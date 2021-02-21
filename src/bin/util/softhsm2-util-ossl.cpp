@@ -218,6 +218,151 @@ int crypto_import_key_pair
 	return result;
 }
 
+int crypto_import_certificate
+(
+	CK_SESSION_HANDLE hSession,
+	char* filePath,
+	char* label,
+	char* objID,
+	size_t objIDLen
+)
+{
+	BIO* in = NULL;
+	X509* x509 = NULL;
+	CK_BYTE_PTR blob = NULL;
+	CK_BYTE_PTR subject = NULL;
+	CK_BYTE_PTR issuer = NULL;
+	CK_BYTE_PTR serial = NULL;
+	CK_BYTE_PTR p;
+	int blobSize;
+	int subjectSize;
+	int issuerSize;
+	int serialSize;
+	int ret = 1;
+
+	if (!(in = BIO_new_file(filePath, "rb")))
+	{
+		fprintf(stderr, "ERROR: Could open the PKCS#8 file: %s\n", filePath);
+		goto cleanup;
+	}
+
+	if ((x509 = PEM_read_bio_X509(in, NULL, NULL, NULL)) == NULL)
+	{
+		fprintf(stderr, "ERROR: Could not read the certificate file: %s\n", filePath);
+		goto cleanup;
+	}
+
+	blobSize = i2d_X509(x509, NULL);
+	subjectSize = i2d_X509_NAME(X509_get_subject_name(x509), NULL);
+	issuerSize = i2d_X509_NAME(X509_get_issuer_name(x509), NULL);
+	serialSize = i2d_ASN1_INTEGER(X509_get_serialNumber(x509), NULL);
+
+	if
+	(
+		blobSize < 0 ||
+		subjectSize < 0 ||
+		issuerSize < 0 ||
+		serialSize < 0
+	)
+	{
+		fprintf(stderr, "ERROR: Could not convert certificate to DER.\n");
+		goto cleanup;
+	}
+
+	if (blobSize > 0)
+	{
+		if ((blob = (CK_BYTE_PTR)malloc(blobSize)) == NULL)
+		{
+			fprintf(stderr, "ERROR: Could not allocate memory.\n");
+			goto cleanup;
+		}
+		p = blob;
+		blobSize = i2d_X509(x509, &p);
+	}
+	if (subjectSize > 0) {
+		if ((subject = (CK_BYTE_PTR)malloc(subjectSize)) == NULL)
+		{
+			fprintf(stderr, "ERROR: Could not allocate memory.\n");
+			goto cleanup;
+		}
+		p = subject;
+		subjectSize = i2d_X509_NAME(X509_get_subject_name(x509), &p);
+	}
+	if (issuerSize > 0)
+	{
+		if ((issuer = (CK_BYTE_PTR)malloc(issuerSize)) == NULL)
+		{
+			fprintf(stderr, "ERROR: Could not allocate memory.\n");
+			goto cleanup;
+		}
+		p = issuer;
+		issuerSize = i2d_X509_NAME(X509_get_issuer_name(x509), &p);
+	}
+	if (serialSize > 0)
+	{
+		if ((serial = (CK_BYTE_PTR)malloc(serialSize)) == NULL)
+		{
+			fprintf(stderr, "ERROR: Could not allocate memory.\n");
+			goto cleanup;
+		}
+		p = serial;
+		serialSize = i2d_ASN1_INTEGER(X509_get_serialNumber(x509), &p);
+	}
+
+	if
+	(
+		blobSize < 0 ||
+		subjectSize < 0 ||
+		issuerSize < 0 ||
+		serialSize < 0
+	)
+	{
+		fprintf(stderr, "ERROR: Could not convert certificate to DER.\n");
+		goto cleanup;
+	}
+
+	{
+		CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
+		CK_CERTIFICATE_TYPE certType = CKC_X_509;
+		CK_BBOOL ckFalse = CK_FALSE, ckTrue = CK_TRUE;
+		CK_ATTRIBUTE certTemplate[] = {
+			{ CKA_CLASS,            &certClass,   sizeof(certClass) },
+			{ CKA_CERTIFICATE_TYPE, &certType,    sizeof(certType) },
+			{ CKA_LABEL,            label,        strlen(label) },
+			{ CKA_ID,               objID,        objIDLen },
+			{ CKA_TOKEN,            &ckTrue,      sizeof(ckTrue) },
+			{ CKA_PRIVATE,          &ckFalse,     sizeof(ckFalse) },
+			{ CKA_VALUE,            blob,         (CK_ULONG)blobSize },
+			{ CKA_SUBJECT,          subject,      (CK_ULONG)subjectSize },
+			{ CKA_ISSUER,           issuer,       (CK_ULONG)issuerSize },
+			{ CKA_SERIAL_NUMBER,    serial,       (CK_ULONG)serialSize }
+		};
+
+		CK_OBJECT_HANDLE hCert;
+		CK_RV rv = p11->C_CreateObject(hSession, certTemplate, 10, &hCert);
+		if (rv != CKR_OK)
+		{
+			fprintf(stderr, "ERROR: Could not save the certificate in the token.\n");
+			goto cleanup;
+		}
+	}
+
+	printf("The certificate has been imported.\n");
+
+	ret = 0;
+
+cleanup:
+
+	free(blob);
+	free(subject);
+	free(issuer);
+	free(serial);
+	X509_free(x509);
+	BIO_free(in);
+
+	return ret;
+}
+
 // Read the key from file
 EVP_PKEY* crypto_read_file(char* filePath, char* filePIN)
 {
