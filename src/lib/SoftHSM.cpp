@@ -932,6 +932,8 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 	{
 		return CKR_SLOT_ID_INVALID;
 	}
+	if (!isMechanismPermitted(NULL, type))
+		return CKR_MECHANISM_INVALID;
 
 	AsymmetricAlgorithm* rsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::RSA);
 	if (rsa != NULL)
@@ -2186,7 +2188,7 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get key info
@@ -2916,7 +2918,7 @@ CK_RV SoftHSM::SymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get key info
@@ -3164,7 +3166,7 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get key info
@@ -3966,7 +3968,7 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get key info
@@ -4118,7 +4120,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get the asymmetric algorithm matching the mechanism
@@ -4944,7 +4946,7 @@ CK_RV SoftHSM::MacVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get key info
@@ -5096,7 +5098,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Get the asymmetric algorithm matching the mechanism
@@ -6549,7 +6551,7 @@ CK_RV SoftHSM::C_WrapKey
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the wrapping key
-	if (!isMechanismPermitted(wrapKey, pMechanism))
+	if (!isMechanismPermitted(wrapKey, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Check the to be wrapped key handle.
@@ -7017,7 +7019,7 @@ CK_RV SoftHSM::C_UnwrapKey
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the unwrap key
-	if (!isMechanismPermitted(unwrapKey, pMechanism))
+	if (!isMechanismPermitted(unwrapKey, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Extract information from the template that is needed to create the object.
@@ -7300,7 +7302,7 @@ CK_RV SoftHSM::C_DeriveKey
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the key
-	if (!isMechanismPermitted(key, pMechanism))
+	if (!isMechanismPermitted(key, pMechanism->mechanism))
 		return CKR_MECHANISM_INVALID;
 
 	// Extract information from the template that is needed to create the object.
@@ -12858,22 +12860,27 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 	return CKR_OK;
 }
 
-bool SoftHSM::isMechanismPermitted(OSObject* key, CK_MECHANISM_PTR pMechanism)
+bool SoftHSM::isMechanismPermitted(OSObject* key, CK_MECHANISM_TYPE mechanism)
 {
 	std::list<CK_MECHANISM_TYPE> mechs = supportedMechanisms;
 	/* First check if the algorithm is enabled in the global configuration */
-	auto it = std::find(mechs.begin(), mechs.end(), pMechanism->mechanism);
+	auto it = std::find(mechs.begin(), mechs.end(), mechanism);
 	if (it == mechs.end())
 		return false;
 
-	OSAttribute attribute = key->getAttribute(CKA_ALLOWED_MECHANISMS);
-	std::set<CK_MECHANISM_TYPE> allowed = attribute.getMechanismTypeSetValue();
+	/* If we have object, consult also its allowed mechanisms */
+	if (key) {
+		OSAttribute attribute = key->getAttribute(CKA_ALLOWED_MECHANISMS);
+		std::set<CK_MECHANISM_TYPE> allowed = attribute.getMechanismTypeSetValue();
 
-	if (allowed.empty()) {
+		/* empty allow list means we allowing everything that is built-in */
+		if (allowed.empty()) {
+			return true;
+		}
+		return allowed.find(mechanism) != allowed.end();
+	} else {
 		return true;
 	}
-
-	return allowed.find(pMechanism->mechanism) != allowed.end();
 }
 
 bool SoftHSM::detectFork(void) {
