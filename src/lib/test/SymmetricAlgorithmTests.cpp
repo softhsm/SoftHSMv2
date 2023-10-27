@@ -1186,6 +1186,119 @@ void SymmetricAlgorithmTests::aesWrapUnwrapGeneric(CK_MECHANISM_TYPE mechanismTy
 	CPPUNIT_ASSERT(rv == CKR_OK);
 }
 
+void SymmetricAlgorithmTests::aesWrapUnwrapNonModifiableGeneric(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)
+{
+	CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_OBJECT_CLASS secretClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE genKeyType = CKK_GENERIC_SECRET;
+	CK_BYTE keyPtr[128];
+	CK_ULONG keyLen =
+		mechanismType == CKM_AES_KEY_WRAP_PAD ? 125UL : 128UL;
+
+	CK_RV rv;
+	CK_BYTE ivPtr[16];
+	if( mechanismType == CKM_AES_CBC_PAD ) {
+		rv = CRYPTOKI_F_PTR( C_GenerateRandom(hSession, ivPtr, sizeof ivPtr) );
+		CPPUNIT_ASSERT(rv == CKR_OK);
+		mechanism.pParameter = ivPtr;
+		mechanism.ulParameterLen = sizeof ivPtr;
+	}
+
+	CK_ATTRIBUTE attribs[] = {
+		{ CKA_EXTRACTABLE, &bFalse, sizeof(bFalse) },
+		{ CKA_CLASS, &secretClass, sizeof(secretClass) },
+		{ CKA_KEY_TYPE, &genKeyType, sizeof(genKeyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_PRIVATE, &bTrue, sizeof(bTrue) },
+		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) }, // Wrapping is allowed even on sensitive objects
+		{ CKA_VALUE, keyPtr, keyLen }
+	};
+	CK_OBJECT_HANDLE hSecret;
+
+	rv = CRYPTOKI_F_PTR( C_GenerateRandom(hSession, keyPtr, keyLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	hSecret = CK_INVALID_HANDLE;
+	rv = CRYPTOKI_F_PTR( C_CreateObject(hSession, attribs, sizeof(attribs)/sizeof(CK_ATTRIBUTE), &hSecret) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(hSecret != CK_INVALID_HANDLE);
+
+	CK_BYTE_PTR wrappedPtr = NULL_PTR;
+	CK_ULONG wrappedLen = 0UL;
+	CK_ULONG zero = 0UL;
+	CK_ULONG rndKeyLen = keyLen;
+	if (mechanismType == CKM_AES_KEY_WRAP_PAD)
+		rndKeyLen =  (keyLen + 7) & ~7;
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hKey, hSecret, wrappedPtr, &wrappedLen) );
+	CPPUNIT_ASSERT(rv == CKR_KEY_UNEXTRACTABLE);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hSecret) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	attribs[0].pValue = &bTrue;
+
+	hSecret = CK_INVALID_HANDLE;
+	rv = CRYPTOKI_F_PTR( C_CreateObject(hSession, attribs, sizeof(attribs)/sizeof(CK_ATTRIBUTE), &hSecret) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(hSecret != CK_INVALID_HANDLE);
+
+	// Estimate wrapped length
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hKey, hSecret, wrappedPtr, &wrappedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	auto wrapOverhead = [mechanismType]() {
+		return (mechanismType == CKM_AES_KEY_WRAP || mechanismType == CKM_AES_KEY_WRAP_PAD) ? 8 : 16;
+	};
+	CPPUNIT_ASSERT(wrappedLen == rndKeyLen + wrapOverhead() );
+
+	wrappedPtr = (CK_BYTE_PTR) malloc(wrappedLen);
+	CPPUNIT_ASSERT(wrappedPtr != NULL_PTR);
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hKey, hSecret, wrappedPtr, &wrappedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(wrappedLen == rndKeyLen + wrapOverhead() );
+
+	// This should always fail because wrapped data have to be longer than 0 bytes
+	zero = 0;
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hKey, hSecret, wrappedPtr, &zero) );
+	CPPUNIT_ASSERT(rv == CKR_BUFFER_TOO_SMALL);
+
+	CK_ATTRIBUTE nattribs[] = {
+		{ CKA_CLASS, &secretClass, sizeof(secretClass) },
+		{ CKA_KEY_TYPE, &genKeyType, sizeof(genKeyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_PRIVATE, &bTrue, sizeof(bTrue) },
+		{ CKA_ENCRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_DECRYPT, &bTrue, sizeof(bTrue) },
+		{ CKA_MODIFIABLE, &bFalse, sizeof(bFalse) },
+		{ CKA_SIGN, &bFalse,sizeof(bFalse) },
+		{ CKA_VERIFY, &bTrue, sizeof(bTrue) }
+	};
+	CK_OBJECT_HANDLE hNew;
+
+	hNew = CK_INVALID_HANDLE;
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hKey, wrappedPtr, wrappedLen, nattribs, sizeof(nattribs)/sizeof(CK_ATTRIBUTE), &hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(hNew != CK_INVALID_HANDLE);
+
+	CK_ATTRIBUTE modifiableAttribs[] = {
+		{ CKA_MODIFIABLE, &bFalse, sizeof(bFalse) }
+	};
+
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hNew, modifiableAttribs, sizeof(modifiableAttribs)/sizeof(CK_ATTRIBUTE)) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CPPUNIT_ASSERT(modifiableAttribs[0].ulValueLen == sizeof(bFalse));
+	CPPUNIT_ASSERT(*(CK_BBOOL*)modifiableAttribs[0].pValue == bFalse);
+
+	free(wrappedPtr);
+	wrappedPtr = NULL_PTR;
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hSecret) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+}
+
 inline void SymmetricAlgorithmTests::aesWrapUnwrapRsa(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)
 {
 	wrapUnwrapRsa(mechanismType, hSession, hKey);
@@ -1643,6 +1756,8 @@ void SymmetricAlgorithmTests::testAesWrapUnwrap()
 
 	aesWrapUnwrapGeneric(CKM_AES_KEY_WRAP, hSession, hKey);
 	aesWrapUnwrapGeneric(CKM_AES_CBC_PAD, hSession, hKey);
+	aesWrapUnwrapNonModifiableGeneric(CKM_AES_KEY_WRAP, hSession, hKey);
+    aesWrapUnwrapNonModifiableGeneric(CKM_AES_CBC_PAD, hSession, hKey);
 	aesWrapUnwrapRsa(CKM_AES_KEY_WRAP, hSession, hKey);
 	aesWrapUnwrapRsa(CKM_AES_CBC_PAD, hSession, hKey);
 
