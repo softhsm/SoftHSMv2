@@ -10575,7 +10575,7 @@ CK_RV SoftHSM::deriveDH
 			{
 				// Truncate value when requested, remove from the leading end
 				if (byteLen < secretValue.size())
-					secretValue.split(secretValue.size() - byteLen);
+					secretValue.resize(byteLen);
 
 				// Fix the odd parity for DES
 				if (keyType == CKK_DES ||
@@ -10858,6 +10858,7 @@ CK_RV SoftHSM::deriveECDH
 		rv = CKR_GENERAL_ERROR;
 	ecdh->recyclePrivateKey(privateKey);
 	ecdh->recyclePublicKey(publicKey);
+	DEBUG_MSG("Derived secret key value: %s", secret->getKeyBits().hex_str().c_str());
 
 	// Apply key derivation function (ANSI X9.63)
 	if (rv == CKR_OK && kdfAlgorithm != NULL) {
@@ -10993,10 +10994,12 @@ CK_RV SoftHSM::deriveECDH
 			}
 			else
 			{
-				// Truncate value when requested, remove from the leading end
+				// 6.3.17 Elliptic Curve Diffie-Hellman key derivation
+				// Truncate value when requested, remove from the leading end.
 				if (byteLen < secretValue.size())
-					secretValue.split(secretValue.size() - byteLen);
+					secretValue.resize(byteLen);
 
+				DEBUG_MSG("secretValue value: %s", secretValue.hex_str().c_str());
 				// Fix the odd parity for DES
 				if (keyType == CKK_DES ||
 				    keyType == CKK_DES2 ||
@@ -11416,7 +11419,7 @@ CK_RV SoftHSM::deriveEDDSA
 			{
 				// Truncate value when requested, remove from the leading end
 				if (byteLen < secretValue.size())
-					secretValue.split(secretValue.size() - byteLen);
+					secretValue.resize(byteLen);
 
 				// Fix the odd parity for DES
 				if (keyType == CKK_DES ||
