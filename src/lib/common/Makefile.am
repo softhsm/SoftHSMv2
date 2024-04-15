@@ -11,7 +11,8 @@ libsofthsm_common_la_SOURCES =	Configuration.cpp \
 				log.cpp \
 				osmutex.cpp \
 				SimpleConfigLoader.cpp \
-				MutexFactory.cpp
+				MutexFactory.cpp \
+				utils.cpp
 
 man_MANS =			softhsm2.conf.5
 
