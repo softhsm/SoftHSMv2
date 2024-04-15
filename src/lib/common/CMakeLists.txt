@@ -12,6 +12,7 @@ set(SOURCES Configuration.cpp
             MutexFactory.cpp
             osmutex.cpp
             SimpleConfigLoader.cpp
+            utils.cpp
             )
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
