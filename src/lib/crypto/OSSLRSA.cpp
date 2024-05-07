@@ -1280,6 +1280,21 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	return true;
 }
 
+bool OSSLRSA::checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode)
+{
+	// Retrieve the OpenSSL key object
+	RSA* rsa = ((OSSLRSAPrivateKey*) privateKey)->getOSSLKey();
+
+	// Check the input size
+	if (encryptedData.size() != (size_t) RSA_size(rsa))
+	{
+		ERROR_MSG("Invalid amount of input data supplied for RSA decryption");
+		*errorCode = CKR_ENCRYPTED_DATA_LEN_RANGE;
+		return false;
+	}
+	return true;
+}
+
 // Decryption functions
 bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		      ByteString& data, const AsymMech::Type padding)

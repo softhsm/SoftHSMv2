@@ -821,6 +821,21 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	return true;
 }
 
+bool BotanRSA::checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode)
+{
+	BotanRSAPrivateKey* pk = (BotanRSAPrivateKey*) privateKey;
+	Botan::RSA_PrivateKey* botanKey = pk->getBotanKey();
+	
+	// Check the input size
+	if (encryptedData.size() * 8 != botanKey->key_length())
+	{
+		ERROR_MSG("Invalid amount of input data (%d bits) supplied for RSA decryption with key of length %d bits", encryptedData.bits(), botanKey->key_length());
+		*errorCode = CKR_ENCRYPTED_DATA_LEN_RANGE;
+		return false;
+	}
+	return true;
+}
+
 // Decryption functions
 bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		       ByteString& data, const AsymMech::Type padding)

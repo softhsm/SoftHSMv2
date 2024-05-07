@@ -140,6 +140,11 @@ bool AsymmetricAlgorithm::verifyFinal(const ByteString& /*signature*/)
 	return true;
 }
 
+bool AsymmetricAlgorithm::checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode)
+{
+	return true;
+}
+
 // Returns true for mechanisms which have 'tick mark' in Wrap&Unwrap column in PKCS #11 Mechanisms v2.40
 bool AsymmetricAlgorithm::isWrappingMech(AsymMech::Type padding)
 {
