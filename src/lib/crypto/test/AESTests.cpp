@@ -1094,6 +1094,179 @@ void AESTests::testGCM()
 	}
 }
 
+void AESTests::testCCM()
+{
+	// Test vectors from NIST via Botan
+
+	char test128[13][6][256] =
+	{
+		{
+			// Key
+			"C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF",
+			// Nonce
+			"00000003020100A0A1A2A3A4A5",
+			// In
+			"08090A0B0C0D0E0F101112131415161718191A1B1C1D1E",
+			// AD
+			"0001020304050607",
+			// tag size
+			"8",
+			// Out
+			"588C979A61C663D2F066D0C2C0F989806D5F6B61DAC38417E8D12CFDF926E0"
+		},
+		{
+			"C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF",
+			"00000004030201A0A1A2A3A4A5",
+			"08090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F",
+			"0001020304050607",
+			"8",
+			"72C91A36E135F8CF291CA894085C87E3CC15C439C9E43A3BA091D56E10400916"
+		},
+		{
+			"40CFB7A62E88013BD6D3AFFCC191041E",
+			"00B6A88ADF36912FDCA0F3A5AE",
+			"2C1BD036831C95496C5F4DBF3D559E72DE802A18",
+			"88C0D9577DF763C8B6A88ADF3691DC4A8BCA94DD00000000",
+			"8",
+			"89D8580340B626A0B6D4D013BF18F291B89646C8FD1F1F61A9FB4BB3"
+		},
+		{
+			"C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF",
+			"0000000E0D0C0BA0A1A2A3A4A5",
+			"0C0D0E0F101112131415161718191A1B1C1D1E1F20",
+			"000102030405060708090A0B",
+			"A",
+			"C0FFA0D6F05BDB67F24D43A4338D2AA4BED7B20E43CD1AA31662E7AD65D6DB"
+		},
+		#ifdef WITH_BOTAN
+		// Could not find a way to make OpenSSL work with an empty payload
+		{
+			"2EBF60F0969013A54A3DEDB19D20F6C8",
+			"1DE8C5E21F9DB33123FF870ADD",
+			"",
+			"E1DE6C6119D7DB471136285D10B47A450221B16978569190EF6A22B055295603",
+			"10",
+			"0EAD29EF205FBB86D11ABE5ED704B880"
+		},
+		#endif
+		{
+			"43C1142877D9F450E12D7B6DB47A85BA",
+			"76BECD9D27CA8A026215F32712",
+			"B506A6BA900C1147C806775324B36EB376AA01D4C3EEF6F5",
+			"6A59AACADD416E465264C15E1A1E9BFA084687492710F9BDA832E2571E468224",
+			"10",
+			"14B14FE5B317411392861638EC383AE40BA95FEFE34255DC2EC067887114BC370281DE6F00836CE4"
+		},
+		{
+			"ac87fef3b76e725d66d905625a387e82",
+			"61bf06b9fa5a450d094f3ddcb5",
+			"959403e0771c21a416bd03f3898390e90d0a0899f69f9552",
+			"0245484bcd987787fe97fda6c8ffb6e7058d7b8f7064f27514afaac4048767fd",
+			"10",
+			"cabf8aa613d5357aa3e70173d43f1f202b628a61d18e8b572eb66bb8213a515aa61e5f0945cd57f4"
+		},
+		{
+			"43b1a6bc8d0d22d6d1ca95c18593cca5",
+			"9882578e750b9682c6ca7f8f86",
+			"a2b381c7d1545c408fe29817a21dc435a154c87256346b05",
+			"2084f3861c9ad0ccee7c63a7e05aece5db8b34bd8724cc06b4ca99a7f9c4914f",
+			"4",
+			"cc69ed76985e0ed4c8365a72775e5a19bfccc71aeb116c85a8c74677"
+		},
+		{
+			"44e89189b815b4649c4e9b38c4275a5a",
+			"374c83e94384061ac01963f88d",
+			"8db6ae1eb959963931d1c5224f29ef50019d2b0db7f5f76f",
+			"cd149d17dba7ec50000b8c5390d114697fafb61025301f4e3eaa9f4535718a08",
+			"6",
+			"df952dce0f843374d33da94c969eff07b7bc2418ca9ee01e32bc2ffa8600"
+		},
+		{
+			"368f35a1f80eaaacd6bb136609389727",
+			"842a8445847502ea77363a16b6",
+			"1cccd55825316a94c5979e049310d1d717cdfb7624289dac",
+			"34396dfcfa6f742aea7040976bd596497a7a6fa4fb85ee8e4ca394d02095b7bf",
+			"8",
+			"1a58094f0e8c6035a5584bfa8d1009c5f78fd2ca487ff222f6d1d897d6051618"
+		},
+		{
+			"996a09a652fa6c82eae8be7886d7e75e",
+			"a8b3eb68f205a46d8f632c3367",
+			"84cdd7380f47524b86168ed95386faa402831f22045183d0",
+			"c71620d0477c8137b77ec5c72ced4df3a1e987fd9af6b5b10853f0526d876cd5",
+			"A",
+			"a7fbf9dd1b099ed3acf6bcbd0b6f7cae57bee99f9d084f826d86e69c07f053d1a607"
+		},
+		{
+			"3ee186594f110fb788a8bf8aa8be5d4a",
+			"44f705d52acf27b7f17196aa9b",
+			"d71864877f2578db092daba2d6a1f9f4698a9c356c7830a1",
+			"2c16724296ff85e079627be3053ea95adf35722c21886baba343bd6c79b5cb57",
+			"C",
+			"b4dd74e7a0cc51aea45dfb401a41d5822c96901a83247ea0d6965f5aa6e31302a9cc2b36"
+		},
+		{
+			"7b2d52a5186d912cf6b83ace7740ceda",
+			"f47be3a2b019d1beededf5b80c",
+			"ea384b081f60bb450808e0c20dc2914ae14a320612c3e1e8",
+			"76cf3522aff97a44b4edd0eef3b81e3ab3cd1ccc93a767a133afd508315f05ed",
+			"E",
+			"79070f33114a980dfd48215051e224dfd01471ac293242afddb36e37da1ee8a88a77d7f12cc6"
+		}
+	};
+
+
+	for (int i = 0; i < 12; i++)
+	{
+		ByteString keyData128(test128[i][0]);
+
+		AESKey aesKey128(128);
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i),aesKey128.setKeyBits(keyData128));
+
+		ByteString IV;
+		ByteString plainText;
+		ByteString AAD;
+		size_t tagBits;
+		ByteString cipherText;
+
+		ByteString shsmPlainText;
+		ByteString shsmCipherText;
+		ByteString OB;
+
+		// Test 128-bit key
+		IV = ByteString(test128[i][1]);
+		plainText = ByteString(test128[i][2]);
+		AAD = ByteString(test128[i][3]);
+		tagBits = ByteString(test128[i][4]).long_val();
+		cipherText = ByteString(test128[i][5]);
+
+		// Now, do the same thing using our AES implementation
+		shsmCipherText.wipe();
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->encryptInit(&aesKey128, SymMode::CCM, IV, false, plainText.size(), AAD, tagBits));
+
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->encryptUpdate(plainText, OB));
+		shsmCipherText += OB;
+
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->encryptFinal(OB));
+		shsmCipherText += OB;
+
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i) + ", expected " + cipherText.hex_str().c_str() + " got " + shsmCipherText.hex_str().c_str(), shsmCipherText == cipherText);
+
+		// Check that we can get the plain text
+		shsmPlainText.wipe();
+		int dataSize = shsmCipherText.size() - tagBits > 0 ? shsmCipherText.size() - tagBits : 0;
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->decryptInit(&aesKey128, SymMode::CCM, IV, false, dataSize, AAD, tagBits));
+
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->decryptUpdate(shsmCipherText, OB));
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), OB.size() == 0);
+
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->decryptFinal(OB));
+		shsmPlainText += OB;
+
+		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i) + ", expected " + plainText.hex_str().c_str() + " got " + shsmPlainText.hex_str().c_str(), shsmPlainText == plainText);
+	}
+}
+
 void AESTests::testWrap(const char testKeK[][128], const char testKey[][128], const char testCt[][128], const int testCnt, SymWrap::Type mode)
 {
 	for (int i = 0; i < testCnt; i++)
