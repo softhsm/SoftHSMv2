@@ -101,7 +101,7 @@ bool BotanSymmetricAlgorithm::encryptInit(const SymmetricKey* key, const SymMode
 	}
 
 	// Check the IV
-	if (mode != SymMode::GCM && (IV.size() > 0) && (IV.size() != getBlockSize()))
+	if ((mode != SymMode::GCM && mode != SymMode::CCM) && (IV.size() > 0) && (IV.size() != getBlockSize()))
 	{
 		ERROR_MSG("Invalid IV size (%d bytes, expected %d bytes)", IV.size(), getBlockSize());
 
@@ -193,6 +193,19 @@ bool BotanSymmetricAlgorithm::encryptInit(const SymmetricKey* key, const SymMode
 			Botan::AEAD_Mode* aead = Botan::get_aead(cipherName, Botan::ENCRYPTION);
 			aead->set_key(botanKey);
 			aead->set_associated_data(aad.const_byte_str(), aad.size());
+
+			Botan::InitializationVector botanIV = Botan::InitializationVector(IV.const_byte_str(), IV.size());
+			Botan::Keyed_Filter* filter = new Botan::Cipher_Mode_Filter(aead);
+			filter->set_iv(botanIV);
+			cryption = new Botan::Pipe(filter);
+		}
+		else if (mode == SymMode::CCM)
+		{
+			Botan::AEAD_Mode* aead = Botan::get_aead(cipherName, Botan::ENCRYPTION);
+			aead->set_key(botanKey);
+			if (&aad == NULL && aad.size() > 0) {
+				aead->set_associated_data(aad.const_byte_str(), aad.size());
+			}
 
 			Botan::InitializationVector botanIV = Botan::InitializationVector(IV.const_byte_str(), IV.size());
 			Botan::Keyed_Filter* filter = new Botan::Cipher_Mode_Filter(aead);
@@ -336,7 +349,7 @@ bool BotanSymmetricAlgorithm::decryptInit(const SymmetricKey* key, const SymMode
 	}
 
 	// Check the IV
-	if (mode != SymMode::GCM && (IV.size() > 0) && (IV.size() != getBlockSize()))
+	if ((mode != SymMode::GCM && mode != SymMode::CCM) && (IV.size() > 0) && (IV.size() != getBlockSize()))
 	{
 		ERROR_MSG("Invalid IV size (%d bytes, expected %d bytes)", IV.size(), getBlockSize());
 
@@ -428,6 +441,19 @@ bool BotanSymmetricAlgorithm::decryptInit(const SymmetricKey* key, const SymMode
 			Botan::AEAD_Mode* aead = Botan::get_aead(cipherName, Botan::DECRYPTION);
 			aead->set_key(botanKey);
 			aead->set_associated_data(aad.const_byte_str(), aad.size());
+
+			Botan::InitializationVector botanIV = Botan::InitializationVector(IV.const_byte_str(), IV.size());
+			Botan::Keyed_Filter* filter = new Botan::Cipher_Mode_Filter(aead);
+			filter->set_iv(botanIV);
+			cryption = new Botan::Pipe(filter);
+		}
+		else if (mode == SymMode::CCM)
+		{
+			Botan::AEAD_Mode* aead = Botan::get_aead(cipherName, Botan::DECRYPTION);
+			aead->set_key(botanKey);
+			if (&aad == NULL && aad.size() > 0) {
+				aead->set_associated_data(aad.const_byte_str(), aad.size());
+			}
 
 			Botan::InitializationVector botanIV = Botan::InitializationVector(IV.const_byte_str(), IV.size());
 			Botan::Keyed_Filter* filter = new Botan::Cipher_Mode_Filter(aead);
