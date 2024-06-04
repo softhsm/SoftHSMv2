@@ -2573,7 +2573,7 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			counterBits = CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulDataLen;
 			if (tagBytes != 16 && tagBytes != 14 && tagBytes != 12 && tagBytes != 10 && tagBytes != 8)
 			{
-				DEBUG_MSG("Invalid ulDataLen value, is %#5d should be 16, 14, 12, 10 or 8", tagBytes);
+				DEBUG_MSG("Invalid ulMACLen value, is %#5d should be 16, 14, 12, 10 or 8", tagBytes);
 				return CKR_ARGUMENTS_BAD;
 			}
 			break;

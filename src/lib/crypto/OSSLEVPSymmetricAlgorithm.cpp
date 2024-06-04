@@ -115,8 +115,6 @@ bool OSSLEVPSymmetricAlgorithm::encryptInit(const SymmetricKey* key, const SymMo
 		return false;
 	}
 
-	DEBUG_MSG("mode: %d, iv: %s, aad: %s", mode, IV.hex_str().c_str(), aad.hex_str().c_str());
-
 	// Check the IV
 	if ((mode != SymMode::GCM && mode != SymMode::CCM) && (IV.size() > 0) && (IV.size() != getBlockSize()))
 	{
@@ -187,6 +185,19 @@ bool OSSLEVPSymmetricAlgorithm::encryptInit(const SymmetricKey* key, const SymMo
 			EVP_CIPHER_CTX_ctrl(pCurCTX, EVP_CTRL_CCM_SET_IVLEN, iv.size(), NULL);
 			EVP_CIPHER_CTX_ctrl(pCurCTX, EVP_CTRL_CCM_SET_TAG, tagBytes, NULL);
 
+			int preL = std::to_string(currentCounterBits).length();
+			int L;
+			if (preL < 2) 
+			{
+				L = 2;
+			} 
+			else 
+			{
+				L = preL;
+			}
+			DEBUG_MSG("preL=%d, L=%d", preL, L);
+			EVP_CIPHER_CTX_ctrl(pCurCTX, EVP_CTRL_CCM_SET_L, L, NULL);
+
 			/* Initialise key and nonce */
 			if (!EVP_EncryptInit_ex(pCurCTX, NULL, NULL, (unsigned char*) currentKey->getKeyBits().const_byte_str(), iv.byte_str()))
 			{
@@ -199,7 +210,7 @@ bool OSSLEVPSymmetricAlgorithm::encryptInit(const SymmetricKey* key, const SymMo
 			}
 
 			int outlen;
-			if (!EVP_EncryptUpdate(pCurCTX, 0, &outlen, 0, counterBits)) {
+			if (!EVP_EncryptUpdate(pCurCTX, 0, &outlen, NULL, counterBits)) {
 				ERROR_MSG("Failed to update counterBits");
 
 				ByteString dummy;
@@ -232,7 +243,7 @@ bool OSSLEVPSymmetricAlgorithm::encryptInit(const SymmetricKey* key, const SymMo
 	if (mode == SymMode::GCM || mode == SymMode::CCM)
 	{
 		int outLen = 0;
-		if (aad.size() && !EVP_EncryptUpdate(pCurCTX, NULL, &outLen, (unsigned char*) aad.const_byte_str(), aad.size()))
+		if (aad.size() > 0 && !EVP_EncryptUpdate(pCurCTX, NULL, &outLen, (unsigned char*) aad.const_byte_str(), aad.size()))
 		{
 			ERROR_MSG("Failed to update with AAD: %s", ERR_error_string(ERR_get_error(), NULL));
 
@@ -349,8 +360,6 @@ bool OSSLEVPSymmetricAlgorithm::decryptInit(const SymmetricKey* key, const SymMo
 	{
 		return false;
 	}
-
-	DEBUG_MSG("mode: %d, iv: %s, aad: %s", mode, IV.hex_str().c_str(), aad.hex_str().c_str());
 
 	// Check the IV
 	if ((mode != SymMode::GCM && mode != SymMode::CCM) && (IV.size() > 0) && (IV.size() != getBlockSize()))
