@@ -597,7 +597,7 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 	}
 
 	// Load the enabled list of algorithms
-	prepareSupportedMecahnisms(mechanisms_table);
+	prepareSupportedMechanisms(mechanisms_table);
 
 	isRemovable = Configuration::i()->getBool("slots.removable", false);
 
@@ -720,7 +720,7 @@ CK_RV SoftHSM::C_GetTokenInfo(CK_SLOT_ID slotID, CK_TOKEN_INFO_PTR pInfo)
 	return token->getTokenInfo(pInfo);
 }
 
-void SoftHSM::prepareSupportedMecahnisms(std::map<std::string, CK_MECHANISM_TYPE> &t)
+void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE> &t)
 {
 #ifndef WITH_FIPS
 	t["CKM_MD5"]			= CKM_MD5;
