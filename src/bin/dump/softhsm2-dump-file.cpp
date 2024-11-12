@@ -437,13 +437,15 @@ void dump(FILE* stream)
 			}
 			printf("(length %lu)\n", (unsigned long) len);
 
-			std::vector<uint8_t> value((size_t) len);
-			if (!readBytes(stream, value))
-			{
-				corrupt(stream);
-				return;
+			if (len > 0) {
+				std::vector<uint8_t> value((size_t) len);
+				if (!readBytes(stream, value))
+				{
+					corrupt(stream);
+					return;
+				}
+				dumpBytes(value);
 			}
-			dumpBytes(value);
 		}
 		else if (disktype == ATTRMAP_ATTR)
 		{
@@ -461,13 +463,15 @@ void dump(FILE* stream)
 			}
 			printf("(length %lu)\n", (unsigned long) len);
 
-			std::vector<Attribute> value;
-			if (!readMap(stream, len, value))
-			{
-				corrupt(stream);
-				return;
-			}
-			dumpMap(value);
+			if (len > 0) {
+				std::vector<Attribute> value;
+				if (!readMap(stream, len, value))
+				{
+					corrupt(stream);
+					return;
+				}
+				dumpMap(value);
+			}	
 		}
 		else if (disktype == MECHSET_ATTR)
 		{
