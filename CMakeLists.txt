@@ -50,7 +50,7 @@ set(DEFAULT_LOG_LEVEL "INFO"
     CACHE STRING "The default log level")
 set(DEFAULT_OBJECTSTORE_BACKEND "file"
     CACHE STRING "Default storage backend for token objects")
-set(DEFAULT_PKCS11_LIB "${CMAKE_INSTALL_FULL_LIBDIR}/softhsm/libsofthsm2.so"
+set(DEFAULT_PKCS11_LIB "${CMAKE_INSTALL_FULL_LIBDIR}/softhsm/libsofthsm2${CMAKE_SHARED_LIBRARY_SUFFIX}"
     CACHE STRING "The default PKCS#11 library")
 set(DEFAULT_SOFTHSM2_CONF "${CMAKE_INSTALL_FULL_SYSCONFDIR}/softhsm2.conf"
     CACHE STRING "The default location of softhsm.conf")
