@@ -64,7 +64,7 @@ The unit tests requires CppUnit.
 If the code is downloaded directly from the code repository, you have to
 prepare the configuration scripts before continuing.
 
-1. You need to install automake, autoconf, libtool, libtool-ltdl-devel (RHEL/CentOS), pkg-config.
+1. You need to install automake, autoconf, libtool, libtool-ltdl-devel (RHEL/CentOS/Fedora), pkg-config.
 2. Run the command 'sh autogen.sh'
 
 ### Configure
@@ -113,18 +113,18 @@ Running the unit tests requires CppUnit.
 
 ### Install Library
 
-Install the library using the follow command:
+Install the library using the following command:
 
 	sudo make install
 
 ### Configure
 
 The default location of the config file is /etc/softhsm2.conf. This location
-can be change by setting the environment variable.
+can be changed by setting the SOFTHSM2\_CONF environment variable.
 
 	export SOFTHSM2_CONF=/home/user/config.file
 
-Details on the configuration can be found in "man softhsm2.conf".
+Details on the configuration can be found through command "man softhsm2.conf".
 
 Create the token directory you defined in your config file:
 
