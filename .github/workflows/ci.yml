@@ -32,6 +32,29 @@ jobs:
         run: |
           make check || (find . -name test-suite.log -exec cat {} \; && false)
 
+  linux_openssl3:
+    name: Linux (openssl 3)
+    runs-on: ubuntu-latest # for OpenSSL 3
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: openssl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare
+        run: |
+          sudo apt update -qq
+          sudo apt install libcppunit-dev p11-kit
+      - name: Build
+        run: |
+          ./autogen.sh
+          ./configure --with-crypto-backend=${{ matrix.backend }}
+          make
+      - name: Test
+        run: |
+          make check || (find . -name test-suite.log -exec cat {} \; && false)
+
   macos:
     name: macOS (${{ matrix.backend }})
     runs-on: macos-14
