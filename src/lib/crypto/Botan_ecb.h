@@ -22,7 +22,7 @@ namespace Botan {
 /**
 * ECB mode
 */
-class BOTAN_DLL ECB_Mode : public Cipher_Mode
+class ECB_Mode : public Cipher_Mode
    {
    public:
       std::string name() const override;
@@ -57,7 +57,7 @@ class BOTAN_DLL ECB_Mode : public Cipher_Mode
 /**
 * ECB Encryption
 */
-class BOTAN_DLL ECB_Encryption final : public ECB_Mode
+class ECB_Encryption final : public ECB_Mode
    {
    public:
       /**
@@ -78,7 +78,7 @@ class BOTAN_DLL ECB_Encryption final : public ECB_Mode
 /**
 * ECB Decryption
 */
-class BOTAN_DLL ECB_Decryption final : public ECB_Mode
+class ECB_Decryption final : public ECB_Mode
    {
    public:
       /**
