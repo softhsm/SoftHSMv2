@@ -918,7 +918,7 @@ void ObjectTests::testCreateObject()
 	rv = createDataObjectMinimal(hSession, ON_TOKEN, IS_PUBLIC, hObject);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession,hObject) );
-	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT_STREAM("rv=" << int_to_hex(rv), rv == CKR_OK);
 
 	// Only public objects can be created unless the normal user is logged in.
 	rv = createDataObjectMinimal(hSession, ON_TOKEN, IS_PRIVATE, hObject);
@@ -1162,11 +1162,11 @@ void ObjectTests::testDestroyObject()
 
 	// On a read-only session we should not be able to destroy the public token object
 	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSessionRO,hObjectTokenPublic) );
-	CPPUNIT_ASSERT(rv == CKR_SESSION_READ_ONLY);
+	CPPUNIT_ASSERT_STREAM("rv=" << int_to_hex(rv), rv == CKR_SESSION_READ_ONLY);
 
 	// On a read-only session we should not be able to destroy the private token object
 	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSessionRO,hObjectTokenPrivate) );
-	CPPUNIT_ASSERT(rv == CKR_SESSION_READ_ONLY);
+	CPPUNIT_ASSERT_STREAM("rv=" << int_to_hex(rv), rv == CKR_SESSION_READ_ONLY);
 
 	// Logout with a different session than the one used for login should be fine.
 	rv = CRYPTOKI_F_PTR( C_Logout(hSessionRW) );
@@ -1390,7 +1390,7 @@ void ObjectTests::testSetAttributeValue()
 	rv = CRYPTOKI_F_PTR( C_SetAttributeValue (hSessionRO,hObjectSessionPrivate,&attribs[0],1) );
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	rv = CRYPTOKI_F_PTR( C_SetAttributeValue (hSessionRO,hObjectTokenPublic,&attribs[0],1) );
-	CPPUNIT_ASSERT(rv == CKR_SESSION_READ_ONLY);
+	CPPUNIT_ASSERT_STREAM("rv=" << int_to_hex(rv), rv == CKR_SESSION_READ_ONLY);
 	rv = CRYPTOKI_F_PTR( C_SetAttributeValue (hSessionRW,hObjectTokenPublic,&attribs[0],1) );
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	rv = CRYPTOKI_F_PTR( C_SetAttributeValue (hSessionRO,hObjectTokenPrivate,&attribs[0],1) );
@@ -1453,7 +1453,7 @@ void ObjectTests::testFindObjects()
 
 	// Login USER into the sessions so we can create a private objects
 	rv = CRYPTOKI_F_PTR( C_Login(hSessionRO,CKU_USER,m_userPin1,m_userPin1Length) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT_STREAM("rv=" << int_to_hex(rv), rv == CKR_OK);
 
 	// Create all permutations of session/token, public/private objects
 	rv = createDataObjectMinimal(hSessionRO, IN_SESSION, IS_PUBLIC, hObjectSessionPublic);
@@ -2417,6 +2417,7 @@ void ObjectTests::testCreateSecretKey()
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hObject, attribKCV, 1) );
 	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT_STREAM("attribKCV[0].ulValueLen=" << attribKCV[0].ulValueLen, attribKCV[0].ulValueLen == 3);
 	CPPUNIT_ASSERT(attribKCV[0].ulValueLen == 3);
 	CPPUNIT_ASSERT(memcmp(pCheckValue, desKCV, 3) == 0);
 	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession,hObject) );

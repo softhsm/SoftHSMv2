@@ -34,6 +34,7 @@
 #define SRC_LIB_TEST_TESTSNOPININITBASE_H_
 
 #include "cryptoki.h"
+#include "iomanip"
 #include <cppunit/TestFixture.h>
 
 
@@ -42,6 +43,36 @@
 #else
 #define CRYPTOKI_F_PTR(func) func
 #endif
+
+#define CPPUNIT_ASSERT_STREAM(MSG, CONDITION) \
+    do { \
+        std::ostringstream oss; \
+        CPPUNIT_ASSERT_MESSAGE(\
+            static_cast<std::ostringstream &>(oss << MSG).str(), \
+            CONDITION); \
+    } while (0)
+
+template< typename T >
+std::string int_to_hex( T i )
+{
+  std::stringstream stream;
+  stream << "0x" 
+         << std::setfill ('0') << std::setw(sizeof(T)) 
+         << std::hex << i;
+  return stream.str();
+}
+
+template< typename T >
+std::string hexStr(const T *data, int len)
+{
+     std::stringstream ss;
+     ss << std::hex;
+
+     for( int i(0) ; i < len; ++i )
+         ss << std::setfill ('0') << std::setw(sizeof(T) * 2) << static_cast<uint32_t>(static_cast<uint8_t>(data[i]));
+
+     return ss.str();
+}
 
 class TestsNoPINInitBase : public CppUnit::TestFixture {
 public:

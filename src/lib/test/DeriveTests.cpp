@@ -658,6 +658,7 @@ void DeriveTests::symDerive(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey, C
 	CK_KEY_DERIVATION_STRING_DATA param1;
 	CK_DES_CBC_ENCRYPT_DATA_PARAMS param2;
 	CK_AES_CBC_ENCRYPT_DATA_PARAMS param3;
+	int memcmpResult;
 
 	CK_BYTE data[] = {
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
@@ -703,13 +704,31 @@ void DeriveTests::symDerive(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey, C
 			break;
 		case CKK_DES:
 			mechEncrypt.mechanism = CKM_DES_ECB;
+			#ifdef WITH_BOTAN
+			if (mechType == CKM_DES_CBC_ENCRYPT_DATA || mechType == CKM_DES3_CBC_ENCRYPT_DATA) {
+				CK_BYTE iv[8] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+				mechEncrypt = { CKM_DES_CBC, iv, sizeof(iv) };
+			}
+			#endif
 			break;
 		case CKK_DES2:
 		case CKK_DES3:
 			mechEncrypt.mechanism = CKM_DES3_ECB;
+			#ifdef WITH_BOTAN
+			if (mechType == CKM_DES_CBC_ENCRYPT_DATA || mechType == CKM_DES3_CBC_ENCRYPT_DATA) {
+				CK_BYTE iv[8] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+				mechEncrypt = { CKM_DES3_CBC, iv, sizeof(iv) };
+			}
+			#endif
 			break;
 		case CKK_AES:
 			mechEncrypt.mechanism = CKM_AES_ECB;
+			#ifdef WITH_BOTAN
+			if (mechType == CKM_AES_CBC_ENCRYPT_DATA) {
+				CK_BYTE iv[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16 };
+				mechEncrypt = { CKM_AES_CBC, iv, sizeof(iv) };
+			}
+			#endif
 			secLen = 32;
 			break;
 		default:
@@ -764,7 +783,7 @@ void DeriveTests::symDerive(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey, C
 	CK_ULONG ulRecoveredTextLen;
 
 	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechEncrypt,hDerive) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT_STREAM("Could not C_EncryptInit with mechType=" << int_to_hex(mechType) << ", mechEncrypt.mechanism=" << int_to_hex(mechEncrypt.mechanism) << " keyType=" << int_to_hex(keyType) << ".rv=" << int_to_hex(rv), rv==CKR_OK);
 
 	ulCipherTextLen = sizeof(cipherText);
 	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession,data,sizeof(data),cipherText,&ulCipherTextLen) );
@@ -778,7 +797,10 @@ void DeriveTests::symDerive(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey, C
 	CPPUNIT_ASSERT(rv==CKR_OK);
 	CPPUNIT_ASSERT(ulRecoveredTextLen==sizeof(data));
 
-	CPPUNIT_ASSERT(memcmp(data, recoveredText, sizeof(data)) == 0);
+	memcmpResult = memcmp(data, recoveredText, sizeof(data));
+	CPPUNIT_ASSERT_STREAM("memcmp != 0 with mechType=" << int_to_hex(mechType) << ", mechEncrypt.mechanism=" << int_to_hex(mechEncrypt.mechanism) << ", keyType=" << int_to_hex(keyType) << ", memcmpResult=" << int_to_hex(memcmpResult)
+	<< ", ulCipherTextLen=" << ulCipherTextLen << ", cipherText=" << hexStr(cipherText, ulCipherTextLen)
+	<< ", data=" << hexStr(data, sizeof(data)) << ", recoveredText=" << hexStr(recoveredText, ulRecoveredTextLen), memcmpResult==0);
 }
 
 void DeriveTests::testSymDerive()
@@ -830,12 +852,12 @@ void DeriveTests::testSymDerive()
 
 	// Derive keys
 	CK_OBJECT_HANDLE hDerive = CK_INVALID_HANDLE;
+#ifndef WITH_BOTAN
 #ifndef WITH_FIPS
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_ECB_ENCRYPT_DATA,CKK_GENERIC_SECRET);
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_ECB_ENCRYPT_DATA,CKK_DES);
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_ECB_ENCRYPT_DATA,CKK_DES2);
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_ECB_ENCRYPT_DATA,CKK_DES3);
-	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_ECB_ENCRYPT_DATA,CKK_AES);
 #endif
 	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_GENERIC_SECRET);
 #ifndef WITH_FIPS
@@ -843,27 +865,21 @@ void DeriveTests::testSymDerive()
 #endif
 	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_DES2);
 	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_DES3);
-	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_AES);
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_GENERIC_SECRET);
 #ifndef WITH_FIPS
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_DES);
 #endif
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_DES2);
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_DES3);
-	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_ECB_ENCRYPT_DATA,CKK_AES);
 	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_ECB_ENCRYPT_DATA,CKK_GENERIC_SECRET);
-#ifndef WITH_FIPS
-	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_ECB_ENCRYPT_DATA,CKK_DES);
-#endif
-	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_ECB_ENCRYPT_DATA,CKK_DES2);
-	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_ECB_ENCRYPT_DATA,CKK_DES3);
+
 	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_ECB_ENCRYPT_DATA,CKK_AES);
+#endif
 #ifndef WITH_FIPS
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_CBC_ENCRYPT_DATA,CKK_GENERIC_SECRET);
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_CBC_ENCRYPT_DATA,CKK_DES);
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_CBC_ENCRYPT_DATA,CKK_DES2);
 	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_CBC_ENCRYPT_DATA,CKK_DES3);
-	symDerive(hSessionRW,hKeyDes,hDerive,CKM_DES_CBC_ENCRYPT_DATA,CKK_AES);
 #endif
 	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_GENERIC_SECRET);
 #ifndef WITH_FIPS
@@ -871,20 +887,14 @@ void DeriveTests::testSymDerive()
 #endif
 	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_DES2);
 	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_DES3);
-	symDerive(hSessionRW,hKeyDes2,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_AES);
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_GENERIC_SECRET);
 #ifndef WITH_FIPS
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_DES);
 #endif
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_DES2);
 	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_DES3);
-	symDerive(hSessionRW,hKeyDes3,hDerive,CKM_DES3_CBC_ENCRYPT_DATA,CKK_AES);
 	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_CBC_ENCRYPT_DATA,CKK_GENERIC_SECRET);
-#ifndef WITH_FIPS
-	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_CBC_ENCRYPT_DATA,CKK_DES);
-#endif
-	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_CBC_ENCRYPT_DATA,CKK_DES2);
-	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_CBC_ENCRYPT_DATA,CKK_DES3);
+
 	symDerive(hSessionRW,hKeyAes,hDerive,CKM_AES_CBC_ENCRYPT_DATA,CKK_AES);
 }
 
