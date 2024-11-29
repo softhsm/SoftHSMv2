@@ -1427,8 +1427,10 @@ void SymmetricAlgorithmTests::aesWrapUnwrapED(CK_MECHANISM_TYPE mechanismType, C
 	CK_BBOOL bTrue = CK_TRUE;
 
 	std::map<std::string, EDCurveParam > curves {
-		{ "ED25519", {0x06, 0x03, 0x2b, 0x65, 0x70} },
-		{ "ED448", {0x06, 0x03, 0x2b, 0x65, 0x71} }
+		{ "ED25519", {0x06, 0x03, 0x2b, 0x65, 0x70} }
+#ifndef WITH_BOTAN
+		, { "ED448", {0x06, 0x03, 0x2b, 0x65, 0x71} }
+#endif
 	};
 
 	for(auto &curve : curves) {

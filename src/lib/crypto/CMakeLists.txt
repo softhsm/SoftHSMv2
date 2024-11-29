@@ -95,6 +95,7 @@ if(WITH_BOTAN)
                         BotanDSAKeyPair.cpp
                         BotanDSAPrivateKey.cpp
                         BotanDSAPublicKey.cpp
+                        Botan_ecb.cpp
                         BotanECDH.cpp
                         BotanECDHKeyPair.cpp
                         BotanECDHPrivateKey.cpp
