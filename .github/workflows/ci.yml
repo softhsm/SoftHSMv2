@@ -34,7 +34,7 @@ jobs:
 
   macos:
     name: macOS (${{ matrix.backend }})
-    runs-on: macos-12
+    runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare
         run: |
-          brew install automake cppunit botan@2
+          brew install automake libtool cppunit botan@2
       - name: Build
         run: |
           ./autogen.sh
