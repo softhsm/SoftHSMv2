@@ -463,7 +463,8 @@ void dump(FILE* stream)
 			}
 			printf("(length %lu)\n", (unsigned long) len);
 
-			if (len > 0) {
+			if (len > 0)
+			{
 				std::vector<Attribute> value;
 				if (!readMap(stream, len, value))
 				{
