@@ -49,6 +49,11 @@ SecureMemoryRegistry::~SecureMemoryRegistry()
 	if (!registry.empty())
 	{
 		ERROR_MSG("SecureMemoryRegistry is not empty: leak!");
+		for (auto const& x : registry)
+		{
+
+    		DEBUG_MSG("Pointer %lx, size: %lu", x.first, x.second);
+		}
 	}
 	MutexFactory::i()->recycleMutex(SecMemRegistryMutex);
 }
