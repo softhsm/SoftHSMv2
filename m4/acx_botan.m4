@@ -46,7 +46,7 @@ AC_DEFUN([ACX_BOTAN],[
 	AC_MSG_RESULT($BOTAN_LIBS)
 
 	if test "x${BOTAN_VERSION_MAJOR}" != "x1" -o "x${BOTAN_VERSION_MINOR}" != "x10"; then
-		AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+		AX_CXX_COMPILE_STDCXX_14([noext],[mandatory])
 	fi
 
 	tmp_CPPFLAGS=$CPPFLAGS

@@ -48,7 +48,7 @@
 #include "config.h"
 #include "MutexFactory.h"
 
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
 #else
 std::auto_ptr<MutexFactory> MutexFactory::instance(NULL);

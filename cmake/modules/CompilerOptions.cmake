@@ -20,10 +20,10 @@ function(enable_cxx_compiler_flag_if_supported flag)
     endif()
 endfunction()
 
-# Configures C++11
-set(CMAKE_CXX_STANDARD 11)
+# Configures C++14
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(HAVE_CXX11 1)
+set(HAVE_CXX14 1)
 
 if(ENABLE_PEDANTIC)
     enable_cxx_compiler_flag_if_supported(-pedantic)
@@ -165,12 +165,12 @@ if(WITH_CRYPTO_BACKEND STREQUAL "botan")
     message(STATUS "Botan: Includes: ${CRYPTO_INCLUDES}")
     message(STATUS "Botan: Libs: ${CRYPTO_LIBS}")
 
-    # CXX11 flag is not added to try_run, so set it locally.
-    CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+    # CXX14 flag is not added to try_run, so set it locally.
+    CHECK_CXX_COMPILER_FLAG("-std=c++14" COMPILER_SUPPORTS_CXX14)
     CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
     set(TMP_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-    if(COMPILER_SUPPORTS_CXX11)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    if(COMPILER_SUPPORTS_CXX14)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
     elseif(COMPILER_SUPPORTS_CXX0X)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
     endif()

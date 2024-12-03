@@ -50,7 +50,7 @@
 #include "Configuration.h"
 
 // Initialise the one-and-only instance
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 std::unique_ptr<SimpleConfigLoader> SimpleConfigLoader::instance(nullptr);
 #else
 std::auto_ptr<SimpleConfigLoader> SimpleConfigLoader::instance(NULL);

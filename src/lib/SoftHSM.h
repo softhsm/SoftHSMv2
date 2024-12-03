@@ -179,7 +179,7 @@ private:
 	SoftHSM();
 
 	// The one-and-only instance
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 	static std::unique_ptr<SoftHSM> instance;
 #else
 	static std::auto_ptr<SoftHSM> instance;

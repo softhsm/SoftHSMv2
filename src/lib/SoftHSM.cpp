@@ -91,7 +91,7 @@
 
 // Initialise the one-and-only instance
 
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 
 std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
 std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);
@@ -114,8 +114,6 @@ std::auto_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(NULL);
 std::auto_ptr<SoftHSM> SoftHSM::instance(NULL);
 
 #endif
-
-using namespace std::chrono_literals;
 
 static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERTIFICATE_TYPE certType, P11Object **p11object)
 {
@@ -485,7 +483,7 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 			return CKR_ARGUMENTS_BAD;
 		} */
 
-		if (args->pReserved != NULL_PTR) {
+        if (args->pReserved != NULL_PTR && sizeof(args->pReserved) > 8) {
 			const char* reserved = ((const char*) args->pReserved);
 			DEBUG_MSG("reserved: %s, reserved.strlen: %d", reserved, strlen(reserved));
 			std::string parameters(reserved);
@@ -13764,6 +13762,7 @@ bool SoftHSM::detectFork(void) {
 }
 
 unsigned long SoftHSM::mockAndSleep(const char* function) {
+	using namespace std::chrono_literals;
 	DEBUG_MSG("Evaluating mock for function: %s", function);
 	if (mockErrorSleepTime > 0 && (mockErrorFunction.compare(function) == 0)) {
 		DEBUG_MSG("%s is mocked, waiting %dms", function, mockErrorSleepTime);

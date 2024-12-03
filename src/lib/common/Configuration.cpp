@@ -36,7 +36,7 @@
 #include "log.h"
 
 // Initialise the one-and-only instance
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 std::unique_ptr<Configuration> Configuration::instance(nullptr);
 #else
 std::auto_ptr<Configuration> Configuration::instance(NULL);

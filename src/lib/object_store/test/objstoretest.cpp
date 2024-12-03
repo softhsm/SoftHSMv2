@@ -51,7 +51,7 @@
 #endif
 
 // Initialise the one-and-only instance
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 
 std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
 std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);

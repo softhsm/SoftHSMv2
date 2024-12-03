@@ -50,7 +50,7 @@ PKG_PROG_PKG_CONFIG
 ACX_PEDANTIC
 ACX_STRICT
 ACX_64BIT
-AX_CXX_COMPILE_STDCXX_11([noext],[optional])
+AX_CXX_COMPILE_STDCXX_14([noext],[optional])
 
 # Check for libraries (-ldl can be required by OpenSSL too)
 ACX_DLOPEN

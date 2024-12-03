@@ -27,8 +27,8 @@
 /* Define if advanced AES key wrap with pad is supported */
 #cmakedefine HAVE_AES_KEY_WRAP_PAD @HAVE_AES_KEY_WRAP_PAD@
 
-/* define if the compiler supports basic C++11 syntax */
-#cmakedefine HAVE_CXX11 @HAVE_CXX11@
+/* define if the compiler supports basic C++14 syntax */
+#cmakedefine HAVE_CXX14 @HAVE_CXX14@
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #cmakedefine HAVE_DLFCN_H @HAVE_DLFCN_H@

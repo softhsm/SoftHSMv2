@@ -113,7 +113,7 @@ private:
 	CK_RV UnlockMutex(CK_VOID_PTR mutex);
 
 	// The one-and-only instance
-#ifdef HAVE_CXX11
+#ifdef HAVE_CXX14
 	static std::unique_ptr<MutexFactory> instance;
 #else
 	static std::auto_ptr<MutexFactory> instance;
