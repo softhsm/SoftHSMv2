@@ -1,6 +1,7 @@
 # SoftHSM version 2
 
-SoftHSM is part of the OpenDNSSEC project. Read more at www.opendnssec.org.
+SoftHSM started as part of the OpenDNSSEC project. Today it's a standalone
+project.
 
 [![Travis Build Status](https://api.travis-ci.org/opendnssec/SoftHSMv2.png)](https://travis-ci.org/opendnssec/SoftHSMv2)
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/opendnssec/SoftHSMv2?svg=true)](https://ci.appveyor.com/project/opendnssec/softhsmv2)
@@ -18,7 +19,7 @@ computer.
 A potential problem with the use of the PKCS#11 interface is that it might
 limit the wide spread use of OpenDNSSEC, since a potential user might not be
 willing to invest in a new hardware device. To counter this effect, OpenDNSSEC
-is providing a software implementation of a generic cryptographic device with a
+provided a software implementation of a generic cryptographic device with a
 PKCS#11 interface, the SoftHSM. SoftHSM is designed to meet the requirements of
 OpenDNSSEC, but can also work together with other cryptographic products
 because of the PKCS#11 interface.
