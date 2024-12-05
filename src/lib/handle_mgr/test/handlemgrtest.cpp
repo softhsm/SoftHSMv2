@@ -89,7 +89,7 @@ public:
 private:
 	std::string TimeFormat(double time) {
 		char buffer[320];
-		::sprintf(buffer, "%6f", time);
+		snprintf(buffer, sizeof(buffer), "%6f", time);
 		return buffer;
 	}
 
