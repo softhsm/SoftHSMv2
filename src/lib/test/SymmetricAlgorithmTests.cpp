@@ -39,11 +39,9 @@
 #include "SymmetricAlgorithmTests.h"
 
 // CKA_TOKEN
-const CK_BBOOL ON_TOKEN = CK_TRUE;
 const CK_BBOOL IN_SESSION = CK_FALSE;
 
 // CKA_PRIVATE
-const CK_BBOOL IS_PRIVATE = CK_TRUE;
 const CK_BBOOL IS_PUBLIC = CK_FALSE;
 
 #define NR_OF_BLOCKS_IN_TEST 0x10001
