@@ -24,6 +24,8 @@ jobs:
           sudo apt update -qq
           sudo apt install libcppunit-dev libbotan-2-dev p11-kit
       - name: Build
+        env:
+          CXXFLAGS: -Werror -DBOTAN_NO_DEPRECATED_WARNINGS
         run: |
           ./autogen.sh
           ./configure --with-crypto-backend=${{ matrix.backend }}
@@ -49,6 +51,8 @@ jobs:
         run: |
           brew install automake libtool cppunit botan@2
       - name: Build
+        env:
+          CXXFLAGS: -Werror -DBOTAN_NO_DEPRECATED_WARNINGS
         run: |
           ./autogen.sh
           ./configure --with-crypto-backend=${{ matrix.backend }} ${{ matrix.extra-options }}
