@@ -310,6 +310,8 @@ SymmetricAlgorithm* OSSLCryptoFactory::getSymmetricAlgorithm(SymAlgo::Type algor
 		case SymAlgo::DES:
 		case SymAlgo::DES3:
 			return new OSSLDES();
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
@@ -342,6 +344,8 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 		case AsymAlgo::EDDSA:
 			return new OSSLEDDSA();
 #endif
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
@@ -370,6 +374,8 @@ HashAlgorithm* OSSLCryptoFactory::getHashAlgorithm(HashAlgo::Type algorithm)
 		case HashAlgo::GOST:
 			return new OSSLGOSTR3411();
 #endif
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
@@ -402,6 +408,8 @@ MacAlgorithm* OSSLCryptoFactory::getMacAlgorithm(MacAlgo::Type algorithm)
 			return new OSSLCMACDES();
 		case MacAlgo::CMAC_AES:
 			return new OSSLCMACAES();
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available

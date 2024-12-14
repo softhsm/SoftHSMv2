@@ -62,13 +62,13 @@ public:
 	}
 
 	void startTest(CppUnit::Test *test) {
-		(test);
+		(void)test;
 		start = clock();
 	}
 
 	void endTestRun(CppUnit::Test *test,
 		CppUnit::TestResult *eventManager) {
-		(eventManager); (test);
+		(void)eventManager; (void)test;
 		end = clock();
 		duration= double(end - start)/ CLOCKS_PER_SEC;
 		CppUnit::stdCOut() << "duration " << TimeFormat(duration);
@@ -80,7 +80,7 @@ public:
 	}
 
 	void endTest(CPPUNIT_NS::Test *test) {
-		(test);
+		(void)test;
 	}
 
 	double durationTest() const {
@@ -89,7 +89,7 @@ public:
 private:
 	std::string TimeFormat(double time) {
 		char buffer[320];
-		::sprintf(buffer, "%6f", time);
+		snprintf(buffer, sizeof(buffer), "%6f", time);
 		return buffer;
 	}
 

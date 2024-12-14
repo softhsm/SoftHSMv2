@@ -227,8 +227,7 @@ std::string ByteString::hex_str() const
 
 	for (size_t i = 0; i < byteString.size(); i++)
 	{
-		sprintf(hex, "%02X", byteString[i]);
-
+		snprintf(hex, sizeof(hex), "%02X", byteString[i]);
 		rv += hex;
 	}
 

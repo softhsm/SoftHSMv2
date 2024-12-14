@@ -79,32 +79,6 @@ std::auto_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(NULL);
 
 #endif
 
-class MyProgressListener : public CppUnit::TextTestProgressListener
-{
-	void startTest(CppUnit::Test *test) {
-		bool t = true;
-	}
-
-	void endTestRun(CppUnit::Test *test,
-		CppUnit::TestResult *eventManager) {
-		bool t = true;
-	}
-private:
-	std::string m_name;
-};
-
-class MyListener : public CPPUNIT_NS::TestListener {
-        virtual void startTest( CPPUNIT_NS::Test*const pTest ) {
-                std::cout << std::endl << pTest->getName() << ' ' << pTest->countTestCases() << std::endl << std::endl;
-        }
-        virtual void addFailure( const CPPUNIT_NS::TestFailure & failure ) {
-                const CPPUNIT_NS::SourceLine solurceLine( failure.sourceLine() );
-                CPPUNIT_NS::Message message( failure.thrownException()->message() );
-                std::cout << solurceLine.fileName() << ' ' << solurceLine.lineNumber() << ' ' << message.shortDescription() << std::endl;
-                std::cout << message.details() << std::endl << std::endl;
-        }
-};
-
 int main(int /*argc*/, char** /*argv*/)
 {
 	CppUnit::TestResult controller;
@@ -115,9 +89,6 @@ int main(int /*argc*/, char** /*argv*/)
 
 	CppUnit::BriefTestProgressListener progressListener;
 	controller.addListener(&progressListener);
-
-	MyProgressListener progress;
-	controller.addListener(&progress);
 
 	runner.addTest(registry.makeTest());
 	runner.run(controller);
