@@ -39,6 +39,9 @@
 #include <cppunit/Message.h>
 #include <cppunit/Exception.h>
 #include <cppunit/XmlOutputter.h>
+#include <cppunit/TextOutputter.h>
+#include <cppunit/BriefTestProgressListener.h>
+#include <cppunit/TextTestProgressListener.h>
 #include <fstream>
 #include <stdlib.h>
 #include <iostream>
@@ -76,27 +79,16 @@ std::auto_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(NULL);
 
 #endif
 
-class MyListener : public CPPUNIT_NS::TestListener {
-        virtual void startTest( CPPUNIT_NS::Test*const pTest ) {
-                std::cout << std::endl << pTest->getName() << ' ' << pTest->countTestCases() << std::endl << std::endl;
-        }
-        virtual void addFailure( const CPPUNIT_NS::TestFailure & failure ) {
-                const CPPUNIT_NS::SourceLine solurceLine( failure.sourceLine() );
-                CPPUNIT_NS::Message message( failure.thrownException()->message() );
-                std::cout << solurceLine.fileName() << ' ' << solurceLine.lineNumber() << ' ' << message.shortDescription() << std::endl;
-                std::cout << message.details() << std::endl << std::endl;
-        }
-};
-
 int main(int /*argc*/, char** /*argv*/)
 {
 	CppUnit::TestResult controller;
 	CppUnit::TestResultCollector result;
 	CppUnit::TextUi::TestRunner runner;
 	controller.addListener(&result);
-	MyListener progress;
-	controller.addListener(&progress);
 	CppUnit::TestFactoryRegistry &registry = CppUnit::TestFactoryRegistry::getRegistry();
+
+	CppUnit::BriefTestProgressListener progressListener;
+	controller.addListener(&progressListener);
 
 	runner.addTest(registry.makeTest());
 	runner.run(controller);
@@ -104,6 +96,9 @@ int main(int /*argc*/, char** /*argv*/)
 	std::ofstream xmlFileOut("test-results.xml");
 	CppUnit::XmlOutputter xmlOut(&result, xmlFileOut);
 	xmlOut.write();
+
+	CppUnit::TextOutputter consoleOutputter(&result, std::cout);
+	consoleOutputter.write();
 
 	CryptoFactory::reset();
 

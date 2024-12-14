@@ -35,7 +35,7 @@
 #include "Generation.h"
 
 // Factory
-Generation* Generation::create(const std::string path, int umask, bool isToken /* = false */)
+Generation* Generation::create(const std::string path, int umask, bool isToken)
 {
 	Generation* gen = new Generation(path, umask, isToken);
 	if ((gen != NULL) && isToken && (gen->genMutex == NULL))
@@ -178,7 +178,7 @@ void Generation::commit()
 			return;
 		}
 
-		unsigned long onDisk;
+		unsigned long onDisk = 0;
 
 		bool bOK = true;
 

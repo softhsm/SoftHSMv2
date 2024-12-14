@@ -597,7 +597,7 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 	}
 
 	// Load the enabled list of algorithms
-	prepareSupportedMecahnisms(mechanisms_table);
+	prepareSupportedMechanisms(mechanisms_table);
 
 	isRemovable = Configuration::i()->getBool("slots.removable", false);
 
@@ -720,7 +720,7 @@ CK_RV SoftHSM::C_GetTokenInfo(CK_SLOT_ID slotID, CK_TOKEN_INFO_PTR pInfo)
 	return token->getTokenInfo(pInfo);
 }
 
-void SoftHSM::prepareSupportedMecahnisms(std::map<std::string, CK_MECHANISM_TYPE> &t)
+void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE> &t)
 {
 #ifndef WITH_FIPS
 	t["CKM_MD5"]			= CKM_MD5;
@@ -1124,17 +1124,21 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			break;
 #ifndef WITH_FIPS
 		case CKM_DES_CBC_PAD:
+			/* FALLTHROUGH */
 #endif
 		case CKM_DES3_CBC_PAD:
 			pInfo->flags = CKF_WRAP | CKF_UNWRAP;
-			// falls through
+			/* FALLTHROUGH */
 #ifndef WITH_FIPS
+			/* FALLTHROUGH - extra needed due to gcc issue. */
 		case CKM_DES_ECB:
+			/* FALLTHROUGH */
 		case CKM_DES_CBC:
+			/* FALLTHROUGH */
 #endif
 		case CKM_DES3_CBC:
 			pInfo->flags |= CKF_WRAP;
-			// falls through
+			/* FALLTHROUGH */
 		case CKM_DES3_ECB:
 			// Key size is not in use
 			pInfo->ulMinKeySize = 0;
@@ -1154,10 +1158,10 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			break;
 		case CKM_AES_CBC_PAD:
 			pInfo->flags = CKF_UNWRAP | CKF_WRAP;
-			// falls through
+			/* FALLTHROUGH */
 		case CKM_AES_CBC:
 			pInfo->flags |= CKF_WRAP;
-			// falls through
+			/* FALLTHROUGH */
 		case CKM_AES_ECB:
 		case CKM_AES_CTR:
 		case CKM_AES_GCM:
@@ -2652,12 +2656,17 @@ CK_RV SoftHSM::C_Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	if (pData == NULL_PTR) return CKR_ARGUMENTS_BAD;
-	if (pulEncryptedDataLen == NULL_PTR) return CKR_ARGUMENTS_BAD;
-
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	if ((pData == NULL_PTR) || (pulEncryptedDataLen == NULL_PTR))
+	{
+		// Fix issue 585
+		session->resetOp();
+
+		return CKR_ARGUMENTS_BAD;
+	}
 
 	// Check if we are doing the correct operation
 	if (session->getOpType() != SESSION_OP_ENCRYPT)
@@ -2748,12 +2757,16 @@ CK_RV SoftHSM::C_EncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	if (pData == NULL_PTR) return CKR_ARGUMENTS_BAD;
-	if (pulEncryptedDataLen == NULL_PTR) return CKR_ARGUMENTS_BAD;
-
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	if ((pData == NULL_PTR) || (pulEncryptedDataLen == NULL_PTR))
+	{
+		session->resetOp();
+
+		return CKR_ARGUMENTS_BAD;
+	}
 
 	// Check if we are doing the correct operation
 	if (session->getOpType() != SESSION_OP_ENCRYPT)
@@ -3391,12 +3404,16 @@ CK_RV SoftHSM::C_Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	if (pEncryptedData == NULL_PTR) return CKR_ARGUMENTS_BAD;
-	if (pulDataLen == NULL_PTR) return CKR_ARGUMENTS_BAD;
-
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	if ((pEncryptedData == NULL_PTR) || (pulDataLen == NULL_PTR))
+	{
+		session->resetOp();
+
+		return CKR_ARGUMENTS_BAD;
+	}
 
 	// Check if we are doing the correct operation
 	if (session->getOpType() != SESSION_OP_DECRYPT)
@@ -3491,12 +3508,16 @@ CK_RV SoftHSM::C_DecryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncrypte
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
 
-	if (pEncryptedData == NULL_PTR) return CKR_ARGUMENTS_BAD;
-	if (pDataLen == NULL_PTR) return CKR_ARGUMENTS_BAD;
-
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	if ((pEncryptedData == NULL_PTR) || (pDataLen == NULL_PTR))
+	{
+		session->resetOp();
+
+		return CKR_ARGUMENTS_BAD;
+	}
 
 	// Check if we are doing the correct operation
 	if (session->getOpType() != SESSION_OP_DECRYPT)
@@ -6809,12 +6830,13 @@ CK_RV SoftHSM::UnwrapKeySym
 		
 	default:
 		// Unwrap the key
-		CK_RV rv = CKR_OK;
+		rv = CKR_OK;
 		if (!cipher->unwrapKey(unwrappingkey, mode, wrapped, keydata))
 			rv = CKR_GENERAL_ERROR;
-		cipher->recycleKey(unwrappingkey);
-		CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
 	}
+
+	cipher->recycleKey(unwrappingkey);
+	CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
 	return rv;
 }
 

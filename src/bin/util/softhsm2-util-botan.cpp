@@ -68,15 +68,17 @@ int crypto_import_aes_key
 	size_t objIDLen
 )
 {
-	const size_t cMaxAesKeySize = 1024 + 1; // including null-character
+	const size_t cMaxAesKeySize = 1024;
 	char aesKeyValue[cMaxAesKeySize];
+	size_t aesKeyLength = 0;
 	FILE* fp = fopen(filePath, "rb");
 	if (fp == NULL)
 	{
 		fprintf(stderr, "ERROR: Could not open the secret key file.\n");
 		return 1;
 	}
-	if (fgets(aesKeyValue, cMaxAesKeySize, fp) == NULL)
+	aesKeyLength = fread(aesKeyValue, 1, cMaxAesKeySize, fp);
+	if (aesKeyLength == 0)
 	{
 		fprintf(stderr, "ERROR: Could not read the secret key file.\n");
 		fclose(fp);
@@ -96,7 +98,7 @@ int crypto_import_aes_key
 		{ CKA_ENCRYPT,          &ckTrue,      sizeof(ckTrue) },
 		{ CKA_DECRYPT,          &ckTrue,      sizeof(ckTrue) },
 		{ CKA_SENSITIVE,        &ckTrue,      sizeof(ckTrue) },
-        	{ CKA_VALUE,		&aesKeyValue, strlen(aesKeyValue) }
+        	{ CKA_VALUE,		&aesKeyValue, aesKeyLength }
 	};
 
 	CK_OBJECT_HANDLE hKey;

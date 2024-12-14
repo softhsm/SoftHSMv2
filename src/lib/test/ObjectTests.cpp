@@ -73,19 +73,6 @@
 #include <string.h>
 #include "ObjectTests.h"
 
-// Common object attributes
-const CK_BBOOL CKA_TOKEN_DEFAULT = CK_FALSE;
-//const CK_BBOOL CKA_PRIVATE_DEFAULT = <token/object attribute dependent>
-const CK_BBOOL CKA_MODIFIABLE_DEFAULT = CK_TRUE;
-const CK_UTF8CHAR_PTR CKA_LABEL_DEFAULT = NULL;
-const CK_BBOOL CKA_COPYABLE_DEFAULT = CK_TRUE;
-const CK_BBOOL CKA_DESTROYABLE_DEFAULT = CK_TRUE;
-
-// Data Object Attributes
-const CK_UTF8CHAR_PTR CKA_APPLICATION_DEFAULT = NULL;
-const CK_BYTE_PTR CKA_OBJECT_ID_DEFAULT = NULL;
-const CK_BYTE_PTR CKA_VALUE_DEFAULT = NULL;
-
 // CKA_TOKEN
 const CK_BBOOL ON_TOKEN = CK_TRUE;
 const CK_BBOOL IN_SESSION = CK_FALSE;
@@ -446,6 +433,52 @@ void ObjectTests::checkCommonPrivateKeyAttributes(CK_SESSION_HANDLE hSession, CK
 		CPPUNIT_ASSERT(memcmp(attribs[0].pValue, pSubject, ulSubjectLen) == 0);
 
 	free(attribs[0].pValue);
+}
+
+void ObjectTests::checkToTrueAttributes(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject)
+{
+	// Check Table 25 note 11 enforcement on CKA_WRAP_WITH_TRUSTED
+	CK_RV rv = CKR_OK;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_ATTRIBUTE wwt_to_false[] = {
+		{ CKA_WRAP_WITH_TRUSTED, &bFalse, sizeof(bFalse) }
+	};
+	CK_ATTRIBUTE wwt_to_true[] = {
+		{ CKA_WRAP_WITH_TRUSTED, &bTrue, sizeof(bTrue) }
+	};
+
+	// Default was CK_FALSE, so setting to CK_FALSE should work
+	rv = CRYPTOKI_F_PTR( C_SetAttributeValue(hSession, hObject, &wwt_to_false[0], 1) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Now set it to CK_TRUE
+	rv = CRYPTOKI_F_PTR( C_SetAttributeValue(hSession, hObject, &wwt_to_true[0], 1) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Once CK_TRUE, it cannot go back to CK_FALSE
+	rv = CRYPTOKI_F_PTR( C_SetAttributeValue(hSession, hObject, &wwt_to_false[0], 1) );
+	CPPUNIT_ASSERT(rv == CKR_ATTRIBUTE_READ_ONLY);
+
+	// Check Table 25 note 11 enforcement on CKA_SENSITIVE
+	CK_ATTRIBUTE sensitive_to_false[] = {
+		{ CKA_SENSITIVE, &bFalse, sizeof(bFalse) }
+	};
+	CK_ATTRIBUTE sensitive_to_true[] = {
+		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) }
+	};
+
+	// Default was CK_FALSE, so setting to CK_FALSE should work
+	rv = CRYPTOKI_F_PTR( C_SetAttributeValue(hSession, hObject, &sensitive_to_false[0], 1) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Now set it to CK_TRUE
+	rv = CRYPTOKI_F_PTR( C_SetAttributeValue(hSession, hObject, &sensitive_to_true[0], 1) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Once CK_TRUE, it cannot go back to CK_FALSE
+	rv = CRYPTOKI_F_PTR( C_SetAttributeValue(hSession, hObject, &sensitive_to_false[0], 1) );
+	CPPUNIT_ASSERT(rv == CKR_ATTRIBUTE_READ_ONLY);
 }
 
 void ObjectTests::checkCommonRSAPublicKeyAttributes(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject, CK_BYTE_PTR pModulus, CK_ULONG ulModulusLen, CK_ULONG ulModulusBits, CK_BYTE_PTR pPublicExponent, CK_ULONG ulPublicExponentLen)
@@ -1786,6 +1819,7 @@ void ObjectTests::testDefaultRSAPrivAttributes()
 	checkCommonKeyAttributes(hSession, hObject, objType, NULL_PTR, 0, emptyDate, 0, emptyDate, 0, CK_FALSE, CK_FALSE, CK_UNAVAILABLE_INFORMATION, NULL_PTR, 0);
 	checkCommonPrivateKeyAttributes(hSession, hObject, NULL_PTR, 0, CK_FALSE, CK_TRUE, CK_TRUE, CK_TRUE, CK_TRUE, CK_TRUE, CK_FALSE, CK_FALSE, CK_FALSE, NULL_PTR, 0, CK_FALSE);
 	checkCommonRSAPrivateKeyAttributes(hSession, hObject, pN, sizeof(pN), NULL_PTR, 0, pD, sizeof(pD), NULL_PTR, 0, NULL_PTR, 0, NULL_PTR, 0, NULL_PTR, 0, NULL_PTR, 0);
+	checkToTrueAttributes(hSession, hObject);
 }
 
 void ObjectTests::testAlwaysNeverAttribute()

@@ -311,13 +311,11 @@ SymmetricAlgorithm* OSSLCryptoFactory::getSymmetricAlgorithm(SymAlgo::Type algor
 		case SymAlgo::DES3:
 			return new OSSLDES();
 		default:
-			// No algorithm implementation is available
-			ERROR_MSG("Unknown algorithm '%i'", algorithm);
-
-			return NULL;
+			break;
 	}
 
 	// No algorithm implementation is available
+	ERROR_MSG("Unknown algorithm '%i'", algorithm);
 	return NULL;
 }
 
@@ -347,13 +345,11 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 			return new OSSLEDDSA();
 #endif
 		default:
-			// No algorithm implementation is available
-			ERROR_MSG("Unknown algorithm '%i'", algorithm);
-
-			return NULL;
+			break;
 	}
 
 	// No algorithm implementation is available
+	ERROR_MSG("Unknown algorithm '%i'", algorithm);
 	return NULL;
 }
 
@@ -379,13 +375,11 @@ HashAlgorithm* OSSLCryptoFactory::getHashAlgorithm(HashAlgo::Type algorithm)
 			return new OSSLGOSTR3411();
 #endif
 		default:
-			// No algorithm implementation is available
-			ERROR_MSG("Unknown algorithm '%i'", algorithm);
-
-			return NULL;
+			break;
 	}
 
 	// No algorithm implementation is available
+	ERROR_MSG("Unknown algorithm '%i'", algorithm);
 	return NULL;
 }
 
@@ -415,13 +409,11 @@ MacAlgorithm* OSSLCryptoFactory::getMacAlgorithm(MacAlgo::Type algorithm)
 		case MacAlgo::CMAC_AES:
 			return new OSSLCMACAES();
 		default:
-			// No algorithm implementation is available
-			ERROR_MSG("Unknown algorithm '%i'", algorithm);
-
-			return NULL;
+			break;
 	}
 
 	// No algorithm implementation is available
+	ERROR_MSG("Unknown algorithm '%i'", algorithm);
 	return NULL;
 }
 

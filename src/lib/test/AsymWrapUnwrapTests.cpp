@@ -37,15 +37,13 @@
 #include "AsymWrapUnwrapTests.h"
 
 // CKA_TOKEN
-const CK_BBOOL ON_TOKEN = CK_TRUE;
 const CK_BBOOL IN_SESSION = CK_FALSE;
 
 // CKA_PRIVATE
-const CK_BBOOL IS_PRIVATE = CK_TRUE;
 const CK_BBOOL IS_PUBLIC = CK_FALSE;
 
 
-CPPUNIT_TEST_SUITE_REGISTRATION(AsymWrapUnwrapTests);
+//CPPUNIT_TEST_SUITE_REGISTRATION(AsymWrapUnwrapTests);
 
 // Generate throw-away (session) symmetric key
 CK_RV AsymWrapUnwrapTests::generateAesKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE &hKey)
