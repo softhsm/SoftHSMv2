@@ -49,6 +49,16 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		AC_MSG_RESULT(no)
 	fi
 
+	# Option to disable usage engines
+
+	AC_ARG_ENABLE(openssl-engines,
+		AS_HELP_STRING([--disable-openssl-engines],
+			[Disable OpenSSL engines usage]
+		),
+		[enable_openssl_engines="${enableval}"],
+		[enable_openssl_engines="yes"]
+	)
+
 	# Then check what crypto library we want to use
 
 	AC_ARG_WITH(crypto-backend,
@@ -103,6 +113,22 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			ACX_OPENSSL_FIPS
 		else
 			ACX_OPENSSL_EVPAESWRAP
+		fi
+
+		AC_MSG_CHECKING(for OpenSSL engines support)
+		if test "x${enable_openssl_engines}" = "xyes"; then
+			ACX_OPENSSL_ENGINES
+			if test "x${have_lib_openssl_engines_support}" = "xyes"; then
+				AC_MSG_RESULT([yes])
+			else
+				AC_MSG_RESULT([no])
+				AC_DEFINE_UNQUOTED([WITHOUT_OPENSSL_ENGINES], [1],
+					[Compile without OpenSSL engines support as it is unavailable])
+			fi
+		else
+			AC_MSG_RESULT([disabled])
+			AC_DEFINE([WITHOUT_OPENSSL_ENGINES], [1],
+				[Compile without OpenSSL engines support as it is disabled])
 		fi
 
 		AC_DEFINE_UNQUOTED(
