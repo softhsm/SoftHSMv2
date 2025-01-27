@@ -437,7 +437,8 @@ void dump(FILE* stream)
 			}
 			printf("(length %lu)\n", (unsigned long) len);
 
-			if (len > 0) {
+			if (len > 0)
+			{
 				std::vector<uint8_t> value((size_t) len);
 				if (!readBytes(stream, value))
 				{
