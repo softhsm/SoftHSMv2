@@ -8,9 +8,9 @@ on:
   pull_request:
 
 jobs:
-  linux:
-    name: Linux (${{ matrix.backend }})
-    runs-on: ubuntu-20.04 # for OpenSSL 1.1.1
+  linux_ubuntu_20:
+    name: Linux Ubuntu 20.04 (${{ matrix.backend }})
+    runs-on: ubuntu-20.04 # for OpenSSL 1.1.1 and Botan 2.12
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +26,32 @@ jobs:
       - name: Build
         env:
           CXXFLAGS: -Werror -DBOTAN_NO_DEPRECATED_WARNINGS
+        run: |
+          ./autogen.sh
+          ./configure --with-crypto-backend=${{ matrix.backend }}
+          make
+      - name: Test
+        run: |
+          make check || (find . -name test-suite.log -exec cat {} \; && false)
+
+  linux_ubuntu_24:
+    name: Linux Ubuntu 24.04 (${{ matrix.backend }})
+    runs-on: ubuntu-24.04 # for OpenSSL 3.0 and Botan 2.19
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: openssl
+          - backend: botan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare
+        run: |
+          sudo apt update -qq
+          sudo apt install libcppunit-dev libbotan-2-dev p11-kit
+      - name: Build
+        env:
+          CXXFLAGS: -DBOTAN_NO_DEPRECATED_WARNINGS
         run: |
           ./autogen.sh
           ./configure --with-crypto-backend=${{ matrix.backend }}
