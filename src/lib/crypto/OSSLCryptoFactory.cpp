@@ -141,6 +141,7 @@ OSSLCryptoFactory::OSSLCryptoFactory()
 	// Initialise OpenSSL
 	OpenSSL_add_all_algorithms();
 
+#ifdef WITH_ENGINES
 #if !( OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER) )
 	// Make sure RDRAND is loaded first
 	ENGINE_load_rdrand();
@@ -161,11 +162,12 @@ OSSLCryptoFactory::OSSLCryptoFactory()
 			WARNING_MSG("ENGINE_set_default returned %lu\n", ERR_get_error());
 		}
 	}
+#endif
 
 	// Initialise the one-and-only RNG
 	rng = new OSSLRNG();
 
-#ifdef WITH_GOST
+#if defined(WITH_ENGINES) && defined(WITH_GOST)
 	// Load engines
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	ENGINE_load_builtin_engines();
@@ -228,7 +230,7 @@ OSSLCryptoFactory::~OSSLCryptoFactory()
 {
 	bool ossl_shutdown = false;
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if defined(WITH_ENGINES) && OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
 	// OpenSSL 1.1.0+ will register an atexit() handler to run
 	// OPENSSL_cleanup(). If that has already happened we must
 	// not attempt to free any ENGINEs because they'll already
@@ -243,6 +245,7 @@ OSSLCryptoFactory::~OSSLCryptoFactory()
 #endif
 	if (!ossl_shutdown)
 	{
+#ifdef WITH_ENGINES
 #ifdef WITH_GOST
 		// Finish the GOST engine
 		if (eg != NULL)
@@ -257,6 +260,7 @@ OSSLCryptoFactory::~OSSLCryptoFactory()
 		ENGINE_finish(rdrand_engine);
 		ENGINE_free(rdrand_engine);
 		rdrand_engine = NULL;
+#endif
 
 		// Recycle locks
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
