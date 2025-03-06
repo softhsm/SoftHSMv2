@@ -761,8 +761,20 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 		case AsymMech::RSA_PKCS:
 			eme = "PKCS1v15";
 			break;
-		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
+		case AsymMech::RSA_PKCS_OAEP_SHA1:
+			eme = "EME1(SHA-1)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA224:
+			eme = "EME1(SHA-224)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA256:
+			eme = "EME1(SHA-256)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA384:
+			eme = "EME1(SHA-384)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA512:
+			eme = "EME1(SHA-512)";
 			break;
 		case AsymMech::RSA:
 			eme = "Raw";
@@ -855,8 +867,20 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		case AsymMech::RSA_PKCS:
 			eme = "PKCS1v15";
 			break;
-		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
+		case AsymMech::RSA_PKCS_OAEP_SHA1:
+			eme = "EME1(SHA-1)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA224:
+			eme = "EME1(SHA-224)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA256:
+			eme = "EME1(SHA-256)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA384:
+			eme = "EME1(SHA-384)";
+			break;
+		case AsymMech::RSA_PKCS_OAEP_SHA512:
+			eme = "EME1(SHA-512)";
 			break;
 		case AsymMech::RSA:
 			eme = "Raw";

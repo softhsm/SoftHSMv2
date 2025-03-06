@@ -2668,6 +2668,7 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism;
+	unsigned long expectedMgf;
 	bool isRSA = false;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -2689,7 +2690,37 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 			if (rv != CKR_OK)
 				return rv;
 
-			mechanism = AsymMech::RSA_PKCS_OAEP;
+			switch(CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg) {
+				case CKM_SHA_1:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA1;
+					expectedMgf = CKG_MGF1_SHA1;
+					break;
+				case CKM_SHA224:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA224;
+					expectedMgf = CKG_MGF1_SHA224;
+					break;
+				case CKM_SHA256:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA256;
+					expectedMgf = CKG_MGF1_SHA256;
+					break;
+				case CKM_SHA384:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA384;
+					expectedMgf = CKG_MGF1_SHA384;
+					break;
+				case CKM_SHA512:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA512;
+					expectedMgf = CKG_MGF1_SHA512;
+					break;
+				default:
+					DEBUG_MSG("hashAlg must be one of: CKM_SHA_1, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512");
+					return CKR_ARGUMENTS_BAD;
+			}
+
+			if(CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->mgf != expectedMgf) {
+				ERROR_MSG("Hash and MGF don't match");
+				return CKR_ARGUMENTS_BAD;
+			}
+
 			isRSA = true;
 			break;
 		default:
@@ -3455,6 +3486,7 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism = AsymMech::Unknown;
+	unsigned long expectedMgf;
 	bool isRSA = false;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -3478,18 +3510,38 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				DEBUG_MSG("pParameter must be of type CK_RSA_PKCS_OAEP_PARAMS");
 				return CKR_ARGUMENTS_BAD;
 			}
-			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA_1)
-			{
-				DEBUG_MSG("hashAlg must be CKM_SHA_1");
-				return CKR_ARGUMENTS_BAD;
+
+			switch(CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg) {
+				case CKM_SHA_1:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA1;
+					expectedMgf = CKG_MGF1_SHA1;
+					break;
+				case CKM_SHA224:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA224;
+					expectedMgf = CKG_MGF1_SHA224;
+					break;
+				case CKM_SHA256:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA256;
+					expectedMgf = CKG_MGF1_SHA256;
+					break;
+				case CKM_SHA384:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA384;
+					expectedMgf = CKG_MGF1_SHA384;
+					break;
+				case CKM_SHA512:
+					mechanism = AsymMech::RSA_PKCS_OAEP_SHA512;
+					expectedMgf = CKG_MGF1_SHA512;
+					break;
+				default:
+					DEBUG_MSG("hashAlg must be one of: CKM_SHA_1, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512");
+					return CKR_ARGUMENTS_BAD;
 			}
-			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA1)
-			{
-				DEBUG_MSG("mgf must be CKG_MGF1_SHA1");
+
+			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->mgf != expectedMgf) {
+				ERROR_MSG("Hash and MGF don't match");
 				return CKR_ARGUMENTS_BAD;
 			}
 
-			mechanism = AsymMech::RSA_PKCS_OAEP;
 			isRSA = true;
 			break;
 		default:
@@ -4422,7 +4474,7 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 
 CK_RV SoftHSM::GmacSignInit(Token* token, Session* session, CK_MECHANISM_PTR pMechanism, OSObject *key)
 {
-	
+
 	// Get key info
 	CK_KEY_TYPE keyType = key->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED);
 
@@ -4475,7 +4527,7 @@ CK_RV SoftHSM::GmacSignInit(Token* token, Session* session, CK_MECHANISM_PTR pMe
 		CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
 		return CKR_MECHANISM_INVALID;
 	}
-	
+
 	session->setOpType(SESSION_OP_SIGN);
 	session->setSymmetricCryptoOp(cipher);
 	session->setAllowMultiPartOp(false);
@@ -4537,7 +4589,7 @@ CK_RV SoftHSM::GmacVerifyInit(Token* token, Session* session, CK_MECHANISM_PTR p
 		CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
 		return CKR_MECHANISM_INVALID;
 	}
-	
+
 	session->setOpType(SESSION_OP_VERIFY);
 	session->setSymmetricCryptoOp(cipher);
 	session->setAllowMultiPartOp(false);
@@ -5100,7 +5152,7 @@ static CK_RV GmacSign(Session* session, CK_BYTE_PTR pSignature, CK_ULONG_PTR pul
 		*pulSignatureLen = maxSize;
 		return CKR_BUFFER_TOO_SMALL;
 	}
-	
+
 	// Finalize encryption
 	ByteString encryptedData;
 	if (!cipher->encryptFinal(encryptedData))
@@ -5203,7 +5255,7 @@ CK_RV SoftHSM::C_Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG ul
 	if (mockReturnCode != CKR_OK) {
 		return mockErrorCode;
 	}
-	
+
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
@@ -5213,7 +5265,7 @@ CK_RV SoftHSM::C_Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG ul
 		if (pData == NULL_PTR) return CKR_ARGUMENTS_BAD;
 		if (pulSignatureLen == NULL_PTR) return CKR_ARGUMENTS_BAD;
 	}
-	
+
 	// Check if we are doing the correct operation
 	if (session->getOpType() != SESSION_OP_SIGN)
 		return CKR_OPERATION_NOT_INITIALIZED;
@@ -6243,7 +6295,7 @@ CK_RV SoftHSM::C_Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG 
 		return mockErrorCode;
 	}
 
-	
+
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
@@ -6987,23 +7039,23 @@ CK_RV SoftHSM::WrapKeySym
 		case CKM_AES_CBC:
 			algo = SymAlgo::AES;
 			break;
-			
+
 		case CKM_AES_CBC_PAD:
 			blocksize = 16;
 			wrappedlen = RFC5652Pad(keydata, blocksize);
 			algo = SymAlgo::AES;
 			break;
-			
+
 		case CKM_DES3_CBC:
 			algo = SymAlgo::DES3;
 			break;
-			
+
 		case CKM_DES3_CBC_PAD:
 			blocksize = 8;
 			wrappedlen = RFC5652Pad(keydata, blocksize);
 			algo = SymAlgo::DES3;
 			break;
-			
+
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -7033,7 +7085,7 @@ CK_RV SoftHSM::WrapKeySym
 	        case CKM_DES3_CBC_PAD:
 			iv.resize(blocksize);
 			memcpy(&iv[0], pMechanism->pParameter, blocksize);
-			
+
 			if (!cipher->encryptInit(wrappingkey, SymMode::CBC, iv, false))
 			{
 				cipher->recycleKey(wrappingkey);
@@ -7083,6 +7135,7 @@ CK_RV SoftHSM::WrapKeyAsym
 	const size_t bb = 8;
 	AsymAlgo::Type algo = AsymAlgo::Unknown;
 	AsymMech::Type mech = AsymMech::Unknown;
+	unsigned long expectedMgf;
 
 	CK_ULONG modulus_length;
 	switch(pMechanism->mechanism) {
@@ -7109,11 +7162,51 @@ CK_RV SoftHSM::WrapKeyAsym
 			break;
 
 		case CKM_RSA_PKCS_OAEP:
-			mech = AsymMech::RSA_PKCS_OAEP;
-			// SHA-1 is the only supported option
-			// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
-			if (keydata.size() > modulus_length - 2 - 2 * 160 / 8)
-				return CKR_KEY_SIZE_RANGE;
+			switch(CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg) {
+				case CKM_SHA_1:
+					mech = AsymMech::RSA_PKCS_OAEP_SHA1;
+					expectedMgf = CKG_MGF1_SHA1;
+					// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
+					if (keydata.size() > modulus_length - 2 - 2 * 160 / 8)
+						return CKR_KEY_SIZE_RANGE;
+					break;
+				case CKM_SHA224:
+					mech = AsymMech::RSA_PKCS_OAEP_SHA224;
+					expectedMgf = CKG_MGF1_SHA224;
+					// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
+					if (keydata.size() > modulus_length - 2 - 2 * 224 / 8)
+						return CKR_KEY_SIZE_RANGE;
+					break;
+				case CKM_SHA256:
+					mech = AsymMech::RSA_PKCS_OAEP_SHA256;
+					expectedMgf = CKG_MGF1_SHA256;
+					// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
+					if (keydata.size() > modulus_length - 2 - 2 * 256 / 8)
+						return CKR_KEY_SIZE_RANGE;
+					break;
+				case CKM_SHA384:
+					mech = AsymMech::RSA_PKCS_OAEP_SHA384;
+					expectedMgf = CKG_MGF1_SHA384;
+					// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
+					if (keydata.size() > modulus_length - 2 - 2 * 384 / 8)
+						return CKR_KEY_SIZE_RANGE;
+					break;
+				case CKM_SHA512:
+					mech = AsymMech::RSA_PKCS_OAEP_SHA512;
+					expectedMgf = CKG_MGF1_SHA512;
+					// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
+					if (keydata.size() > modulus_length - 2 - 2 * 512 / 8)
+						return CKR_KEY_SIZE_RANGE;
+					break;
+				default:
+					return CKR_MECHANISM_INVALID;
+			}
+
+			if(CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->mgf != expectedMgf) {
+				ERROR_MSG("Hash and MGF don't match");
+				return CKR_ARGUMENTS_BAD;
+			}
+
 			break;
 
 		default:
@@ -7567,7 +7660,7 @@ CK_RV SoftHSM::UnwrapKeySym
 	SymWrap::Type mode = SymWrap::Unknown;
 	size_t bb = 8;
 	size_t blocksize = 0;
-	
+
 	switch(pMechanism->mechanism) {
 #ifdef HAVE_AES_KEY_WRAP
 		case CKM_AES_KEY_WRAP:
@@ -7585,12 +7678,12 @@ CK_RV SoftHSM::UnwrapKeySym
 			algo = SymAlgo::AES;
 			blocksize = 16;
 			break;
-			
+
 	        case CKM_DES3_CBC_PAD:
 			algo = SymAlgo::DES3;
 			blocksize = 8;
 		        break;
-		  
+
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -7613,14 +7706,14 @@ CK_RV SoftHSM::UnwrapKeySym
 	ByteString iv;
 	ByteString decryptedFinal;
 	CK_RV rv = CKR_OK;
-	
+
 	switch(pMechanism->mechanism) {
 
 	case CKM_AES_CBC_PAD:
 	case CKM_DES3_CBC_PAD:
 		iv.resize(blocksize);
 		memcpy(&iv[0], pMechanism->pParameter, blocksize);
-			
+
 		if (!cipher->decryptInit(unwrappingkey, SymMode::CBC, iv, false))
 		{
 			cipher->recycleKey(unwrappingkey);
@@ -7649,7 +7742,7 @@ CK_RV SoftHSM::UnwrapKeySym
 			return CKR_GENERAL_ERROR; // TODO should be another error
 		}
 		break;
-		
+
 	default:
 		// Unwrap the key
 		rv = CKR_OK;
@@ -7676,6 +7769,7 @@ CK_RV SoftHSM::UnwrapKeyAsym
 	// Get the symmetric algorithm matching the mechanism
 	AsymAlgo::Type algo = AsymAlgo::Unknown;
 	AsymMech::Type mode = AsymMech::Unknown;
+	unsigned long expectedMgf;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
 			algo = AsymAlgo::RSA;
@@ -7684,7 +7778,35 @@ CK_RV SoftHSM::UnwrapKeyAsym
 
 		case CKM_RSA_PKCS_OAEP:
 			algo = AsymAlgo::RSA;
-			mode = AsymMech::RSA_PKCS_OAEP;
+			switch(CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg) {
+				case CKM_SHA_1:
+					mode = AsymMech::RSA_PKCS_OAEP_SHA1;
+					expectedMgf = CKG_MGF1_SHA1;
+					break;
+				case CKM_SHA224:
+					mode = AsymMech::RSA_PKCS_OAEP_SHA224;
+					expectedMgf = CKG_MGF1_SHA224;
+					break;
+				case CKM_SHA256:
+					mode = AsymMech::RSA_PKCS_OAEP_SHA256;
+					expectedMgf = CKG_MGF1_SHA256;
+					break;
+				case CKM_SHA384:
+					mode = AsymMech::RSA_PKCS_OAEP_SHA384;
+					expectedMgf = CKG_MGF1_SHA384;
+					break;
+				case CKM_SHA512:
+					mode = AsymMech::RSA_PKCS_OAEP_SHA512;
+					expectedMgf = CKG_MGF1_SHA512;
+					break;
+				default:
+					return CKR_MECHANISM_INVALID;
+			}
+
+			if (CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != expectedMgf) {
+				ERROR_MSG("Hash and MGF don't match");
+				return CKR_ARGUMENTS_BAD;
+			}
 			break;
 
 		default:
@@ -7945,7 +8067,7 @@ CK_RV SoftHSM::C_UnwrapKey
                             pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
 			break;
-			
+
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -7989,7 +8111,7 @@ CK_RV SoftHSM::C_UnwrapKey
 	if (pMechanism->mechanism == CKM_DES3_CBC && (unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES2 ||
 		unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES3))
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	
+
 	// Check if the unwrapping key can be used for unwrapping
 	if (unwrapKey->getBooleanValue(CKA_UNWRAP, false) == false)
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
@@ -8824,11 +8946,11 @@ CK_RV SoftHSM::generateAES
 	if (rv == CKR_OK)
 	{
 		OSObject* osobject = (OSObject*)handleManager->getObject(*phKey);
-		if (osobject == NULL_PTR || !osobject->isValid()) 
+		if (osobject == NULL_PTR || !osobject->isValid())
         {
 			rv = CKR_FUNCTION_FAILED;
-		} 
-        else if (osobject->startTransaction()) 
+		}
+        else if (osobject->startTransaction())
         {
 			bool bOK = true;
 
@@ -14030,14 +14152,22 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 	}
 
 	CK_RSA_PKCS_OAEP_PARAMS_PTR params = (CK_RSA_PKCS_OAEP_PARAMS_PTR)pMechanism->pParameter;
-	if (params->hashAlg != CKM_SHA_1)
+	if (params->hashAlg != CKM_SHA_1 &&
+	    params->hashAlg != CKM_SHA224 &&
+	    params->hashAlg != CKM_SHA256 &&
+	    params->hashAlg != CKM_SHA384 &&
+	    params->hashAlg != CKM_SHA512)
 	{
-		ERROR_MSG("hashAlg must be CKM_SHA_1");
+		ERROR_MSG("hashAlg must be one of: CKM_SHA_1, CKM_SHA224, CKM_SHA256, CKM_SHA384, CKM_SHA512");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->mgf != CKG_MGF1_SHA1)
+	if (params->mgf != CKG_MGF1_SHA1 &&
+	    params->mgf != CKG_MGF1_SHA224 &&
+	    params->mgf != CKG_MGF1_SHA256 &&
+	    params->mgf != CKG_MGF1_SHA384 &&
+	    params->mgf != CKG_MGF1_SHA512)
 	{
-		ERROR_MSG("mgf must be CKG_MGF1_SHA1");
+		ERROR_MSG("mgf must be onf of: CKG_MGF1_SHA1, CKM_MGF1_SHA224, CKM_MGF1_SHA256, CKM_MGF1_SHA384, CKM_MGF1_SHA512");
 		return CKR_ARGUMENTS_BAD;
 	}
 	if (params->source != CKZ_DATA_SPECIFIED)
