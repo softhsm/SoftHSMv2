@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2010 SURFnet bv
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*****************************************************************************
+ MLDSAParameters.h
+
+ ML-DSA parameters (only used for key generation)
+ *****************************************************************************/
+
+#ifndef _SOFTHSM_V2_MLDSAPARAMETERS_H
+#define _SOFTHSM_V2_MLDSAPARAMETERS_H
+
+#include <tuple>
+#include <stdexcept>
+#include "config.h"
+#include "ByteString.h"
+#include "AsymmetricParameters.h"
+
+
+class MLDSAParameters : public AsymmetricParameters
+{
+public:
+	// The type
+	static const char* type;
+
+	// Get the ML-DSA parameter set
+	virtual unsigned long getParameterSet() const;
+
+	// Setters for the ML-DSA parameter set
+	virtual void setParameterSet(const unsigned long parameterSet);
+
+	// Are the parameters of the given type?
+	virtual bool areOfType(const char* inType);
+
+	// Serialisation
+	virtual ByteString serialise() const;
+	virtual bool deserialise(ByteString& serialised);
+
+	static const unsigned long ML_DSA_44_PARAMETER_SET = 1;
+	static const unsigned long ML_DSA_65_PARAMETER_SET = 2;
+	static const unsigned long ML_DSA_87_PARAMETER_SET = 3;
+
+	/*
+	From https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.204.pdf
+	Table 2. Sizes (in bytes) of keys and signatures of ML-DSA
+						Private Key | Public Key | Signature Size
+			ML-DSA-44      2560     |    1312    |     2420
+			ML-DSA-65      4032     |    1952    |     3309
+			ML-DSA-87      4896     |    2592    |     4627
+	*/
+	
+	static const unsigned long ML_DSA_44_PUB_LENGTH = 1312;
+	static const unsigned long ML_DSA_65_PUB_LENGTH = 1952;
+	static const unsigned long ML_DSA_87_PUB_LENGTH = 2592;
+
+	static const unsigned long ML_DSA_44_PRIV_LENGTH = 2560;
+	static const unsigned long ML_DSA_65_PRIV_LENGTH = 4032;
+	static const unsigned long ML_DSA_87_PRIV_LENGTH = 4896;
+
+	static const unsigned long ML_DSA_44_SIGNATURE_LENGTH = 2420;
+	static const unsigned long ML_DSA_65_SIGNATURE_LENGTH = 3309;
+	static const unsigned long ML_DSA_87_SIGNATURE_LENGTH = 4627;
+
+	static const unsigned long ML_DSA_POLY_T1_PACKED_BYTES = 320;
+    static const unsigned long ML_DSA_POLY_T0_PACKED_BYTES = 416;
+
+	static std::tuple<unsigned long, unsigned long, unsigned long> getPrivateKeyParametersLengths(unsigned long privLength) {
+		switch (privLength)
+		{
+			case ML_DSA_44_PRIV_LENGTH:
+				return {4, 4, 96};
+			case ML_DSA_65_PRIV_LENGTH:
+				return {6, 5, 128};
+			case ML_DSA_87_PRIV_LENGTH:
+				return {8, 7, 96};
+		}
+		throw std::invalid_argument("privLength");
+	}
+
+private:
+	unsigned long parameterSet;
+
+};
+
+#endif // !_SOFTHSM_V2_ECPARAMETERS_H
+

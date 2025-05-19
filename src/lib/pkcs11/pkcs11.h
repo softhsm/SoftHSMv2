@@ -405,6 +405,8 @@ typedef unsigned long ck_key_type_t;
 #define CKK_GOSTR3411		(0x31UL)
 #define CKK_GOST28147		(0x32UL)
 #define CKK_EC_EDWARDS		(0x40UL)
+#define CKK_ML_KEM        (0x49UL)
+#define CKK_ML_DSA        (0x4aUL)
 #define CKK_VENDOR_DEFINED	((unsigned long) (1UL << 31))
 
 
@@ -525,6 +527,7 @@ typedef unsigned long ck_attribute_type_t;
 #define CKA_UNWRAP_TEMPLATE		(CKF_ARRAY_ATTRIBUTE | 0x212UL)
 #define CKA_DERIVE_TEMPLATE		(CKF_ARRAY_ATTRIBUTE | 0x213UL)
 #define CKA_ALLOWED_MECHANISMS		(CKF_ARRAY_ATTRIBUTE | 0x600UL)
+#define CKA_PARAMETER_SET               (0x61dUL)
 #define CKA_VENDOR_DEFINED		((unsigned long) (1UL << 31))
 
 
@@ -889,6 +892,24 @@ typedef unsigned long ck_mechanism_type_t;
 /* From version 3.0 */
 #define CKM_EC_EDWARDS_KEY_PAIR_GEN	(0x1055UL)
 #define CKM_EDDSA			(0x1057UL)
+
+/* From version 3.2 */
+#define CKM_ML_KEM_KEY_PAIR_GEN        (0x0fUL)
+#define CKM_ML_KEM                     (0x17UL)
+
+#define CKM_ML_DSA_KEY_PAIR_GEN        (0x1cUL)
+#define CKM_ML_DSA                     (0x1dUL)
+#define CKM_HASH_ML_DSA                (0x1fUL)
+#define CKM_HASH_ML_DSA_SHA224         (0x23UL)
+#define CKM_HASH_ML_DSA_SHA256         (0x24UL)
+#define CKM_HASH_ML_DSA_SHA384         (0x25UL)
+#define CKM_HASH_ML_DSA_SHA512         (0x26UL)
+#define CKM_HASH_ML_DSA_SHA3_224       (0x27UL)
+#define CKM_HASH_ML_DSA_SHA3_256       (0x28UL)
+#define CKM_HASH_ML_DSA_SHA3_384       (0x29UL)
+#define CKM_HASH_ML_DSA_SHA3_512       (0x2aUL)
+#define CKM_HASH_ML_DSA_SHAKE128       (0x2bUL)
+#define CKM_HASH_ML_DSA_SHAKE256       (0x2cUL)
 
 /* Attribute and other constants related to OTP */
 #define CK_OTP_FORMAT_DECIMAL		(0UL)
@@ -1541,6 +1562,18 @@ struct ck_c_initialize_args
 #define CKR_PIN_TOO_WEAK			(0x1c3UL)
 #define CKR_PUBLIC_KEY_INVALID			(0x1c4UL)
 #define CKR_FUNCTION_REJECTED			(0x200UL)
+
+#define CKR_TOKEN_RESOURCE_EXCEEDED           (0x201UL)
+#define CKR_OPERATION_CANCEL_FAILED           (0x202UL)
+#define CKR_KEY_EXHAUSTED                     (0x203UL)
+
+#define CKR_PENDING                           (0x204UL)
+#define CKR_SESSION_ASYNC_NOT_SUPPORTED       (0x205UL)
+#define CKR_SEED_RANDOM_REQUIRED              (0x206UL)
+#define CKR_OPERATION_NOT_VALIDATED           (0x207UL)
+#define CKR_TOKEN_NOT_INITIALIZED             (0x208UL)
+#define CKR_PARAMETER_SET_NOT_SUPPORTED       (0x209UL)
+
 #define CKR_VENDOR_DEFINED			((unsigned long) (1UL << 31))
 
 

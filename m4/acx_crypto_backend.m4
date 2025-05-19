@@ -28,6 +28,16 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		[enable_eddsa="detect"]
 	)
 
+	# Add ML-DSA check
+
+	AC_ARG_ENABLE(eddsa,
+		AS_HELP_STRING([--enable-mldsa],
+			[Enable support for ML-DSA (default detect)]
+		),
+		[enable_mldsa="${enableval}"],
+		[enable_mldsa="detect"]
+	)
+
 	# Second check for the FIPS 140-2 mode
 
 	AC_ARG_ENABLE(fips,
@@ -102,6 +112,14 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			detect*-no*) enable_eddsa="no";;
 		esac
 
+		case "${enable_mldsa}" in
+			yes|detect) ACX_OPENSSL_MLDSA;;
+		esac
+		case "${enable_mldsa}-${have_lib_openssl_mldsa_support}" in
+			yes-no) AC_MSG_ERROR([OpenSSL library has no ML-DSA support]);;
+			detect-*) enable_mldsa="${have_lib_openssl_mldsa_support}";;
+		esac
+
 		case "${enable_gost}-${enable_fips}" in
 			yes-yes) AC_MSG_ERROR([GOST is not FIPS approved]);;
 			yes-no|detect-no) ACX_OPENSSL_GOST;;
@@ -168,6 +186,14 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			detect-*) enable_eddsa="${have_lib_botan_eddsa_support}";;
 		esac
 
+		case "${enable_mldsa}" in
+			yes|detect) ACX_BOTAN_MLDSA;;
+		esac
+		case "${enable_mldsa}-${have_lib_botan_mldsa_support}" in
+			yes-no) AC_MSG_ERROR([Botan library has no ML-DSA support]);;
+			detect-*) enable_mldsa="${have_lib_botan_mldsa_support}";;
+		esac
+
 		case "${enable_gost}" in
 			yes|detect) ACX_BOTAN_GOST;;
 		esac
@@ -232,6 +258,19 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		AC_MSG_RESULT(no)
 	fi
 	AM_CONDITIONAL([WITH_EDDSA], [test "x${enable_eddsa}" = "xyes"])
+
+	AC_MSG_CHECKING(for ML-DSA support)
+	if test "x${enable_mldsa}" = "xyes"; then
+		AC_MSG_RESULT(yes)
+		AC_DEFINE_UNQUOTED(
+			[WITH_MLDSA],
+			[],
+			[Compile with ML-DSA support]
+		)
+	else
+		AC_MSG_RESULT(no)
+	fi
+	AM_CONDITIONAL([WITH_MLDSA], [test "x${enable_mldsa}" = "xyes"])
 
 
 	AC_SUBST(CRYPTO_INCLUDES)

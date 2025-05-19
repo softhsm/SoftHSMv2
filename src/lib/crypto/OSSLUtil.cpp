@@ -34,6 +34,7 @@
 #include "log.h"
 #include "DerUtil.h"
 #include "OSSLUtil.h"
+#include "MLDSAParameters.h"
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -204,6 +205,22 @@ int OSSL::byteString2oid(const ByteString& byteString)
 		{
 			return EVP_PKEY_X448;
 		}
+	}
+
+	return NID_undef;
+}
+#endif
+
+#ifdef WITH_EDDSA
+int OSSL::parameterSet2Nid(unsigned long parameterSet) {
+
+	switch(parameterSet) {
+		case MLDSAParameters::ML_DSA_44_PARAMETER_SET:
+			return EVP_PKEY_ML_DSA_44;
+		case MLDSAParameters::ML_DSA_65_PARAMETER_SET:
+			return EVP_PKEY_ML_DSA_65;
+		case MLDSAParameters::ML_DSA_87_PARAMETER_SET:
+			return EVP_PKEY_ML_DSA_87;
 	}
 
 	return NID_undef;
