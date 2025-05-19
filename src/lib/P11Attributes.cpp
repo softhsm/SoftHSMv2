@@ -2282,6 +2282,17 @@ bool P11AttrEcPoint::setDefault()
 }
 
 /*****************************************
+ * CKA_PARAMETER_SET
+ *****************************************/
+
+// Set default value
+bool P11AttrParameterSet::setDefault()
+{
+	OSAttribute attr(ByteString(0UL));
+	return osobject->setAttribute(type, attr);
+}
+
+/*****************************************
  * CKA_GOSTR3410_PARAMS
  *****************************************/
 
@@ -2575,5 +2586,45 @@ CK_RV P11AttrAllowedMechanisms::updateAttr(Token* /*token*/, bool /*isPrivate*/,
 
 	// Store data
 	osobject->setAttribute(type, OSAttribute(data));
+	return CKR_OK;
+}
+
+/*****************************************
+ * CKA_SEED
+ *****************************************/
+
+// Set default value
+bool P11AttrSeed::setDefault()
+{
+	OSAttribute attr(ByteString(""));
+	return osobject->setAttribute(type, attr);
+}
+
+// Update the value if allowed
+CK_RV P11AttrSeed::updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op)
+{
+	ByteString plaintext((unsigned char*)pValue, ulValueLen);
+	DEBUG_MSG("P11AttrSeed plaintext: %s", plaintext.hex_str().c_str());
+	ByteString value;
+
+	// Encrypt
+
+	if (isPrivate)
+	{
+		if (!token->encrypt(plaintext, value))
+			return CKR_GENERAL_ERROR;
+	}
+	else
+		value = plaintext;
+
+	// Attribute specific checks
+
+	if (value.size() < ulValueLen)
+		return CKR_GENERAL_ERROR;
+
+	// Store data
+
+	osobject->setAttribute(type, value);
+
 	return CKR_OK;
 }
