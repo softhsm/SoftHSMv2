@@ -35,7 +35,11 @@
 
 #include "config.h"
 #include "DHPublicKey.h"
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 #include <openssl/dh.h>
+#else
+#include <openssl/evp.h>
+#endif
 
 class OSSLDHPublicKey : public DHPublicKey
 {
@@ -43,7 +47,11 @@ public:
 	// Constructors
 	OSSLDHPublicKey();
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 	OSSLDHPublicKey(const DH* inDH);
+#else
+	OSSLDHPublicKey(const EVP_PKEY* inDH);
+#endif
 
 	// Destructor
 	virtual ~OSSLDHPublicKey();
@@ -59,15 +67,30 @@ public:
 	virtual void setG(const ByteString& inG);
 	virtual void setY(const ByteString& inY);
 
-	// Set from OpenSSL representation
-	virtual void setFromOSSL(const DH* inDH);
-
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 	// Retrieve the OpenSSL representation of the key
 	DH* getOSSLKey();
 
+	// Set from OpenSSL representation
+	virtual void setFromOSSL(const DH* inDH);
+#else
+	// Retrieve the OpenSSL representation of the key
+	EVP_PKEY* getOSSLKey();
+
+	// Set from OpenSSL representation
+	virtual void setFromOSSL(const EVP_PKEY* inDH);
+#endif
+
 private:
 	// The internal OpenSSL representation
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 	DH* dh;
+#else
+	EVP_PKEY* dh;
+#endif
+
+	/* Reset OpenSSL representation of the key */
+	void resetOSSLKey();
 
 	// Create the OpenSSL representation of the key
 	void createOSSLKey();
