@@ -37,13 +37,14 @@
 #include "AsymWrapUnwrapTests.h"
 
 // CKA_TOKEN
+const CK_BBOOL ON_TOKEN = CK_TRUE;
 const CK_BBOOL IN_SESSION = CK_FALSE;
 
 // CKA_PRIVATE
 const CK_BBOOL IS_PUBLIC = CK_FALSE;
+const CK_BBOOL IS_PRIVATE = CK_TRUE;
 
-
-//CPPUNIT_TEST_SUITE_REGISTRATION(AsymWrapUnwrapTests);
+CPPUNIT_TEST_SUITE_REGISTRATION(AsymWrapUnwrapTests);
 
 // Generate throw-away (session) symmetric key
 CK_RV AsymWrapUnwrapTests::generateAesKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE &hKey)
@@ -70,16 +71,21 @@ CK_RV AsymWrapUnwrapTests::generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK_BBO
 {
 	CK_MECHANISM mechanism = { CKM_RSA_PKCS_KEY_PAIR_GEN, NULL_PTR, 0 };
 	CK_ULONG bits = 1536;
+	CK_OBJECT_CLASS pubClass = CKO_PUBLIC_KEY;
+	CK_OBJECT_CLASS pvtClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE keyType = CKK_RSA;
 	CK_BYTE pubExp[] = {0x01, 0x00, 0x01};
 	CK_BYTE subject[] = { 0x12, 0x34 }; // dummy
 	CK_BYTE id[] = { 123 } ; // dummy
-	CK_BBOOL bFalse = CK_FALSE;
+	// CK_BBOOL bFalse = CK_FALSE;
 	CK_BBOOL bTrue = CK_TRUE;
 	CK_ATTRIBUTE pukAttribs[] = {
 		{ CKA_TOKEN, &bTokenPuk, sizeof(bTokenPuk) },
 		{ CKA_PRIVATE, &bPrivatePuk, sizeof(bPrivatePuk) },
-		{ CKA_ENCRYPT, &bFalse, sizeof(bFalse) },
-		{ CKA_VERIFY, &bFalse, sizeof(bFalse) },
+		{ CKA_CLASS, &pubClass, sizeof(pubClass) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType)},
+		{ CKA_ENCRYPT,&bTrue, sizeof(bTrue) },
+		{ CKA_VERIFY, &bTrue, sizeof(bTrue) },
 		{ CKA_WRAP, &bTrue, sizeof(bTrue) },
 		{ CKA_MODULUS_BITS, &bits, sizeof(bits) },
 		{ CKA_PUBLIC_EXPONENT, &pubExp[0], sizeof(pubExp) }
@@ -87,12 +93,15 @@ CK_RV AsymWrapUnwrapTests::generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK_BBO
 	CK_ATTRIBUTE prkAttribs[] = {
 		{ CKA_TOKEN, &bTokenPrk, sizeof(bTokenPrk) },
 		{ CKA_PRIVATE, &bPrivatePrk, sizeof(bPrivatePrk) },
+		{ CKA_CLASS, &pvtClass, sizeof(pvtClass) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType)},
 		{ CKA_SUBJECT, &subject[0], sizeof(subject) },
 		{ CKA_ID, &id[0], sizeof(id) },
 		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) },
-		{ CKA_DECRYPT, &bFalse, sizeof(bFalse) },
-		{ CKA_SIGN, &bFalse, sizeof(bFalse) },
+		{ CKA_DECRYPT, &bTrue, sizeof(bTrue) },
+		{ CKA_SIGN, &bTrue, sizeof(bTrue) },
 		{ CKA_UNWRAP, &bTrue, sizeof(bTrue) },
+		{ CKA_EXTRACTABLE, &bTrue, sizeof(bTrue)},
 	};
 
 	hPuk = CK_INVALID_HANDLE;
@@ -101,6 +110,83 @@ CK_RV AsymWrapUnwrapTests::generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK_BBO
 							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
 							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
 							 &hPuk, &hPrk) );
+}
+
+void AsymWrapUnwrapTests::rsaWrapUnwrapPvt(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey)
+{
+	CK_RV rv = CKR_OK;
+	CK_MECHANISM_INFO mechInfo;
+	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, CKZ_DATA_SPECIFIED, NULL_PTR, 0 };
+	CK_RSA_AES_KEY_WRAP_PARAMS rsa_aes_params = {
+        .aes_key_bits = 256,
+        .oaep_params = &oaepParams
+    };
+	CK_MECHANISM mechanism = {CKM_RSA_AES_KEY_WRAP, &rsa_aes_params, sizeof(rsa_aes_params)};
+	CK_MECHANISM sv_mechanism = { CKM_RSA_PKCS, NULL_PTR, 0 };
+	CK_BYTE data[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
+	CK_BYTE signature[256];
+	CK_ULONG ulSignatureLen = 0;
+	CK_BYTE cipherText[2048];
+	CK_ULONG ulCipherTextLen = 0;
+	CK_ULONG wrappedLenEstimation = 0;
+	CK_OBJECT_HANDLE targetPvtKey = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE targetPubKey = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE unwrappedKey = CK_INVALID_HANDLE;
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_OBJECT_CLASS keyClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE keyType = CKK_RSA;
+	CK_ATTRIBUTE unwrapTemplate[] = {
+		{ CKA_CLASS, &keyClass, sizeof(keyClass) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) },
+		{ CKA_EXTRACTABLE, &bTrue, sizeof(bTrue) }
+	};
+
+	// Generate temporary asymmetric key pair
+	rv = generateRsaKeyPair( hSession, IN_SESSION, IS_PRIVATE, IN_SESSION, IS_PRIVATE, targetPubKey, targetPvtKey );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Check if the specified mechanism supports Wrap/Unwrap
+	rv = CRYPTOKI_F_PTR( C_GetMechanismInfo(m_initializedTokenSlotID, CKM_RSA_AES_KEY_WRAP, &mechInfo) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT(mechInfo.flags&CKF_WRAP);
+	CPPUNIT_ASSERT(mechInfo.flags&CKF_UNWRAP);
+
+	// Estimate wrapped length
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, NULL_PTR, &wrappedLenEstimation) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT(wrappedLenEstimation>0);
+
+	// This should always fail because wrapped data have to be longer than 0 bytes
+	ulCipherTextLen = 0;
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, cipherText, &ulCipherTextLen) );
+	CPPUNIT_ASSERT(rv==CKR_BUFFER_TOO_SMALL);
+
+	// Do real wrapping
+	ulCipherTextLen = sizeof(cipherText);
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, cipherText, &ulCipherTextLen) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT(wrappedLenEstimation==ulCipherTextLen);
+
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hPrivateKey, cipherText, ulCipherTextLen, unwrapTemplate, sizeof(unwrapTemplate)/sizeof(CK_ATTRIBUTE), &unwrappedKey) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT(unwrappedKey != CK_INVALID_HANDLE);
+
+	// Verify the private key is unwrapped properly
+	rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &sv_mechanism, unwrappedKey) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+
+	ulSignatureLen = sizeof(signature);
+	rv = CRYPTOKI_F_PTR( C_Sign(hSession, data, sizeof(data), signature, &ulSignatureLen) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &sv_mechanism, targetPubKey) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_Verify(hSession, data, sizeof(data), signature, ulSignatureLen) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
 }
 
 void AsymWrapUnwrapTests::rsaWrapUnwrap(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey)
@@ -142,6 +228,12 @@ void AsymWrapUnwrapTests::rsaWrapUnwrap(CK_MECHANISM_TYPE mechanismType, CK_SESS
 		mechanism.ulParameterLen = sizeof(oaepParams);
 	}
 
+	if (mechanismType == CKM_RSA_AES_KEY_WRAP)
+	{
+		rsaWrapUnwrapPvt(hSession, hPublicKey, hPrivateKey);
+		return;
+	}
+
 	// Generate temporary symmetric key and remember it's value
 	rv = generateAesKey(hSession, symKey);
 	CPPUNIT_ASSERT(rv==CKR_OK);
@@ -150,8 +242,8 @@ void AsymWrapUnwrapTests::rsaWrapUnwrap(CK_MECHANISM_TYPE mechanismType, CK_SESS
 	CPPUNIT_ASSERT(rv==CKR_OK);
 	ulSymValueLen = valueTemplate[0].ulValueLen;
 
-	// CKM_RSA_PKCS Wrap/Unwrap support
-	rv = CRYPTOKI_F_PTR( C_GetMechanismInfo(m_initializedTokenSlotID, CKM_RSA_PKCS, &mechInfo) );
+	// Check if the specified mechanism supports Wrap/Unwrap
+	rv = CRYPTOKI_F_PTR( C_GetMechanismInfo(m_initializedTokenSlotID, mechanismType, &mechInfo) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 	CPPUNIT_ASSERT(mechInfo.flags&CKF_WRAP);
 	CPPUNIT_ASSERT(mechInfo.flags&CKF_UNWRAP);
@@ -218,9 +310,35 @@ void AsymWrapUnwrapTests::testRsaWrapUnwrap()
 	CK_OBJECT_HANDLE hPrivateKey = CK_INVALID_HANDLE;
 
 	// Generate all combinations of session/token public/private key pairs.
+	// Public Session Keys
 	rv = generateRsaKeyPair(hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPublicKey,hPrivateKey);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 
 	rsaWrapUnwrap(CKM_RSA_PKCS,hSessionRO,hPublicKey,hPrivateKey);
 	rsaWrapUnwrap(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_AES_KEY_WRAP, hSessionRO, hPublicKey, hPrivateKey);
+
+	// Private Session Keys
+	rv = generateRsaKeyPair(hSessionRW, IN_SESSION, IS_PRIVATE, IN_SESSION, IS_PRIVATE, hPublicKey, hPrivateKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rsaWrapUnwrap(CKM_RSA_PKCS,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_AES_KEY_WRAP, hSessionRO, hPublicKey, hPrivateKey);
+
+	// Public Token Keys
+	rv = generateRsaKeyPair(hSessionRW, ON_TOKEN, IS_PUBLIC, ON_TOKEN, IS_PUBLIC, hPublicKey, hPrivateKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rsaWrapUnwrap(CKM_RSA_PKCS,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_AES_KEY_WRAP, hSessionRO, hPublicKey, hPrivateKey);
+
+	// Private Token Keys
+	rv = generateRsaKeyPair(hSessionRW, ON_TOKEN, IS_PRIVATE, ON_TOKEN, IS_PRIVATE, hPublicKey, hPrivateKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rsaWrapUnwrap(CKM_RSA_PKCS,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey);
+	rsaWrapUnwrap(CKM_RSA_AES_KEY_WRAP, hSessionRO, hPublicKey, hPrivateKey);
 }
