@@ -6734,23 +6734,21 @@ CK_RV SoftHSM::C_WrapKey
 		CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
 		CK_ULONG emphKeyLen = params->aes_key_bits / 8;
 		CK_OBJECT_HANDLE hEmphKey = CK_INVALID_HANDLE;
-		CK_OBJECT_CLASS secretClass = CKO_SECRET_KEY;
-		CK_KEY_TYPE keyType = CKK_AES;
-		CK_BBOOL isEmphOnToken = CK_FALSE;
-		CK_BBOOL isEmphPrivate = CK_TRUE;
+		CK_OBJECT_CLASS emphKeyClass = CKO_SECRET_KEY;
+		CK_KEY_TYPE emphKeyType = CKK_AES;
 		CK_BBOOL bFalse = CK_FALSE;
 		CK_BBOOL bTrue = CK_TRUE;
 		CK_ATTRIBUTE emph_temp[] = {
-			{CKA_CLASS, &secretClass, sizeof(CK_OBJECT_CLASS)},
-			{CKA_KEY_TYPE, &keyType, sizeof(CK_KEY_TYPE)},
+			{CKA_CLASS, &emphKeyClass, sizeof(CK_OBJECT_CLASS)},
+			{CKA_KEY_TYPE, &emphKeyType, sizeof(CK_KEY_TYPE)},
 			{CKA_TOKEN, &bFalse, sizeof(CK_BBOOL)},
-			{CKA_PRIVATE, &isEmphPrivate, sizeof(CK_BBOOL)},
+			{CKA_PRIVATE, &bTrue, sizeof(CK_BBOOL)},
 			{CKA_WRAP, &bTrue, sizeof(CK_BBOOL)},
 			{CKA_EXTRACTABLE, &bTrue, sizeof(CK_BBOOL)},
 			{CKA_VALUE_LEN, &emphKeyLen, sizeof(CK_ULONG)}
 		};
 		// Generates temporary random AES key of ulAESKeyBits length.
-		rv = this->generateAES(hSession, emph_temp, sizeof(emph_temp)/sizeof(CK_ATTRIBUTE), &hEmphKey, isEmphOnToken, isEmphPrivate);
+		rv = this->generateAES(hSession, emph_temp, sizeof(emph_temp)/sizeof(CK_ATTRIBUTE), &hEmphKey, bFalse, bTrue);
 		if (rv != CKR_OK)
 		{
 			// Remove secret that may have been created already when the function fails.
@@ -6767,12 +6765,11 @@ CK_RV SoftHSM::C_WrapKey
 		OSObject *emphKey = (OSObject *)handleManager->getObject(hEmphKey);
 		if (emphKey == NULL_PTR || !emphKey->isValid())
 		{
-			return CKR_KEY_HANDLE_INVALID;
+			handleManager->destroyObject(hEmphKey);
+			if(emphKey) emphKey->destroyObject();
+			hEmphKey = CK_INVALID_HANDLE;
+			return CKR_FUNCTION_FAILED;
 		}
-
-		// Remove the emph key handle.
-		handleManager->destroyObject(hEmphKey);
-		hEmphKey = CK_INVALID_HANDLE;
 
 		CK_MECHANISM emphMech = {CKM_AES_KEY_WRAP_PAD, NULL_PTR, 0};
 
@@ -6780,7 +6777,9 @@ CK_RV SoftHSM::C_WrapKey
 		rv = SoftHSM::WrapKeySym(&emphMech, token, emphKey, keydata, wrapped_2);
 		if (rv != CKR_OK)
 		{
+			handleManager->destroyObject(hEmphKey);
 			emphKey->destroyObject();
+			hEmphKey = CK_INVALID_HANDLE;
 			return rv;
 		}
 
@@ -6788,14 +6787,18 @@ CK_RV SoftHSM::C_WrapKey
 		ByteString emphkeydata;
 		ByteString emphKeyValue = emphKey->getByteStringValue(CKA_VALUE);
 		token->decrypt(emphKeyValue, emphkeydata);
+
+		// Remove the emph key handle.
+		handleManager->destroyObject(hEmphKey);
 		emphKey->destroyObject();
+		hEmphKey = CK_INVALID_HANDLE;
 
 		CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_AES_KEY_WRAP_PARAMS)};
 
 		// Wraps the AES emph key with the wrapping RSA key using CKM_RSA_PKCS_OAEP with parameters of OAEPParams.
 		rv = SoftHSM::WrapKeyAsym(&oaepMech, token, wrapKey, emphkeydata, wrapped_1);
 
-		// Zeroizes the temporary AES key
+		// Zeroizes the temporary AES emph key
 		emphkeydata.wipe();
 		emphKeyValue.wipe();
 
@@ -7259,17 +7262,15 @@ CK_RV SoftHSM::C_UnwrapKey
 			return rv;
 		}
 
-		ByteString wrapped_2(pWrappedKey + wrappedLen1, wrappedLen2); // the wrapped target key
-		CK_BBOOL isEmphPrivate = CK_TRUE;
-		CK_OBJECT_CLASS secretClass = CKO_SECRET_KEY;
-		CK_KEY_TYPE keyType = CKK_AES;
+		CK_OBJECT_CLASS emphKeyClass = CKO_SECRET_KEY;
+		CK_KEY_TYPE emphKeyType = CKK_AES;
 		CK_BBOOL bFalse = CK_FALSE;
 		CK_BBOOL bTrue = CK_TRUE;
 		CK_ATTRIBUTE emph_temp[] = {
-			{CKA_CLASS, &secretClass, sizeof(CK_OBJECT_CLASS)},
-			{CKA_KEY_TYPE, &keyType, sizeof(CK_KEY_TYPE)},
+			{CKA_CLASS, &emphKeyClass, sizeof(CK_OBJECT_CLASS)},
+			{CKA_KEY_TYPE, &emphKeyType, sizeof(CK_KEY_TYPE)},
 			{CKA_TOKEN, &bFalse, sizeof(CK_BBOOL)},
-			{CKA_PRIVATE, &isEmphPrivate, sizeof(CK_BBOOL)},
+			{CKA_PRIVATE, &bTrue, sizeof(CK_BBOOL)},
 			{CKA_UNWRAP, &bTrue, sizeof(CK_BBOOL)}
 		};
 		// Create the temporary AES object using C_CreateObject
@@ -7288,16 +7289,16 @@ CK_RV SoftHSM::C_UnwrapKey
 			return rv;
 		}
 
-		// Store the attributes that are being supplied
+		// Store the attributes of emphkey
 		OSObject *emphKey = (OSObject *)handleManager->getObject(hEmphKey);
 		if (emphKey == NULL_PTR || !emphKey->isValid())
 		{
+			handleManager->destroyObject(hEmphKey);
+			if(emphKey) emphKey->destroyObject();
+			hEmphKey = CK_INVALID_HANDLE;
 			emphkeydata.wipe();
 			return CKR_FUNCTION_FAILED;
 		}
-		// remove the emphkey handle
-		handleManager->destroyObject(hEmphKey);
-		hEmphKey = CK_INVALID_HANDLE;
 
 		if (emphKey->startTransaction())
 		{
@@ -7320,27 +7321,38 @@ CK_RV SoftHSM::C_UnwrapKey
 			{
 				emphKey->abortTransaction();
 			}
+
 			// Zeroizes the temporary AES key.
 			emphkeydata.wipe();
 			emphKeyValue.wipe();
 
 			if (!bOK)
 			{
+				handleManager->destroyObject(hEmphKey);
 				emphKey->destroyObject();
+				hEmphKey = CK_INVALID_HANDLE;
 				return CKR_FUNCTION_FAILED;
 			}
 		}
 		else
 		{
 			emphkeydata.wipe();
+			handleManager->destroyObject(hEmphKey);
 			emphKey->destroyObject();
+			hEmphKey = CK_INVALID_HANDLE;
 			return CKR_FUNCTION_FAILED;
 		}
 
+		ByteString wrapped_2(pWrappedKey + wrappedLen1, wrappedLen2); // the wrapped target key
 		CK_MECHANISM emphMech = {CKM_AES_KEY_WRAP_PAD, NULL_PTR, 0};
+
 		// Un-wraps the target key from the second part with the temporary AES key using CKM_AES_KEY_WRAP_PAD (RFC5649)
 		rv = UnwrapKeySym(&emphMech, wrapped_2, token, emphKey, keydata);
+		// remove the emphkey handle
+		handleManager->destroyObject(hEmphKey);
 		emphKey->destroyObject();
+		hEmphKey = CK_INVALID_HANDLE;
+
 		if (rv != CKR_OK)
 		{
 			return rv;
