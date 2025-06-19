@@ -6793,7 +6793,7 @@ CK_RV SoftHSM::C_WrapKey
 		emphKey->destroyObject();
 		hEmphKey = CK_INVALID_HANDLE;
 
-		CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_AES_KEY_WRAP_PARAMS)};
+		CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
 
 		// Wraps the AES emph key with the wrapping RSA key using CKM_RSA_PKCS_OAEP with parameters of OAEPParams.
 		rv = SoftHSM::WrapKeyAsym(&oaepMech, token, wrapKey, emphkeydata, wrapped_1);
@@ -7242,17 +7242,23 @@ CK_RV SoftHSM::C_UnwrapKey
 		CK_OBJECT_HANDLE hEmphKey = CK_INVALID_HANDLE;
 		CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
 		ByteString emphkeydata;
-		ByteString pubexp = unwrapKey->getByteStringValue(CKA_PUBLIC_EXPONENT);
-		ByteString modulus = unwrapKey->getByteStringValue(CKA_MODULUS);
-		CK_ULONG wrappedLen1 = modulus.size();
+		ByteString modulus;
+		ByteString modulusValue = unwrapKey->getByteStringValue(CKA_MODULUS);
+
 		if(isUnwrapKeyPrivate)
 		{
-			wrappedLen1 = modulus.size() - pubexp.size();
+			token->decrypt(modulusValue, modulus);
 		}
+		else
+		{
+			modulus = modulusValue;
+		}
+
+		CK_ULONG wrappedLen1 = modulus.size();
 		CK_ULONG wrappedLen2 = ulWrappedKeyLen - wrappedLen1;
 
 		ByteString wrapped_1(pWrappedKey, wrappedLen1); // the wrapped AES key
-		CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_AES_KEY_WRAP_PARAMS)};
+		CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
 
 		// Un-wraps the temporary AES key from the first part with the private RSA key using CKM_RSA_PKCS_OAEP.
 		rv = UnwrapKeyAsym(&oaepMech, wrapped_1, token, unwrapKey, emphkeydata);
@@ -13119,14 +13125,9 @@ CK_RV SoftHSM::MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism)
 		ERROR_MSG("oaep_params must be of type CK_RSA_PKCS_OAEP_PARAMS");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->oaep_params->hashAlg != CKM_SHA_1)
+	if (params->oaep_params->mgf < 1UL || params->oaep_params->mgf > 5UL)
 	{
-		ERROR_MSG("hashAlg must be CKM_SHA_1");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->oaep_params->mgf != CKG_MGF1_SHA1)
-	{
-		ERROR_MSG("mgf must be CKG_MGF1_SHA1");
+		ERROR_MSG("mgf not supported");
 		return CKR_ARGUMENTS_BAD;
 	}
 	if (params->oaep_params->source != CKZ_DATA_SPECIFIED)

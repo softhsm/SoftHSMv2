@@ -77,7 +77,6 @@ CK_RV AsymWrapUnwrapTests::generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK_BBO
 	CK_BYTE pubExp[] = {0x01, 0x00, 0x01};
 	CK_BYTE subject[] = { 0x12, 0x34 }; // dummy
 	CK_BYTE id[] = { 123 } ; // dummy
-	// CK_BBOOL bFalse = CK_FALSE;
 	CK_BBOOL bTrue = CK_TRUE;
 	CK_ATTRIBUTE pukAttribs[] = {
 		{ CKA_TOKEN, &bTokenPuk, sizeof(bTokenPuk) },
@@ -117,10 +116,7 @@ void AsymWrapUnwrapTests::rsaWrapUnwrapPvt(CK_SESSION_HANDLE hSession, CK_OBJECT
 	CK_RV rv = CKR_OK;
 	CK_MECHANISM_INFO mechInfo;
 	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, CKZ_DATA_SPECIFIED, NULL_PTR, 0 };
-	CK_RSA_AES_KEY_WRAP_PARAMS rsa_aes_params = {
-        .aes_key_bits = 256,
-        .oaep_params = &oaepParams
-    };
+	CK_RSA_AES_KEY_WRAP_PARAMS rsa_aes_params = { 256, &oaepParams };
 	CK_MECHANISM mechanism = {CKM_RSA_AES_KEY_WRAP, &rsa_aes_params, sizeof(rsa_aes_params)};
 	CK_MECHANISM sv_mechanism = { CKM_RSA_PKCS, NULL_PTR, 0 };
 	CK_BYTE data[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
