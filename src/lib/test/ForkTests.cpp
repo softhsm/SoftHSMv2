@@ -80,15 +80,17 @@ void ForkTests::testFork()
 		case 0:
 			rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
 			CPPUNIT_ASSERT(rv == CKR_CRYPTOKI_ALREADY_INITIALIZED);
+			rv = CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+			CPPUNIT_ASSERT(rv == CKR_OK);
+			_exit(0);
 			break;
 		default:
 			rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
 			CPPUNIT_ASSERT(rv == CKR_CRYPTOKI_ALREADY_INITIALIZED);
+			rv = CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+			CPPUNIT_ASSERT(rv == CKR_OK);
 			break;
 	}
-
-	rv = CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
-	CPPUNIT_ASSERT(rv == CKR_OK);
 }
 #ifndef P11_SHARED_LIBRARY
 void ForkTests::testResetOnFork()
@@ -118,16 +120,19 @@ void ForkTests::testResetOnFork()
 			/* For the child, the token is expected to be reset on fork */
 			rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
 			CPPUNIT_ASSERT(rv == CKR_OK);
+			rv = CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+			CPPUNIT_ASSERT(rv == CKR_OK);
+			_exit(0);
 			break;
 		default:
 			/* For the parent, the token is expected to be still initialized */
 			rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
 			CPPUNIT_ASSERT(rv == CKR_CRYPTOKI_ALREADY_INITIALIZED);
+			rv = CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+			CPPUNIT_ASSERT(rv == CKR_OK);
 			break;
 	}
 
-	rv = CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
-	CPPUNIT_ASSERT(rv == CKR_OK);
 
 #ifndef _WIN32
 	setenv("SOFTHSM2_CONF", "./softhsm2.conf", 1);
