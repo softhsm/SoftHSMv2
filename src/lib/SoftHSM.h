@@ -54,6 +54,8 @@
 #include "GOSTPrivateKey.h"
 #include "MLDSAPublicKey.h"
 #include "MLDSAPrivateKey.h"
+#include "MLKEMPublicKey.h"
+#include "MLKEMPrivateKey.h"
 
 #include <memory>
 
@@ -175,6 +177,31 @@ public:
 	CK_RV C_GetFunctionStatus(CK_SESSION_HANDLE hSession);
 	CK_RV C_CancelFunction(CK_SESSION_HANDLE hSession);
 	CK_RV C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot, CK_VOID_PTR pReserved);
+
+	// From old PKCS#11 3.2 draft for Proteccio V182/X181 compatibility
+	CK_RV C_EncapsulateKey
+	(
+		CK_SESSION_HANDLE    hSession,        /* the session's handle */
+		CK_MECHANISM_PTR     pMechanism,      /* the encapsulation mechanism */
+		CK_OBJECT_HANDLE     hPublicKey,      /* the public key */
+		CK_ATTRIBUTE_PTR     pTemplate,       /* the new key template */
+		CK_ULONG             ulAttributeCount, /* the template length */
+		CK_OBJECT_HANDLE_PTR phKey,            /* the key which has been encapsulated */
+		CK_BYTE_PTR          pCipherText,      /* the key encapsulated */
+		CK_ULONG_PTR         pulCipherTextLen  /* the key encapsulated size */
+	);
+
+	CK_RV C_DecapsulateKey
+	(
+		CK_SESSION_HANDLE hSession,         /* the session's handle */
+		CK_MECHANISM_PTR  pMechanism,       /* the decapsulation mechanism */
+		CK_OBJECT_HANDLE  hPrivateKey,      /* the private key */
+		CK_BYTE_PTR       pCipherText,      /* the encapsulated key */
+		CK_ULONG          ulCipherTextLen,  /* the encapsulated key size */
+		CK_ATTRIBUTE_PTR  pTemplate,        /* the decapsulated key template */
+		CK_ULONG          ulAttributeCount, /* the decapsulated key template length */  
+		CK_OBJECT_HANDLE_PTR phKey            /* the decapsulated key  */
+	);
 
 private:
 	// Constructor
@@ -395,6 +422,20 @@ private:
 		CK_BBOOL isPrivateKeyOnToken,
 		CK_BBOOL isPrivateKeyPrivate
 	);
+	CK_RV generateMLKEM
+	(
+		CK_SESSION_HANDLE hSession,
+		CK_ATTRIBUTE_PTR pPublicKeyTemplate,
+		CK_ULONG ulPublicKeyAttributeCount,
+		CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
+		CK_ULONG ulPrivateKeyAttributeCount,
+		CK_OBJECT_HANDLE_PTR phPublicKey,
+		CK_OBJECT_HANDLE_PTR phPrivateKey,
+		CK_BBOOL isPublicKeyOnToken,
+		CK_BBOOL isPublicKeyPrivate,
+		CK_BBOOL isPrivateKeyOnToken,
+		CK_BBOOL isPrivateKeyPrivate
+	);
 #ifdef WITH_ECC
 	CK_RV deriveECDH
 	(
@@ -461,6 +502,8 @@ private:
 	CK_RV getSymmetricKey(SymmetricKey* skey, Token* token, OSObject* key);
 	CK_RV getMLDSAPrivateKey(MLDSAPrivateKey* privateKey, Token* token, OSObject* key);
 	CK_RV getMLDSAPublicKey(MLDSAPublicKey* publicKey, Token* token, OSObject* key);
+	CK_RV getMLKEMPrivateKey(MLKEMPrivateKey* privateKey, Token* token, OSObject* key);
+	CK_RV getMLKEMPublicKey(MLKEMPublicKey* publicKey, Token* token, OSObject* key);
 
 	ByteString getECDHPubData(ByteString& pubData);
 
@@ -471,6 +514,7 @@ private:
 	bool setEDPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
 	bool setGOSTPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
 	bool setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
+	bool setMLKEMPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
 
 
 	CK_RV WrapKeyAsym

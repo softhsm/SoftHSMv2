@@ -61,6 +61,9 @@
 #ifdef WITH_ML_DSA
 #include "OSSLMLDSA.h"
 #endif
+#ifdef WITH_ML_KEM
+#include "OSSLMLKEM.h"
+#endif
 
 #include <algorithm>
 #include <string.h>
@@ -354,6 +357,10 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 #ifdef WITH_ML_DSA
 		case AsymAlgo::MLDSA:
 			return new OSSLMLDSA();
+#endif
+#ifdef WITH_ML_KEM
+		case AsymAlgo::MLKEM:
+			return new OSSLMLKEM();
 #endif
 		default:
 			break;

@@ -25,61 +25,61 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ OSSLMLKEMPrivateKey.h
 
- OpenSSL convenience functions
+ OpenSSL ML-KEM private key class
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#ifndef _SOFTHSM_V2_OSSLMLKEMPRIVATEKEY_H
+#define _SOFTHSM_V2_OSSLMLKEMPRIVATEKEY_H
 
 #include "config.h"
-#include "ByteString.h"
+#include "MLKEMParameters.h"
+#include "MLKEMPrivateKey.h"
 #include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#ifdef WITH_EDDSA
-#include <openssl/objects.h>
-#endif
+#include <openssl/evp.h>
 
-namespace OSSL
+class OSSLMLKEMPrivateKey : public MLKEMPrivateKey
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
+public:
+	// Constructors
+	OSSLMLKEMPrivateKey();
 
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
+	OSSLMLKEMPrivateKey(const EVP_PKEY* inMLKEMKEY);
 
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
+	// Destructor
+	virtual ~OSSLMLKEMPrivateKey();
 
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
+	// The type
+	static const char* type;
 
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
+	// Check if the key is of the given type
+	virtual bool isOfType(const char* inType);
 
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
+	// Setters for the ML-KEM private key components
+	virtual void setValue(const ByteString& value);
+	virtual void setSeed(const ByteString& seed);
+	
+	// Encode into PKCS#8 DER
+	virtual ByteString PKCS8Encode();
 
-#ifdef WITH_EDDSA
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
+	// Decode from PKCS#8 BER
+	virtual bool PKCS8Decode(const ByteString& ber);
 
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
+	// Set from OpenSSL representation
+	virtual void setFromOSSL(const EVP_PKEY* inMLKEMKEY);
 
-#ifdef WITH_ML_DSA
-	const char* mldsaParameterSet2Name(unsigned long parameterSet);
-#endif
-#ifdef WITH_ML_KEM
-	const char* mlkemParameterSet2Name(unsigned long parameterSet);
-#endif
-}
+	// Retrieve the OpenSSL representation of the key
+	EVP_PKEY* getOSSLKey();
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+private:
+	// The internal OpenSSL representation
+	EVP_PKEY* pkey;
+
+	// Create the OpenSSL representation of the key
+	void createOSSLKey();
+
+};
+
+#endif // !_SOFTHSM_V2_OSSLECPRIVATEKEY_H
 

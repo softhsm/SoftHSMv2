@@ -25,61 +25,49 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ MLKEMPublicKey.h
 
- OpenSSL convenience functions
+ ML-KEM public key class
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#ifndef _SOFTHSM_V2_MLKEMPUBLICKEY_H
+#define _SOFTHSM_V2_MLKEMPUBLICKEY_H
 
 #include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#ifdef WITH_EDDSA
-#include <openssl/objects.h>
-#endif
+#include "PublicKey.h"
 
-namespace OSSL
+class MLKEMPublicKey : public PublicKey
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
+public:
+	// The type
+	static const char* type;
 
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
+	// Check if the key is of the given type
+	virtual bool isOfType(const char* inType);
 
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
+	// Get the bit length
+	virtual unsigned long getParameterSet() const;
 
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
+	// Get the signature length
+	virtual unsigned long getOutputLength() const;
 
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
+	// Get the bit length
+	virtual unsigned long getBitLength() const;
 
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
+	virtual void setValue(const ByteString& value);
 
-#ifdef WITH_EDDSA
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
+	// Getters for the ML-KEM public key components
+	virtual const ByteString& getValue() const;
 
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
+	// Serialisation
+	virtual ByteString serialise() const;
+	virtual bool deserialise(ByteString& serialised);
 
-#ifdef WITH_ML_DSA
-	const char* mldsaParameterSet2Name(unsigned long parameterSet);
-#endif
-#ifdef WITH_ML_KEM
-	const char* mlkemParameterSet2Name(unsigned long parameterSet);
-#endif
-}
+protected:
+    
+	// Public components
+	ByteString value;
+};
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+#endif // !_SOFTHSM_V2_MLKEMPUBLICKEY_H
 

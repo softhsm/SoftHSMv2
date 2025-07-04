@@ -38,6 +38,16 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		[enable_mldsa="detect"]
 	)
 
+	# Add ML-KEM check
+
+	AC_ARG_ENABLE(mlkem,
+		AS_HELP_STRING([--enable-mlkem],
+			[Enable support for ML-KEM (default detect)]
+		),
+		[enable_mlkem="${enableval}"],
+		[enable_mlkem="detect"]
+	)
+
 	# Second check for the FIPS 140-2 mode
 
 	AC_ARG_ENABLE(fips,
@@ -121,6 +131,15 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			detect-no) enable_mldsa="no";;
 		esac
 
+		case "${enable_mlkem}" in
+			yes|detect) ACX_OPENSSL_MLKEM;;
+		esac
+		case "${enable_mlkem}-${have_lib_openssl_mlkem_support}" in
+			yes-no) AC_MSG_ERROR([OpenSSL library has no ML-KEM support]);;
+			detect-yes) enable_mlkem="yes";;
+			detect-no) enable_mlkem="no";;
+		esac
+
 		case "${enable_gost}-${enable_fips}" in
 			yes-yes) AC_MSG_ERROR([GOST is not FIPS approved]);;
 			yes-no|detect-no) ACX_OPENSSL_GOST;;
@@ -193,6 +212,14 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		case "${enable_mldsa}-${have_lib_botan_mldsa_support}" in
 			yes-no) AC_MSG_ERROR([Botan library has no ML-DSA support]);;
 			detect-*) enable_mldsa="${have_lib_botan_mldsa_support}";;
+		esac
+
+		case "${enable_mlkem}" in
+			yes|detect) ACX_BOTAN_MLKEM;;
+		esac
+		case "${enable_mlkem}-${have_lib_botan_mlkem_support}" in
+			yes-no) AC_MSG_ERROR([Botan library has no ML-KEM support]);;
+			detect-*) enable_mlkem="${have_lib_botan_mlkem_support}";;
 		esac
 
 		case "${enable_gost}" in
@@ -272,6 +299,19 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		AC_MSG_RESULT(no)
 	fi
 	AM_CONDITIONAL([WITH_ML_DSA], [test "x${enable_mldsa}" = "xyes"])
+
+	AC_MSG_CHECKING(for ML-KEM support)
+	if test "x${enable_mlkem}" = "xyes"; then
+		AC_MSG_RESULT(yes)
+		AC_DEFINE_UNQUOTED(
+			[WITH_ML_KEM],
+			[],
+			[Compile with ML-KEM support]
+		)
+	else
+		AC_MSG_RESULT(no)
+	fi
+	AM_CONDITIONAL([WITH_ML_KEM], [test "x${enable_mlkem}" = "xyes"])
 
 
 	AC_SUBST(CRYPTO_INCLUDES)

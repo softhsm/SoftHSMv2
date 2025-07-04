@@ -65,6 +65,9 @@
 #include "MLDSAParameters.h"
 #include "MLDSAPublicKey.h"
 #include "MLDSAPrivateKey.h"
+#include "MLKEMParameters.h"
+#include "MLKEMPublicKey.h"
+#include "MLKEMPrivateKey.h"
 #include "cryptoki.h"
 #include "SoftHSM.h"
 #include "osmutex.h"
@@ -120,6 +123,7 @@ std::auto_ptr<SoftHSM> SoftHSM::instance(NULL);
 
 static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERTIFICATE_TYPE certType, P11Object **p11object)
 {
+	DEBUG_MSG("newP11Object(CK_OBJECT_CLASS objClass=%ul, CK_KEY_TYPE keyType:%ul", objClass, keyType);
 	switch(objClass) {
 		case CKO_DATA:
 			*p11object = new P11DataObj();
@@ -147,6 +151,8 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 				*p11object = new P11EDPublicKeyObj();
 			else if (keyType == CKK_ML_DSA)
 				*p11object = new P11MLDSAPublicKeyObj();
+			else if (keyType == CKK_ML_KEM)
+				*p11object = new P11MLKEMPublicKeyObj();
 			else
 				return CKR_ATTRIBUTE_VALUE_INVALID;
 			break;
@@ -166,6 +172,8 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 				*p11object = new P11EDPrivateKeyObj();
 			else if (keyType == CKK_ML_DSA)
 				*p11object = new P11MLDSAPrivateKeyObj();
+			else if (keyType == CKK_ML_KEM)
+				*p11object = new P11MLKEMPrivateKeyObj();
 			else
 				return CKR_ATTRIBUTE_VALUE_INVALID;
 			break;
@@ -894,6 +902,10 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_ML_DSA_KEY_PAIR_GEN"] = CKM_ML_DSA_KEY_PAIR_GEN;
 	t["CKM_ML_DSA"]			= CKM_ML_DSA;
 #endif
+#ifdef WITH_ML_KEM
+	t["CKM_ML_KEM_KEY_PAIR_GEN"] = CKM_ML_KEM_KEY_PAIR_GEN;
+	t["CKM_ML_KEM"]			= CKM_ML_KEM;
+#endif
 	t["CKM_CONCATENATE_DATA_AND_BASE"] = CKM_CONCATENATE_DATA_AND_BASE;
 	t["CKM_CONCATENATE_BASE_AND_DATA"] = CKM_CONCATENATE_BASE_AND_DATA;
 	t["CKM_CONCATENATE_BASE_AND_KEY"] = CKM_CONCATENATE_BASE_AND_KEY;
@@ -1005,6 +1017,9 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 #endif
 #ifdef WITH_ML_DSA
     unsigned long mldsaMinSize = 0, mldsaMaxSize = 0;
+#endif
+#ifdef WITH_ML_KEM
+    unsigned long mlkemMinSize = 0, mlkemMaxSize = 0;
 #endif
 
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -1119,6 +1134,19 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		return CKR_GENERAL_ERROR;
 	}
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
+#endif
+#ifdef WITH_ML_KEM
+	AsymmetricAlgorithm* mlkem = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLKEM);
+	if (mlkem != NULL)
+	{
+		mlkemMinSize = mlkem->getMinKeySize();
+		mlkemMaxSize = mlkem->getMaxKeySize();
+	}
+	else
+	{
+		return CKR_GENERAL_ERROR;
+	}
+	CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
 #endif
 	pInfo->flags = 0;	// initialize flags
 	switch (type)
@@ -1420,6 +1448,18 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			pInfo->ulMinKeySize = mldsaMinSize;
 			pInfo->ulMaxKeySize = mldsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
+			break;
+#endif
+#ifdef WITH_ML_KEM
+		case CKM_ML_KEM_KEY_PAIR_GEN:
+			pInfo->ulMinKeySize = mlkemMinSize;
+			pInfo->ulMaxKeySize = mlkemMaxSize;
+			pInfo->flags = CKF_GENERATE_KEY_PAIR;
+			break;
+		case CKM_ML_KEM:
+			pInfo->ulMinKeySize = mlkemMinSize;
+			pInfo->ulMaxKeySize = mlkemMaxSize;
+			pInfo->flags = CKF_ENCAPSULATE | CKF_DECAPSULATE;
 			break;
 #endif
 	    case CKM_CONCATENATE_DATA_AND_BASE:
@@ -6904,6 +6944,11 @@ CK_RV SoftHSM::C_GenerateKeyPair
 			keyType = CKK_ML_DSA;
 			break;
 #endif
+#ifdef WITH_ML_KEM
+		case CKM_ML_KEM_KEY_PAIR_GEN:
+			keyType = CKK_ML_KEM;
+			break;
+#endif
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -6933,6 +6978,8 @@ CK_RV SoftHSM::C_GenerateKeyPair
 		return CKR_TEMPLATE_INCONSISTENT;
 	if (pMechanism->mechanism == CKM_ML_DSA_KEY_PAIR_GEN && keyType != CKK_ML_DSA)
 		return CKR_TEMPLATE_INCONSISTENT;
+	if (pMechanism->mechanism == CKM_ML_KEM_KEY_PAIR_GEN && keyType != CKK_ML_KEM)
+		return CKR_TEMPLATE_INCONSISTENT;
 
 	// Extract information from the private key template that is needed to create the object.
 	CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
@@ -6957,6 +7004,8 @@ CK_RV SoftHSM::C_GenerateKeyPair
 	if (pMechanism->mechanism == CKM_EC_EDWARDS_KEY_PAIR_GEN && keyType != CKK_EC_EDWARDS)
 		return CKR_TEMPLATE_INCONSISTENT;
 	if (pMechanism->mechanism == CKM_ML_DSA_KEY_PAIR_GEN && keyType != CKK_ML_DSA)
+		return CKR_TEMPLATE_INCONSISTENT;
+	if (pMechanism->mechanism == CKM_ML_KEM_KEY_PAIR_GEN && keyType != CKK_ML_KEM)
 		return CKR_TEMPLATE_INCONSISTENT;
 
 	// Check user credentials
@@ -7034,6 +7083,15 @@ CK_RV SoftHSM::C_GenerateKeyPair
 	if (pMechanism->mechanism == CKM_ML_DSA_KEY_PAIR_GEN)
 	{
 			return this->generateMLDSA(hSession,
+									 pPublicKeyTemplate, ulPublicKeyAttributeCount,
+									 pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
+									 phPublicKey, phPrivateKey,
+									 ispublicKeyToken, ispublicKeyPrivate, isprivateKeyToken, isprivateKeyPrivate);
+	}
+
+	if (pMechanism->mechanism == CKM_ML_KEM_KEY_PAIR_GEN)
+	{
+			return this->generateMLKEM(hSession,
 									 pPublicKeyTemplate, ulPublicKeyAttributeCount,
 									 pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
 									 phPublicKey, phPrivateKey,
@@ -8489,6 +8547,551 @@ CK_RV SoftHSM::C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR /*pSlot*/, CK_V
 	// called. However, at this point the caller has been updated with the
 	// new slot list already so no event needs to be triggered.
 	return CKR_NO_EVENT;
+}
+
+// Wrap the specified key using the specified wrapping key and mechanism
+CK_RV SoftHSM::C_EncapsulateKey
+	(
+	CK_SESSION_HANDLE    hSession,        /* the session's handle */
+	CK_MECHANISM_PTR     pMechanism,      /* the encapsulation mechanism */
+	CK_OBJECT_HANDLE     hPublicKey,      /* the public key */
+	CK_ATTRIBUTE_PTR     pTemplate,       /* the new key template */
+	CK_ULONG             ulAttributeCount, /* the template length */
+	CK_OBJECT_HANDLE_PTR phKey,            /* the key which has been encapsulated */
+	CK_BYTE_PTR          pCipherText,      /* the key encapsulated */
+	CK_ULONG_PTR         pulCipherTextLen  /* the key encapsulated size */
+	)
+{
+	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
+
+	unsigned long mockReturnCode = this->mockAndSleep(__FUNCTION__);
+	if (mockReturnCode != CKR_OK) {
+		return mockErrorCode;
+	}
+
+	if (pMechanism == NULL_PTR) return CKR_ARGUMENTS_BAD;
+	if (hPublicKey == NULL_PTR) return CKR_ARGUMENTS_BAD;
+
+	*phKey = CK_INVALID_HANDLE;
+
+	// Get the session
+	Session* session = (Session*)handleManager->getSession(hSession);
+	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	CK_RV rv;
+	AsymAlgo::Type algo = AsymAlgo::Unknown;
+	AsymMech::Type mech = AsymMech::Unknown;
+	// Check the mechanism, only accept advanced AES key wrapping and RSA
+	switch(pMechanism->mechanism)
+	{
+#ifdef WITH_ML_KEM
+		case CKM_ML_KEM:
+			algo = AsymAlgo::MLKEM;
+			mech = AsymMech::MLKEM;
+			break;
+#endif
+		default:
+			return CKR_MECHANISM_INVALID;
+	}
+
+	// Get the token
+	Token* token = session->getToken();
+	if (token == NULL) return CKR_GENERAL_ERROR;
+
+	// Check the wrapping key handle.
+	OSObject *encapsulationKey = (OSObject *)handleManager->getObject(hPublicKey);
+	if (encapsulationKey == NULL_PTR || !encapsulationKey->isValid()) return CKR_KEY_HANDLE_INVALID;
+
+	CK_BBOOL isEncapsulationKeyOnToken = encapsulationKey->getBooleanValue(CKA_TOKEN, false);
+	CK_BBOOL isEncapsulationKeyPrivate = encapsulationKey->getBooleanValue(CKA_PRIVATE, true);
+
+	// Check user credentials for the wrapping key
+	rv = haveRead(session->getState(), isEncapsulationKeyOnToken, isEncapsulationKeyPrivate);
+	if (rv != CKR_OK)
+	{
+		if (rv == CKR_USER_NOT_LOGGED_IN)
+			INFO_MSG("User is not authorized");
+
+		return rv;
+	}
+
+	// Check if the wrapping key can be used for wrapping
+	if (encapsulationKey->getBooleanValue(CKA_ENCAPSULATE, false) == false)
+		return CKR_KEY_FUNCTION_NOT_PERMITTED;
+
+	// Check if the specified mechanism is allowed for the wrapping key
+	if (!isMechanismPermitted(encapsulationKey, pMechanism))
+		return CKR_MECHANISM_INVALID;
+
+	// Extract information from the template that is needed to create the object.
+	CK_OBJECT_CLASS objClass;
+	CK_KEY_TYPE keyType;
+	CK_CERTIFICATE_TYPE dummy;
+	CK_BBOOL isOnToken = CK_FALSE;
+	CK_BBOOL isPrivate = CK_TRUE;
+	bool isImplicit = false;
+	rv = extractObjectInformation(pTemplate, ulAttributeCount, objClass, keyType, dummy, isOnToken, isPrivate, isImplicit);
+	if (rv != CKR_OK)
+	{
+		ERROR_MSG("Mandatory attribute not present in template");
+		return rv;
+	}
+
+	DEBUG_MSG("objClass: %d, keyType: %d", objClass, keyType);
+
+	// Report errors and/or unexpected usage.
+	if (objClass != CKO_SECRET_KEY)
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	// Key type will be handled at object creation
+
+	// Check authorization
+	rv = haveWrite(session->getState(), isOnToken, isPrivate);
+	if (rv != CKR_OK)
+	{
+		if (rv == CKR_USER_NOT_LOGGED_IN)
+			INFO_MSG("User is not authorized");
+		if (rv == CKR_SESSION_READ_ONLY)
+			INFO_MSG("Session is read-only");
+
+		return rv;
+	}
+
+	ByteString cipherText;
+	ByteString secretKey;
+
+	AsymmetricAlgorithm* cipher = CryptoFactory::i()->getAsymmetricAlgorithm(algo);
+	if (cipher == NULL) return CKR_MECHANISM_INVALID;
+
+	PublicKey* publicKey = cipher->newPublicKey();
+
+	if (getMLKEMPublicKey((MLKEMPublicKey*)publicKey, token, encapsulationKey) != CKR_OK)
+	{
+		cipher->recyclePublicKey(publicKey);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		return CKR_GENERAL_ERROR;
+	}
+
+	SymmetricKey *secret = NULL;
+
+	if (cipher->encapsulate(publicKey, cipherText, &secret, keyType, mech)) 
+	{
+		DEBUG_MSG("cipherText: %s, secret: %s", cipherText.hex_str().c_str(), secret->getKeyBits().hex_str().c_str());
+
+		// Create the secret object using C_CreateObject
+		const CK_ULONG maxAttribs = 32;
+		CK_OBJECT_CLASS objClass = CKO_SECRET_KEY;
+		CK_ATTRIBUTE secretAttribs[maxAttribs] = {
+			{ CKA_CLASS, &objClass, sizeof(objClass) },
+			{ CKA_TOKEN, &isOnToken, sizeof(isOnToken) },
+			{ CKA_PRIVATE, &isPrivate, sizeof(isPrivate) },
+			{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		};
+		CK_ULONG secretAttribsCount = 4;
+
+		// Add the additional
+		if (ulAttributeCount > (maxAttribs - secretAttribsCount))
+			rv = CKR_TEMPLATE_INCONSISTENT;
+		for (CK_ULONG i=0; i < ulAttributeCount && rv == CKR_OK; ++i)
+		{
+			switch (pTemplate[i].type)
+			{
+				case CKA_CLASS:
+				case CKA_TOKEN:
+				case CKA_PRIVATE:
+				case CKA_KEY_TYPE:
+				case CKA_CHECK_VALUE:
+					continue;
+			default:
+				secretAttribs[secretAttribsCount++] = pTemplate[i];
+			}
+		}
+
+		rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, phKey, OBJECT_OP_DERIVE);
+
+		// Store the attributes that are being supplied
+		if (rv == CKR_OK)
+		{
+			OSObject* osobject = (OSObject*)handleManager->getObject(*phKey);
+			if (osobject == NULL_PTR || !osobject->isValid()) {
+				rv = CKR_FUNCTION_FAILED;
+			} else if (osobject->startTransaction()) {
+				size_t byteLen = 32;
+				bool checkValue = true;
+				for (CK_ULONG i = 0; i < ulAttributeCount; i++)
+				{
+					switch (pTemplate[i].type)
+					{
+						case CKA_VALUE:
+							INFO_MSG("CKA_VALUE must not be included");
+							return CKR_ATTRIBUTE_READ_ONLY;
+						case CKA_CHECK_VALUE:
+							if (pTemplate[i].ulValueLen > 0)
+							{
+								INFO_MSG("CKA_CHECK_VALUE must be a no-value (0 length) entry");
+								return CKR_ATTRIBUTE_VALUE_INVALID;
+							}
+							checkValue = false;
+							break;
+						default:
+							break;
+					}
+				}
+
+				bool bOK = true;
+
+				// Common Attributes
+				bOK = bOK && osobject->setAttribute(CKA_LOCAL,false);
+				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,false);
+				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE,false);
+
+				// Secret Attributes
+				ByteString secretValue = secret->getKeyBits();
+				ByteString value;
+				ByteString plainKCV;
+				ByteString kcv;
+
+				// Truncate value when requested, remove from the leading end
+				if (byteLen < secretValue.size())
+					secretValue.resize(byteLen);
+				// Get the KCV
+				switch (keyType)
+				{
+					case CKK_GENERIC_SECRET:
+						secret->setBitLen(byteLen * 8);
+						plainKCV = secret->getKeyCheckValue();
+						break;
+					case CKK_AES:
+						secret->setBitLen(byteLen * 8);
+						plainKCV = ((AESKey*)secret)->getKeyCheckValue();
+						break;
+					default:
+						bOK = false;
+						break;
+				}
+
+				if (isPrivate)
+				{
+					token->encrypt(secretValue, value);
+					token->encrypt(plainKCV, kcv);
+				}
+				else
+				{
+					value = secretValue;
+					kcv = plainKCV;
+				}
+				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+				if (checkValue)
+					bOK = bOK && osobject->setAttribute(CKA_CHECK_VALUE, kcv);
+				if (bOK) {
+					bOK = osobject->commitTransaction();
+
+					if (pCipherText != NULL) {
+						if (*pulCipherTextLen >= cipherText.size()) {
+							memcpy(pCipherText, cipherText.byte_str(), cipherText.size());
+							*pulCipherTextLen = cipherText.size();
+						}
+						else
+							rv = CKR_BUFFER_TOO_SMALL;
+					}
+
+					DEBUG_MSG("pulCiphertextLen: %d, phKey: %lx", *pulCipherTextLen, phKey);
+				}
+				else {
+					osobject->abortTransaction();
+				}
+
+				if (!bOK)
+					rv = CKR_FUNCTION_FAILED;
+			} else
+				rv = CKR_FUNCTION_FAILED;
+		}
+
+		// Clean up
+		cipher->recycleSymmetricKey(secret);
+		cipher->recyclePublicKey(publicKey);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		// Remove secret that may have been created already when the function fails.
+		if (rv != CKR_OK)
+		{
+			if (*phKey != CK_INVALID_HANDLE)
+			{
+				OSObject* ossecret = (OSObject*)handleManager->getObject(*phKey);
+				handleManager->destroyObject(*phKey);
+				if (ossecret) ossecret->destroyObject();
+				*phKey = CK_INVALID_HANDLE;
+			}
+		}
+				
+		return rv;
+	} else {
+		return CKR_GENERAL_ERROR;
+	}
+}
+
+CK_RV SoftHSM::C_DecapsulateKey
+	(
+		CK_SESSION_HANDLE hSession,         /* the session's handle */
+		CK_MECHANISM_PTR  pMechanism,       /* the decapsulation mechanism */
+		CK_OBJECT_HANDLE  hPrivateKey,      /* the private key */
+		CK_BYTE_PTR       pCipherText,      /* the encapsulated key */
+		CK_ULONG          ulCipherTextLen,  /* the encapsulated key size */
+		CK_ATTRIBUTE_PTR  pTemplate,        /* the decapsulated key template */
+		CK_ULONG          ulAttributeCount, /* the decapsulated key template length */  
+		CK_OBJECT_HANDLE_PTR phKey            /* the decapsulated key  */
+	)
+{
+	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
+
+	unsigned long mockReturnCode = this->mockAndSleep(__FUNCTION__);
+	if (mockReturnCode != CKR_OK) {
+		return mockErrorCode;
+	}
+
+	if (pMechanism == NULL_PTR) return CKR_ARGUMENTS_BAD;
+	if (hPrivateKey == NULL_PTR) return CKR_ARGUMENTS_BAD;
+
+	*phKey = CK_INVALID_HANDLE;
+
+	// Get the session
+	Session* session = (Session*)handleManager->getSession(hSession);
+	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	CK_RV rv;
+	AsymAlgo::Type algo = AsymAlgo::Unknown;
+	AsymMech::Type mech = AsymMech::Unknown;
+	// Check the mechanism, only accept advanced AES key wrapping and RSA
+	switch(pMechanism->mechanism)
+	{
+#ifdef WITH_ML_KEM
+		case CKM_ML_KEM:
+			algo = AsymAlgo::MLKEM;
+			mech = AsymMech::MLKEM;
+			break;
+#endif
+		default:
+			return CKR_MECHANISM_INVALID;
+	}
+
+	// Get the token
+	Token* token = session->getToken();
+	if (token == NULL) return CKR_GENERAL_ERROR;
+
+	// Check the wrapping key handle.
+	OSObject *decapsulationKey = (OSObject *)handleManager->getObject(hPrivateKey);
+	if (decapsulationKey == NULL_PTR || !decapsulationKey->isValid()) return CKR_KEY_HANDLE_INVALID;
+
+	CK_BBOOL isDecapsulationKeyOnToken = decapsulationKey->getBooleanValue(CKA_TOKEN, false);
+	CK_BBOOL isDecapsulationKeyPrivate = decapsulationKey->getBooleanValue(CKA_PRIVATE, true);
+
+	// Check user credentials for the wrapping key
+	rv = haveRead(session->getState(), isDecapsulationKeyOnToken, isDecapsulationKeyPrivate);
+	if (rv != CKR_OK)
+	{
+		if (rv == CKR_USER_NOT_LOGGED_IN)
+			INFO_MSG("User is not authorized");
+
+		return rv;
+	}
+
+	// Check if the wrapping key can be used for decapsulation
+	if (decapsulationKey->getBooleanValue(CKA_DECAPSULATE, false) == false)
+		return CKR_KEY_FUNCTION_NOT_PERMITTED;
+
+	// Check if the specified mechanism is allowed for the wrapping key
+	if (!isMechanismPermitted(decapsulationKey, pMechanism))
+		return CKR_MECHANISM_INVALID;
+
+	// Extract information from the template that is needed to create the object.
+	CK_OBJECT_CLASS objClass;
+	CK_KEY_TYPE keyType;
+	CK_CERTIFICATE_TYPE dummy;
+	CK_BBOOL isOnToken = CK_FALSE;
+	CK_BBOOL isPrivate = CK_TRUE;
+	bool isImplicit = false;
+	rv = extractObjectInformation(pTemplate, ulAttributeCount, objClass, keyType, dummy, isOnToken, isPrivate, isImplicit);
+	if (rv != CKR_OK)
+	{
+		ERROR_MSG("Mandatory attribute not present in template");
+		return rv;
+	}
+
+	DEBUG_MSG("objClass: %d, keyType: %d", objClass, keyType);
+
+	// Report errors and/or unexpected usage.
+	if (objClass != CKO_SECRET_KEY)
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	// Key type will be handled at object creation
+
+	// Check authorization
+	rv = haveWrite(session->getState(), isOnToken, isPrivate);
+	if (rv != CKR_OK)
+	{
+		if (rv == CKR_USER_NOT_LOGGED_IN)
+			INFO_MSG("User is not authorized");
+		if (rv == CKR_SESSION_READ_ONLY)
+			INFO_MSG("Session is read-only");
+
+		return rv;
+	}
+
+	AsymmetricAlgorithm* cipher = CryptoFactory::i()->getAsymmetricAlgorithm(algo);
+	if (cipher == NULL) return CKR_MECHANISM_INVALID;
+
+	PrivateKey* privateKey = cipher->newPrivateKey();
+
+	if (getMLKEMPrivateKey((MLKEMPrivateKey*)privateKey, token, decapsulationKey) != CKR_OK)
+	{
+		cipher->recyclePrivateKey(privateKey);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		return CKR_GENERAL_ERROR;
+	}
+
+	SymmetricKey *secret = NULL;
+	ByteString cipherText = ByteString(pCipherText, ulCipherTextLen);
+
+	if (cipher->decapsulate(privateKey, cipherText, &secret, keyType, mech)) 
+	{
+		DEBUG_MSG("secret: %s", secret->getKeyBits().hex_str().c_str());
+		
+		// Create the secret object using C_CreateObject
+		const CK_ULONG maxAttribs = 32;
+		CK_OBJECT_CLASS objClass = CKO_SECRET_KEY;
+		CK_ATTRIBUTE secretAttribs[maxAttribs] = {
+			{ CKA_CLASS, &objClass, sizeof(objClass) },
+			{ CKA_TOKEN, &isOnToken, sizeof(isOnToken) },
+			{ CKA_PRIVATE, &isPrivate, sizeof(isPrivate) },
+			{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		};
+		CK_ULONG secretAttribsCount = 4;
+
+		// Add the additional
+		if (ulAttributeCount > (maxAttribs - secretAttribsCount))
+			rv = CKR_TEMPLATE_INCONSISTENT;
+		for (CK_ULONG i=0; i < ulAttributeCount && rv == CKR_OK; ++i)
+		{
+			switch (pTemplate[i].type)
+			{
+				case CKA_CLASS:
+				case CKA_TOKEN:
+				case CKA_PRIVATE:
+				case CKA_KEY_TYPE:
+				case CKA_CHECK_VALUE:
+					continue;
+			default:
+				secretAttribs[secretAttribsCount++] = pTemplate[i];
+			}
+		}
+
+		rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, phKey, OBJECT_OP_UNWRAP);
+
+		// Store the attributes that are being supplied
+		if (rv == CKR_OK)
+		{
+			OSObject* osobject = (OSObject*)handleManager->getObject(*phKey);
+			if (osobject == NULL_PTR || !osobject->isValid()) {
+				rv = CKR_FUNCTION_FAILED;
+			} else if (osobject->startTransaction()) {
+				size_t byteLen = 32;
+				bool checkValue = true;
+				for (CK_ULONG i = 0; i < ulAttributeCount; i++)
+				{
+					switch (pTemplate[i].type)
+					{
+						case CKA_VALUE:
+							INFO_MSG("CKA_VALUE must not be included");
+							return CKR_ATTRIBUTE_READ_ONLY;
+						case CKA_CHECK_VALUE:
+							if (pTemplate[i].ulValueLen > 0)
+							{
+								INFO_MSG("CKA_CHECK_VALUE must be a no-value (0 length) entry");
+								return CKR_ATTRIBUTE_VALUE_INVALID;
+							}
+							checkValue = false;
+							break;
+						default:
+							break;
+					}
+				}
+
+				bool bOK = true;
+
+				// Common Attributes
+				bOK = bOK && osobject->setAttribute(CKA_LOCAL,false);
+				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,false);
+				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE,false);
+
+				// Secret Attributes
+				ByteString secretValue = secret->getKeyBits();
+				ByteString value;
+				ByteString plainKCV;
+				ByteString kcv;
+
+				// Truncate value when requested, remove from the leading end
+				if (byteLen < secretValue.size())
+					secretValue.resize(byteLen);
+				// Get the KCV
+				switch (keyType)
+				{
+					case CKK_GENERIC_SECRET:
+						secret->setBitLen(byteLen * 8);
+						plainKCV = secret->getKeyCheckValue();
+						break;
+					case CKK_AES:
+						secret->setBitLen(byteLen * 8);
+						plainKCV = ((AESKey*)secret)->getKeyCheckValue();
+						break;
+					default:
+						bOK = false;
+						break;
+				}
+
+				if (isPrivate)
+				{
+					token->encrypt(secretValue, value);
+					token->encrypt(plainKCV, kcv);
+				}
+				else
+				{
+					value = secretValue;
+					kcv = plainKCV;
+				}
+				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+				if (checkValue)
+					bOK = bOK && osobject->setAttribute(CKA_CHECK_VALUE, kcv);
+				if (bOK) {
+					bOK = osobject->commitTransaction();
+					DEBUG_MSG("phKey: %lx", phKey);
+				}
+				else {
+					osobject->abortTransaction();
+				}
+
+				if (!bOK)
+					rv = CKR_FUNCTION_FAILED;
+			} else
+				rv = CKR_FUNCTION_FAILED;
+		}
+
+		// Clean up
+		cipher->recycleSymmetricKey(secret);
+		cipher->recyclePrivateKey(privateKey);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		// Remove secret that may have been created already when the function fails.
+		if (rv != CKR_OK)
+		{
+			if (*phKey != CK_INVALID_HANDLE)
+			{
+				OSObject* ossecret = (OSObject*)handleManager->getObject(*phKey);
+				handleManager->destroyObject(*phKey);
+				if (ossecret) ossecret->destroyObject();
+				*phKey = CK_INVALID_HANDLE;
+			}
+		}
+				
+		return rv;
+	} else {
+		return CKR_GENERAL_ERROR;
+	}
 }
 
 CK_RV SoftHSM::generateGeneric
@@ -10777,7 +11380,7 @@ CK_RV SoftHSM::generateMLDSA
 				bool bNeverExtractable = osobject->getBooleanValue(CKA_EXTRACTABLE, false) == false;
 				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
 
-				// EDDSA Private Key Attributes
+				// MLDSA Private Key Attributes
 				ByteString parameterSet;
 				ByteString value;
 				ByteString seed;
@@ -10816,6 +11419,280 @@ CK_RV SoftHSM::generateMLDSA
 	// Clean up
 	mldsa->recycleKeyPair(kp);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
+
+	// Remove keys that may have been created already when the function fails.
+	if (rv != CKR_OK)
+	{
+		if (*phPrivateKey != CK_INVALID_HANDLE)
+		{
+			OSObject* ospriv = (OSObject*)handleManager->getObject(*phPrivateKey);
+			handleManager->destroyObject(*phPrivateKey);
+			if (ospriv) ospriv->destroyObject();
+			*phPrivateKey = CK_INVALID_HANDLE;
+		}
+
+		if (*phPublicKey != CK_INVALID_HANDLE)
+		{
+			OSObject* ospub = (OSObject*)handleManager->getObject(*phPublicKey);
+			handleManager->destroyObject(*phPublicKey);
+			if (ospub) ospub->destroyObject();
+			*phPublicKey = CK_INVALID_HANDLE;
+		}
+	}
+
+	return rv;
+}
+
+// Generate an ML-KEM key pair
+CK_RV SoftHSM::generateMLKEM
+(CK_SESSION_HANDLE hSession,
+	CK_ATTRIBUTE_PTR pPublicKeyTemplate,
+	CK_ULONG ulPublicKeyAttributeCount,
+	CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
+	CK_ULONG ulPrivateKeyAttributeCount,
+	CK_OBJECT_HANDLE_PTR phPublicKey,
+	CK_OBJECT_HANDLE_PTR phPrivateKey,
+	CK_BBOOL isPublicKeyOnToken,
+	CK_BBOOL isPublicKeyPrivate,
+	CK_BBOOL isPrivateKeyOnToken,
+	CK_BBOOL isPrivateKeyPrivate)
+{
+	*phPublicKey = CK_INVALID_HANDLE;
+	*phPrivateKey = CK_INVALID_HANDLE;
+
+	// Get the session
+	Session* session = (Session*)handleManager->getSession(hSession);
+	if (session == NULL)
+		return CKR_SESSION_HANDLE_INVALID;
+
+	// Get the token
+	Token* token = session->getToken();
+	if (token == NULL)
+		return CKR_GENERAL_ERROR;
+
+	// Extract desired key information
+	unsigned long* params = 0;
+	for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount; i++)
+	{
+		switch (pPublicKeyTemplate[i].type)
+		{
+			case CKA_PARAMETER_SET:
+				params = (unsigned long*)pPublicKeyTemplate[i].pValue;
+				break;
+			default:
+				break;
+		}
+	}
+
+	// The parameters must be specified to be able to generate a key pair.
+	if (params == 0) {
+		INFO_MSG("Missing parameter(s) in pPublicKeyTemplate");
+		return CKR_TEMPLATE_INCOMPLETE;
+	}
+
+	if (*params != 1UL && *params != 2UL && *params != 3UL) {
+		INFO_MSG("Wrong parameterSet: %ld", *params);
+		return CKR_PARAMETER_SET_NOT_SUPPORTED;
+	}
+
+	// Set the parameters
+	MLKEMParameters p;
+	p.setParameterSet(*params);
+
+	DEBUG_MSG("params=%d, p.parameterSet=%d", *params, p.getParameterSet());
+
+	// Generate key pair
+	AsymmetricKeyPair* kp = NULL;
+	AsymmetricAlgorithm* mlkem = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLKEM);
+	if (mlkem == NULL) return CKR_GENERAL_ERROR;
+	if (!mlkem->generateKeyPair(&kp, &p))
+	{
+		ERROR_MSG("Could not generate key pair");
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
+		return CKR_GENERAL_ERROR;
+	}
+
+	MLKEMPublicKey* pub = (MLKEMPublicKey*) kp->getPublicKey();
+	MLKEMPrivateKey* priv = (MLKEMPrivateKey*) kp->getPrivateKey();
+
+	CK_RV rv = CKR_OK;
+
+	// Create a public key using C_CreateObject
+	if (rv == CKR_OK)
+	{
+		const CK_ULONG maxAttribs = 32;
+		CK_OBJECT_CLASS publicKeyClass = CKO_PUBLIC_KEY;
+		CK_KEY_TYPE publicKeyType = CKK_ML_KEM;
+		CK_ATTRIBUTE publicKeyAttribs[maxAttribs] = {
+			{ CKA_CLASS, &publicKeyClass, sizeof(publicKeyClass) },
+			{ CKA_TOKEN, &isPublicKeyOnToken, sizeof(isPublicKeyOnToken) },
+			{ CKA_PRIVATE, &isPublicKeyPrivate, sizeof(isPublicKeyPrivate) },
+			{ CKA_KEY_TYPE, &publicKeyType, sizeof(publicKeyType) },
+		};
+		CK_ULONG publicKeyAttribsCount = 4;
+
+		// Add the additional
+		if (ulPublicKeyAttributeCount > (maxAttribs - publicKeyAttribsCount))
+			rv = CKR_TEMPLATE_INCONSISTENT;
+		for (CK_ULONG i=0; i < ulPublicKeyAttributeCount && rv == CKR_OK; ++i)
+		{
+			switch (pPublicKeyTemplate[i].type)
+			{
+				case CKA_CLASS:
+				case CKA_TOKEN:
+				case CKA_PRIVATE:
+				case CKA_KEY_TYPE:
+					continue;
+				default:
+					publicKeyAttribs[publicKeyAttribsCount++] = pPublicKeyTemplate[i];
+			}
+		}
+
+		if (rv == CKR_OK)
+			rv = this->CreateObject(hSession,publicKeyAttribs,publicKeyAttribsCount,phPublicKey,OBJECT_OP_GENERATE);
+
+		DEBUG_MSG("Created public key, rv=%d", rv);
+		// Store the attributes that are being supplied by the key generation to the object
+		if (rv == CKR_OK)
+		{
+			OSObject* osobject = (OSObject*)handleManager->getObject(*phPublicKey);
+			if (osobject == NULL_PTR || !osobject->isValid()) {
+				rv = CKR_FUNCTION_FAILED;
+			} else if (osobject->startTransaction()) {
+				bool bOK = true;
+
+				// Common Key Attributes
+				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
+				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_KEM_KEY_PAIR_GEN;
+				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
+
+				// ML-KEM Public Key Attributes
+				ByteString parameterSet;
+				ByteString value;
+				if (isPublicKeyPrivate)
+				{
+					DEBUG_MSG("pub->getParameterSet()=%d, pub->getValue()=%s", pub->getParameterSet(), pub->getValue().hex_str().c_str());
+					token->encrypt(ByteString(pub->getParameterSet()), parameterSet);
+					token->encrypt(pub->getValue(), value);
+				}
+				else
+				{
+					parameterSet = ByteString(pub->getParameterSet());
+					value = pub->getValue();
+				}
+				DEBUG_MSG("Encryption of attributes done");
+
+				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, parameterSet);
+				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+
+				if (bOK)
+					bOK = osobject->commitTransaction();
+				else
+					osobject->abortTransaction();
+
+				if (!bOK)
+					rv = CKR_FUNCTION_FAILED;
+			} else
+				rv = CKR_FUNCTION_FAILED;
+		}
+	}
+
+	// Create a private key using C_CreateObject
+	if (rv == CKR_OK)
+	{
+		DEBUG_MSG("Creating private key");
+		const CK_ULONG maxAttribs = 32;
+		CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
+		CK_KEY_TYPE privateKeyType = CKK_ML_KEM;
+		CK_ATTRIBUTE privateKeyAttribs[maxAttribs] = {
+			{ CKA_CLASS, &privateKeyClass, sizeof(privateKeyClass) },
+			{ CKA_TOKEN, &isPrivateKeyOnToken, sizeof(isPrivateKeyOnToken) },
+			{ CKA_PRIVATE, &isPrivateKeyPrivate, sizeof(isPrivateKeyPrivate) },
+			{ CKA_KEY_TYPE, &privateKeyType, sizeof(privateKeyType) },
+		};
+		CK_ULONG privateKeyAttribsCount = 4;
+		if (ulPrivateKeyAttributeCount > (maxAttribs - privateKeyAttribsCount))
+			rv = CKR_TEMPLATE_INCONSISTENT;
+		for (CK_ULONG i=0; i < ulPrivateKeyAttributeCount && rv == CKR_OK; ++i)
+		{
+			switch (pPrivateKeyTemplate[i].type)
+			{
+				case CKA_CLASS:
+				case CKA_TOKEN:
+				case CKA_PRIVATE:
+				case CKA_KEY_TYPE:
+					continue;
+				default:
+					privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
+			}
+		}
+
+		DEBUG_MSG("private key attributes done");
+
+
+		if (rv == CKR_OK)
+			rv = this->CreateObject(hSession,privateKeyAttribs,privateKeyAttribsCount,phPrivateKey,OBJECT_OP_GENERATE);
+
+		DEBUG_MSG("private key object created");
+		// Store the attributes that are being supplied by the key generation to the object
+		if (rv == CKR_OK)
+		{
+			OSObject* osobject = (OSObject*)handleManager->getObject(*phPrivateKey);
+			if (osobject == NULL_PTR || !osobject->isValid()) {
+				rv = CKR_FUNCTION_FAILED;
+			} else if (osobject->startTransaction()) {
+				bool bOK = true;
+
+				// Common Key Attributes
+				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
+				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_KEM_KEY_PAIR_GEN;
+				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
+
+				// Common Private Key Attributes
+				bool bAlwaysSensitive = osobject->getBooleanValue(CKA_SENSITIVE, false);
+				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,bAlwaysSensitive);
+				bool bNeverExtractable = osobject->getBooleanValue(CKA_EXTRACTABLE, false) == false;
+				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
+
+				// ML-KEM Private Key Attributes
+				ByteString parameterSet;
+				ByteString value;
+				ByteString seed;
+				DEBUG_MSG("priv->getParameterSet()=%d, priv->getSeed()=%s, priv->getValue()=%s", priv->getParameterSet(), priv->getSeed().hex_str().c_str(), priv->getValue().hex_str().c_str());
+				if (isPrivateKeyPrivate)
+				{
+					token->encrypt(ByteString(priv->getParameterSet()), parameterSet);
+					token->encrypt(priv->getValue(), value);
+					token->encrypt(priv->getSeed(), seed);
+				}
+				else
+				{
+					parameterSet = ByteString(priv->getParameterSet());
+					value = priv->getValue();
+					seed = priv->getSeed();
+				}
+
+				DEBUG_MSG("parameterSet=%d, seed=%s, value=%s", parameterSet.hex_str().c_str(), seed.hex_str().c_str(), value.hex_str().c_str());
+
+				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, parameterSet);
+				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+				bOK = bOK && osobject->setAttribute(CKA_SEED, seed);
+
+				if (bOK)
+					bOK = osobject->commitTransaction();
+				else
+					osobject->abortTransaction();
+
+				if (!bOK)
+					rv = CKR_FUNCTION_FAILED;
+			} else
+				rv = CKR_FUNCTION_FAILED;
+		}
+	}
+
+	// Clean up
+	mlkem->recycleKeyPair(kp);
+	CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
 
 	// Remove keys that may have been created already when the function fails.
 	if (rv != CKR_OK)
@@ -13771,6 +14648,66 @@ CK_RV SoftHSM::getMLDSAPublicKey(MLDSAPublicKey* publicKey, Token* token, OSObje
 	return CKR_OK;
 }
 
+CK_RV SoftHSM::getMLKEMPrivateKey(MLKEMPrivateKey* privateKey, Token* token, OSObject* key)
+{
+	if (privateKey == NULL) return CKR_ARGUMENTS_BAD;
+	if (token == NULL) return CKR_ARGUMENTS_BAD;
+	if (key == NULL) return CKR_ARGUMENTS_BAD;
+
+	// Get the CKA_PRIVATE attribute, when the attribute is not present use default false
+	bool isKeyPrivate = key->getBooleanValue(CKA_PRIVATE, false);
+
+	// ML-KEM Private Key Attributes
+	ByteString value;
+	ByteString seed;
+	if (isKeyPrivate)
+	{
+		bool bOK = true;
+		bOK = bOK && token->decrypt(key->getByteStringValue(CKA_VALUE), value);
+		bOK = bOK && token->decrypt(key->getByteStringValue(CKA_SEED), seed);
+		if (!bOK)
+			return CKR_GENERAL_ERROR;
+	}
+	else
+	{
+		value = key->getByteStringValue(CKA_VALUE);
+		seed = key->getByteStringValue(CKA_SEED);
+	}
+
+	privateKey->setValue(value);
+	privateKey->setSeed(seed);
+
+	return CKR_OK;
+}
+
+CK_RV SoftHSM::getMLKEMPublicKey(MLKEMPublicKey* publicKey, Token* token, OSObject* key)
+{
+	if (publicKey == NULL) return CKR_ARGUMENTS_BAD;
+	if (token == NULL) return CKR_ARGUMENTS_BAD;
+	if (key == NULL) return CKR_ARGUMENTS_BAD;
+
+	// Get the CKA_PRIVATE attribute, when the attribute is not present use default false
+	bool isKeyPrivate = key->getBooleanValue(CKA_PRIVATE, false);
+
+	// ML-KEM Public Key Attributes
+	ByteString value;
+	if (isKeyPrivate)
+	{
+		bool bOK = true;
+		bOK = bOK && token->decrypt(key->getByteStringValue(CKA_VALUE), value);
+		if (!bOK)
+			return CKR_GENERAL_ERROR;
+	}
+	else
+	{
+		value = key->getByteStringValue(CKA_VALUE);
+	}
+
+	publicKey->setValue(value);
+
+	return CKR_OK;
+}
+
 CK_RV SoftHSM::getDHPrivateKey(DHPrivateKey* privateKey, Token* token, OSObject* key)
 {
 	if (privateKey == NULL) return CKR_ARGUMENTS_BAD;
@@ -14271,6 +15208,51 @@ bool SoftHSM::setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* to
 
 	return bOK;
 }
+
+bool SoftHSM::setMLKEMPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const
+{
+	AsymmetricAlgorithm* mlkem = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLKEM);
+	if (mlkem == NULL)
+		return false;
+	PrivateKey* priv = mlkem->newPrivateKey();
+	if (priv == NULL)
+	{
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
+		return false;
+	}
+	if (!priv->PKCS8Decode(ber))
+	{
+		mlkem->recyclePrivateKey(priv);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
+		return false;
+	}
+	// ML-KEM Private Key Attributes
+	ByteString parameterSet;
+	ByteString seed;
+	ByteString value;
+	if (isPrivate)
+	{
+		token->encrypt(((MLKEMPrivateKey*)priv)->getParameterSet(), parameterSet);
+		token->encrypt(((MLKEMPrivateKey*)priv)->getSeed(), seed);
+		token->encrypt(((MLKEMPrivateKey*)priv)->getValue(), value);
+	}
+	else
+	{
+		parameterSet = ((MLKEMPrivateKey*)priv)->getParameterSet();
+		seed = ((MLKEMPrivateKey*)priv)->getSeed();
+		value = ((MLKEMPrivateKey*)priv)->getValue();
+	}
+	bool bOK = true;
+	bOK = bOK && key->setAttribute(CKA_PARAMETER_SET, parameterSet);
+	bOK = bOK && key->setAttribute(CKA_SEED, seed);
+	bOK = bOK && key->setAttribute(CKA_VALUE, value);
+
+	mlkem->recyclePrivateKey(priv);
+	CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
+
+	return bOK;
+}
+
 
 bool SoftHSM::setGOSTPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const
 {

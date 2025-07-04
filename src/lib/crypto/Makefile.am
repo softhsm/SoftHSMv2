@@ -31,6 +31,9 @@ libsofthsm_crypto_la_SOURCES =	AESKey.cpp \
 				MLDSAParameters.cpp \
                 MLDSAPrivateKey.cpp \
             	MLDSAPublicKey.cpp \
+				MLKEMParameters.cpp \
+                MLKEMPrivateKey.cpp \
+            	MLKEMPublicKey.cpp \
 				RSAParameters.cpp \
 				RSAPrivateKey.cpp \
 				RSAPublicKey.cpp \
@@ -83,6 +86,10 @@ libsofthsm_crypto_la_SOURCES +=	OSSLAES.cpp \
 				OSSLMLDSAKeyPair.cpp \
 				OSSLMLDSAPrivateKey.cpp \
 				OSSLMLDSAPublicKey.cpp \
+				OSSLMLKEM.cpp \
+				OSSLMLKEMKeyPair.cpp \
+				OSSLMLKEMPrivateKey.cpp \
+				OSSLMLKEMPublicKey.cpp \
 				OSSLRNG.cpp \
 				OSSLRSA.cpp \
 				OSSLRSAKeyPair.cpp \

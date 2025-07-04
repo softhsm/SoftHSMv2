@@ -140,7 +140,7 @@ bool AsymmetricAlgorithm::verifyFinal(const ByteString& /*signature*/)
 	return true;
 }
 
-bool AsymmetricAlgorithm::checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode)
+bool AsymmetricAlgorithm::checkEncryptedDataSize(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/, int* /*errorCode*/)
 {
 	return true;
 }
@@ -181,6 +181,15 @@ bool AsymmetricAlgorithm::unwrapKey(PrivateKey* privateKey, const ByteString& en
 	return decrypt(privateKey, encryptedData, data, padding);
 }
 
+bool AsymmetricAlgorithm::encapsulate(PublicKey* /*publicKey*/, ByteString& /*cipherText*/, SymmetricKey** /*secretKey*/, CK_KEY_TYPE /*keyType*/, const AsymMech::Type /*mechanism*/) 
+{
+	return false;
+}
+	
+bool AsymmetricAlgorithm::decapsulate(PrivateKey* /*privateKey*/, const ByteString& /*cipherText*/, SymmetricKey** /*secretKey*/, CK_KEY_TYPE /*keyType*/, const AsymMech::Type /*mechanism*/) 
+{
+	return false;
+}
 
 bool AsymmetricAlgorithm::generateParameters(AsymmetricParameters** /*ppParams*/, void* /*parameters = NULL*/, RNG* /*rng = NULL*/)
 {

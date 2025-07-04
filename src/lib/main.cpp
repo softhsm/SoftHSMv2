@@ -120,9 +120,12 @@ static CK_FUNCTION_LIST functionList =
 	C_DeriveKey,
 	C_SeedRandom,
 	C_GenerateRandom,
+	CI_InternalGenerateRandom,
 	C_GetFunctionStatus,
 	C_CancelFunction,
-	C_WaitForSlotEvent
+	C_WaitForSlotEvent,
+	C_EncapsulateKey,
+	C_DecapsulateKey
 };
 
 // PKCS #11 initialisation function
@@ -1140,6 +1143,21 @@ PKCS_API CK_RV C_GenerateRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pRandomD
 	return CKR_FUNCTION_FAILED;
 }
 
+// Generate the specified amount of random data, Proteccio proprietary function
+PKCS_API CK_RV CI_InternalGenerateRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pRandomData, CK_ULONG ulRandomLen)
+{
+	try
+	{
+		return SoftHSM::i()->C_GenerateRandom(hSession, pRandomData, ulRandomLen);
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
 // Legacy function
 PKCS_API CK_RV C_GetFunctionStatus(CK_SESSION_HANDLE hSession)
 {
@@ -1185,3 +1203,50 @@ PKCS_API CK_RV C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot, CK_VOID_
 	return CKR_FUNCTION_FAILED;
 }
 
+PKCS_API CK_RV C_EncapsulateKey
+(
+  CK_SESSION_HANDLE    hSession,        /* the session's handle */
+  CK_MECHANISM_PTR     pMechanism,      /* the encapsulation mechanism */
+  CK_OBJECT_HANDLE     hPublicKey,      /* the public key */
+  CK_ATTRIBUTE_PTR     pTemplate,       /* the new key template */
+  CK_ULONG             ulAttributeCount, /* the template length */
+  CK_OBJECT_HANDLE_PTR phKey,            /* the key which has been encapsulated */
+  CK_BYTE_PTR          pCipherText,      /* the key encapsulated */
+  CK_ULONG_PTR         pulCipherTextLen  /* the key encapsulated size */
+)
+{
+	try
+	{
+		return SoftHSM::i()->C_EncapsulateKey(hSession, pMechanism, hPublicKey, pTemplate, ulAttributeCount, phKey, pCipherText, pulCipherTextLen);
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
+PKCS_API CK_RV C_DecapsulateKey
+(
+  CK_SESSION_HANDLE hSession,         /* the session's handle */
+  CK_MECHANISM_PTR  pMechanism,       /* the decapsulation mechanism */
+  CK_OBJECT_HANDLE  hPrivateKey,      /* the private key */
+  CK_BYTE_PTR       pCipherText,      /* the encapsulated key */
+  CK_ULONG          ulCipherTextLen,  /* the encapsulated key size */
+  CK_ATTRIBUTE_PTR  pTemplate,        /* the decapsulated key template */
+  CK_ULONG          ulAttributeCount, /* the decapsulated key template length */  
+  CK_OBJECT_HANDLE_PTR phKey            /* the decapsulated key  */
+)
+{
+	try
+	{
+		return SoftHSM::i()->C_DecapsulateKey(hSession, pMechanism, hPrivateKey, pCipherText, ulCipherTextLen, pTemplate, ulAttributeCount, phKey);
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}

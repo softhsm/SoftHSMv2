@@ -54,7 +54,8 @@ struct AsymAlgo
 		ECDSA,
 		GOST,
 		EDDSA,
-		MLDSA
+		MLDSA,
+		MLKEM
         };
 };
 
@@ -98,7 +99,8 @@ struct AsymMech
 		GOST,
 		GOST_GOST,
 		EDDSA,
-		MLDSA
+		MLDSA,
+		MLKEM
 	};
 };
 
@@ -153,6 +155,10 @@ public:
 	// Wrap/Unwrap keys
 	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
 	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+
+	// Encapsulate/Decapsulate keys
+	virtual bool encapsulate(PublicKey* publicKey, ByteString& cipherText, SymmetricKey** secretKey, CK_KEY_TYPE keyType, const AsymMech::Type mechanism);
+	virtual bool decapsulate(PrivateKey* privateKey, const ByteString& cipherText, SymmetricKey** secretKey, CK_KEY_TYPE keyType, const AsymMech::Type mechanism);
 
 	// Key factory
 	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL) = 0;

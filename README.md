@@ -83,6 +83,7 @@ Options:
 	--enable-gost		Enable support for GOST (default detect)
 	--enable-eddsa		Enable support for EDDSA (default detect)
 	--enable-mldsa		Enable support for ML-DSA (default detect)
+	--enable-mlkem		Enable support for ML-KEM (default detect)
 	--disable-visibility	Disable hidden visibilty link mode [enabled]
 	--with-crypto-backend	Select crypto backend (openssl|botan)
 	--with-openssl=PATH	Specify prefix of path of OpenSSL

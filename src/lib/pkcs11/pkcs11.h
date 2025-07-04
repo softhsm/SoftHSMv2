@@ -528,6 +528,11 @@ typedef unsigned long ck_attribute_type_t;
 #define CKA_DERIVE_TEMPLATE		(CKF_ARRAY_ATTRIBUTE | 0x213UL)
 #define CKA_ALLOWED_MECHANISMS		(CKF_ARRAY_ATTRIBUTE | 0x600UL)
 #define CKA_PARAMETER_SET               (0x61dUL)
+/* KEM */
+#define CKA_ENCAPSULATE_TEMPLATE        (0x62aUL)
+#define CKA_DECAPSULATE_TEMPLATE        (0x62bUL)
+#define CKA_ENCAPSULATE                 (0x633UL)
+#define CKA_DECAPSULATE                 (0x634UL)
 #define CKA_SEED                        (0x637UL)
 #define CKA_VENDOR_DEFINED		((unsigned long) (1UL << 31))
 
@@ -1095,6 +1100,8 @@ struct ck_aes_cbc_encrypt_data_params {
 #define CKF_EC_UNCOMPRESS	(1UL << 24)
 #define CKF_EC_COMPRESS		(1UL << 25)
 
+#define CKF_ENCAPSULATE        (1UL << 28)
+#define CKF_DECAPSULATE        (1UL << 29)
 
 /* Flags for C_WaitForSlotEvent.  */
 #define CKF_DONT_BLOCK				(1UL)
@@ -1385,10 +1392,35 @@ _CK_DECLARE_FUNCTION (C_GenerateRandom,
 		      (ck_session_handle_t session,
 		       unsigned char *random_data,
 		       unsigned long random_len));
+_CK_DECLARE_FUNCTION (CI_InternalGenerateRandom,
+		      (ck_session_handle_t session,
+		       unsigned char *random_data,
+		       unsigned long random_len));
 
 _CK_DECLARE_FUNCTION (C_GetFunctionStatus, (ck_session_handle_t session));
 _CK_DECLARE_FUNCTION (C_CancelFunction, (ck_session_handle_t session));
 
+// From old PKCS#11 3.2 draft for Proteccio V182/X181 compatibility
+_CK_DECLARE_FUNCTION (C_EncapsulateKey, 
+  (ck_session_handle_t session,
+  struct ck_mechanism *mechanism,
+  ck_object_handle_t publickey,
+  struct ck_attribute *templ,
+  unsigned long attribute_count,
+  ck_object_handle_t *key,
+  unsigned char *cipher_text,
+  unsigned long *cipher_text_length));
+
+_CK_DECLARE_FUNCTION (C_DecapsulateKey,
+  (ck_session_handle_t session,
+  struct ck_mechanism *mechanism,
+  ck_object_handle_t privatekey,
+  unsigned char *cipher_text,
+  unsigned long cipher_text_length,
+  struct ck_attribute *templ,
+  unsigned long attribute_count,
+  ck_object_handle_t *key
+));
 
 struct ck_function_list
 {
@@ -1458,9 +1490,12 @@ struct ck_function_list
   CK_C_DeriveKey C_DeriveKey;
   CK_C_SeedRandom C_SeedRandom;
   CK_C_GenerateRandom C_GenerateRandom;
+  CK_CI_InternalGenerateRandom CI_InternalGenerateRandom;
   CK_C_GetFunctionStatus C_GetFunctionStatus;
   CK_C_CancelFunction C_CancelFunction;
   CK_C_WaitForSlotEvent C_WaitForSlotEvent;
+  CK_C_EncapsulateKey C_EncapsulateKey;
+  CK_C_DecapsulateKey C_DecapsulateKey;
 };
 
 
