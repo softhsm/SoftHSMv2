@@ -47,6 +47,9 @@
 #include <botan/bigint.h>
 #include <botan/der_enc.h>
 #include <botan/oids.h>
+#include <botan/der_enc.h>
+#include <botan/x509cert.h>
+#include <botan/x509_dn.h>
 
 // Init Botan
 void crypto_init()
@@ -207,6 +210,64 @@ int crypto_import_key_pair
 
 	delete pkey;
 	return result;
+}
+
+int crypto_import_certificate
+(
+	CK_SESSION_HANDLE hSession,
+	char* filePath,
+	char* label,
+	char* objID,
+	size_t objIDLen
+)
+{
+	auto _vector_ptr = [](std::vector<uint8_t> &v) {
+		return v.size() == 0 ? NULL : &v.front();
+	};
+
+	Botan::X509_Certificate cert(filePath);
+	std::vector<uint8_t> blob;
+	std::vector<uint8_t> subject;
+	std::vector<uint8_t> issuer;
+	std::vector<uint8_t> serial;
+
+	Botan::DER_Encoder blob_encoder(blob);
+	Botan::DER_Encoder subject_encoder(subject);
+	Botan::DER_Encoder issuer_encoder(issuer);
+	Botan::DER_Encoder serial_encoder(serial);
+
+	cert.encode_into(blob_encoder);
+	cert.subject_dn().encode_into(subject_encoder);
+	cert.issuer_dn().encode_into(issuer_encoder);
+	serial_encoder.encode(Botan::BigInt::decode(cert.serial_number()));
+
+	CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
+	CK_CERTIFICATE_TYPE certType = CKC_X_509;
+	CK_BBOOL ckFalse = CK_FALSE, ckTrue = CK_TRUE;
+	CK_ATTRIBUTE certTemplate[] = {
+		{ CKA_CLASS,            &certClass,          	sizeof(certClass) },
+		{ CKA_CERTIFICATE_TYPE, &certType,           	sizeof(certType) },
+		{ CKA_LABEL,            label,               	strlen(label) },
+		{ CKA_ID,               objID,               	objIDLen },
+		{ CKA_TOKEN,            &ckTrue,            	sizeof(ckTrue) },
+		{ CKA_PRIVATE,		&ckFalse,		sizeof(ckFalse) },
+		{ CKA_VALUE,            _vector_ptr(blob),    	(CK_ULONG)blob.size() },
+		{ CKA_SUBJECT,          _vector_ptr(subject), 	(CK_ULONG)subject.size() },
+		{ CKA_ISSUER,           _vector_ptr(issuer),  	(CK_ULONG)issuer.size() },
+		{ CKA_SERIAL_NUMBER,    _vector_ptr(serial),  	(CK_ULONG)serial.size() }
+	};
+
+	CK_OBJECT_HANDLE hCert;
+	CK_RV rv = p11->C_CreateObject(hSession, certTemplate, 10, &hCert);
+	if (rv != CKR_OK)
+	{
+		fprintf(stderr, "ERROR: Could not save the certificate in the token.\n");
+		return 1;
+	}
+
+	printf("The certificate has been imported.\n");
+
+	return 0;
 }
 
 // Read the key from file

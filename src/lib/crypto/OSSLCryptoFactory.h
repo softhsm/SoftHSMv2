@@ -42,7 +42,11 @@
 #include "RNG.h"
 #include <memory>
 #include <openssl/conf.h>
+#if !defined(WITHOUT_OPENSSL_ENGINES) && !defined(OPENSSL_NO_ENGINES)
+#define WITH_ENGINES 1
 #include <openssl/engine.h>
+#endif
+
 
 class OSSLCryptoFactory : public CryptoFactory
 {
@@ -103,12 +107,15 @@ private:
 
 	// The one-and-only RNG instance
 	RNG* rng;
+
+#ifdef WITH_ENGINES
 	// And RDRAND engine to use with it
 	ENGINE *rdrand_engine;
 
 #ifdef WITH_GOST
 	// The GOST engine
 	ENGINE *eg;
+#endif
 #endif
 };
 
