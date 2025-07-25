@@ -54,6 +54,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # continue to check with modern compiler versions.
 set(STDC_HEADERS 1)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_FILE_OFFSET_BITS=64")
+
 # acx_strict.m4
 if(ENABLE_STRICT)
     enable_cxx_compiler_flag_if_supported(-Wall)
