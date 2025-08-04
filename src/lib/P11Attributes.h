@@ -122,7 +122,7 @@ protected:
 	// Update the value if allowed
 	virtual CK_RV updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op);
 
-	// Retrie the value if allowed
+	// Retrieve the value if allowed
 	virtual CK_RV retrieveAttrByteString(Token *token, bool isPrivate, OSAttribute *attr, ByteString &value);
 
 	// Helper functions
