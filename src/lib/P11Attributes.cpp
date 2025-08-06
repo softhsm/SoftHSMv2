@@ -500,7 +500,7 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 	return CKR_ATTRIBUTE_READ_ONLY;
 }
 
-CK_RV P11NonPrivateAttribute::retrieveAttrByteString(Token *token, bool isPrivate, OSAttribute *attr, ByteString &value)
+CK_RV P11NonPrivateAttribute::retrieveAttrByteString(Token* /*token*/, bool /*isPrivate*/, OSAttribute *attr, ByteString &value)
 {
 	value = attr->getByteStringValue();
 	return CKR_OK;
