@@ -10,7 +10,7 @@ on:
 jobs:
   linux:
     name: Linux (${{ matrix.backend }})
-    runs-on: ubuntu-20.04 # for OpenSSL 1.1.1
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -23,6 +23,13 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt install libcppunit-dev libbotan-2-dev p11-kit
+          # Replace installed OpenSSL with the supported version 1.1.1
+          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb
+          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.24_amd64.deb
+          curl -O http://security.ubuntu.com/ubuntu/pool/main/o/openssl/openssl_1.1.1f-1ubuntu2.24_amd64.deb
+          sudo dpkg -i --force-confnew openssl_1.1.1f-1ubuntu2.24_amd64.deb \
+                                       libssl1.1_1.1.1f-1ubuntu2.24_amd64.deb \
+                                       libssl-dev_1.1.1f-1ubuntu2.24_amd64.deb
       - name: Build
         env:
           CXXFLAGS: -Werror -DBOTAN_NO_DEPRECATED_WARNINGS
