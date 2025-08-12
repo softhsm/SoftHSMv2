@@ -3,7 +3,8 @@ MAINTAINERCLEANFILES = 		$(srcdir)/Makefile.in
 AM_CPPFLAGS = 			-I$(srcdir)/.. \
 				-I$(srcdir)/../common \
 				-I$(srcdir)/../pkcs11 \
-				@CPPUNIT_CFLAGS@
+				@CPPUNIT_CFLAGS@ \
+				@CRYPTO_INCLUDES@
 
 check_PROGRAMS =		p11test
 

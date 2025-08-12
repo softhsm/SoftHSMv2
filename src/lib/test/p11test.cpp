@@ -45,8 +45,15 @@
 #include <fstream>
 #include <stdlib.h>
 #include <iostream>
+#include "config.h"
 #ifdef _WIN32
 #include "setenv.h"
+#endif
+#ifdef WITH_OPENSSL
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/provider.h>
+#endif
 #endif
 
 class MyListener : public CPPUNIT_NS::TestListener {
@@ -69,6 +76,11 @@ int main(int /*argc*/, char**const /*argv*/)
 #else
 	setenv("SOFTHSM2_CONF", ".\\softhsm2.conf", 1);
 #endif
+#endif
+
+#if defined(WITH_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x30000000L
+	OSSL_PROVIDER_load(NULL, "legacy");
+	OSSL_PROVIDER_load(NULL, "default");
 #endif
 
 	CPPUNIT_NS::TestFactoryRegistry &registry( CPPUNIT_NS::TestFactoryRegistry::getRegistry() );
