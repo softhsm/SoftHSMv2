@@ -195,6 +195,9 @@ extern "C" {
 #define source_data pSourceData
 #define source_data_len ulSourceDataLen
 
+#define aes_key_bits ulAESKeyBits
+#define oaep_params pOAEPParams
+
 #define counter_bits ulCounterBits
 #define iv_ptr pIv
 #define iv_len ulIvLen
@@ -976,6 +979,11 @@ struct ck_rsa_pkcs_oaep_params {
   unsigned long source_data_len;
 };
 
+struct ck_rsa_aes_key_wrap_params {
+  unsigned long aes_key_bits;
+  ck_rsa_pkcs_oaep_params *oaep_params;
+};
+
 struct ck_aes_ctr_params {
   unsigned long counter_bits;
   unsigned char cb[16];
@@ -1625,6 +1633,9 @@ typedef struct ck_rsa_pkcs_pss_params *CK_RSA_PKCS_PSS_PARAMS_PTR;
 
 typedef struct ck_rsa_pkcs_oaep_params CK_RSA_PKCS_OAEP_PARAMS;
 typedef struct ck_rsa_pkcs_oaep_params *CK_RSA_PKCS_OAEP_PARAMS_PTR;
+
+typedef struct ck_rsa_aes_key_wrap_params CK_RSA_AES_KEY_WRAP_PARAMS;
+typedef struct ck_rsa_aes_key_wrap_params *CK_RSA_AES_KEY_WRAP_PARAMS_PTR;
 
 typedef struct ck_aes_ctr_params CK_AES_CTR_PARAMS;
 typedef struct ck_aes_ctr_params *CK_AES_CTR_PARAMS_PTR;

@@ -746,6 +746,7 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 #endif
 	t["CKM_SHA1_RSA_PKCS"]		= CKM_SHA1_RSA_PKCS;
 	t["CKM_RSA_PKCS_OAEP"]		= CKM_RSA_PKCS_OAEP;
+	t["CKM_RSA_AES_KEY_WRAP"]	= CKM_RSA_AES_KEY_WRAP;
 	t["CKM_SHA224_RSA_PKCS"]	= CKM_SHA224_RSA_PKCS;
 	t["CKM_SHA256_RSA_PKCS"]	= CKM_SHA256_RSA_PKCS;
 	t["CKM_SHA384_RSA_PKCS"]	= CKM_SHA384_RSA_PKCS;
@@ -1181,6 +1182,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			pInfo->flags = CKF_WRAP | CKF_UNWRAP;
 			break;
 #endif
+		case CKM_RSA_AES_KEY_WRAP:
+			pInfo->ulMinKeySize = rsaMinSize;
+			pInfo->ulMaxKeySize = rsaMaxSize;
+			pInfo->flags = CKF_WRAP | CKF_UNWRAP;
+			break;
+
 #ifndef WITH_FIPS
 		case CKM_DES_ECB_ENCRYPT_DATA:
 		case CKM_DES_CBC_ENCRYPT_DATA:
@@ -6456,6 +6463,102 @@ CK_RV SoftHSM::WrapKeyAsym
 	return CKR_OK;
 }
 
+// Internal: Wrap with mechanism RSA_AES_KEY_WRAP
+CK_RV SoftHSM::WrapMechRsaAesKw
+(
+	CK_SESSION_HANDLE hSession,
+	CK_MECHANISM_PTR pMechanism,
+	Token *token,
+	OSObject *wrapKey,
+	ByteString &keydata,
+	ByteString &wrapped
+)
+{
+	CK_RV rv = CKR_OK;
+	ByteString wrapped_1; // buffer for the wrapped AES key;
+	ByteString wrapped_2; // buffer for the wrapped target key;
+	CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
+	CK_ULONG emphKeyLen = params->aes_key_bits / 8;
+	CK_OBJECT_HANDLE hEmphKey = CK_INVALID_HANDLE;
+	CK_OBJECT_CLASS emphKeyClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE emphKeyType = CKK_AES;
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_ATTRIBUTE emph_temp[] = {
+		{CKA_CLASS, &emphKeyClass, sizeof(CK_OBJECT_CLASS)},
+		{CKA_KEY_TYPE, &emphKeyType, sizeof(CK_KEY_TYPE)},
+		{CKA_TOKEN, &bFalse, sizeof(CK_BBOOL)},
+		{CKA_PRIVATE, &bTrue, sizeof(CK_BBOOL)},
+		{CKA_WRAP, &bTrue, sizeof(CK_BBOOL)},
+		{CKA_EXTRACTABLE, &bTrue, sizeof(CK_BBOOL)},
+		{CKA_VALUE_LEN, &emphKeyLen, sizeof(CK_ULONG)}
+	};
+
+	// Generates temporary random AES key of ulAESKeyBits length.
+	rv = this->generateAES(hSession, emph_temp, sizeof(emph_temp)/sizeof(CK_ATTRIBUTE), &hEmphKey, bFalse, bTrue);
+	if (rv != CKR_OK)
+	{
+		// Remove secret that may have been created already when the function fails.
+		if (hEmphKey != CK_INVALID_HANDLE)
+		{
+		    OSObject *emphKey = (OSObject *)handleManager->getObject(hEmphKey);
+		    handleManager->destroyObject(hEmphKey);
+		    if(emphKey) emphKey->destroyObject();
+		    hEmphKey = CK_INVALID_HANDLE;
+		}
+		return rv;
+	}
+
+	OSObject *emphKey = (OSObject *)handleManager->getObject(hEmphKey);
+	if (emphKey == NULL_PTR || !emphKey->isValid())
+	{
+		rv = CKR_FUNCTION_FAILED;
+		handleManager->destroyObject(hEmphKey);
+		if(emphKey) emphKey->destroyObject();
+		hEmphKey = CK_INVALID_HANDLE;
+		return rv;
+	}
+
+	CK_MECHANISM emphMech = {CKM_AES_KEY_WRAP_PAD, NULL_PTR, 0};
+	// Wraps the target key with the temporary AES key using CKM_AES_KEY_WRAP_PAD (RFC5649).
+	rv = SoftHSM::WrapKeySym(&emphMech, token, emphKey, keydata, wrapped_2);
+	if (rv != CKR_OK)
+	{
+		handleManager->destroyObject(hEmphKey);
+		emphKey->destroyObject();
+		hEmphKey = CK_INVALID_HANDLE;
+		return rv;
+	}
+
+	// Get the AES emph key data
+	ByteString emphkeydata;
+	ByteString emphKeyValue = emphKey->getByteStringValue(CKA_VALUE);
+	token->decrypt(emphKeyValue, emphkeydata);
+
+	// Remove the emph key handle.
+	handleManager->destroyObject(hEmphKey);
+	emphKey->destroyObject();
+	hEmphKey = CK_INVALID_HANDLE;
+
+	CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
+	// Wraps the AES emph key with the wrapping RSA key using CKM_RSA_PKCS_OAEP with parameters of OAEPParams.
+	rv = SoftHSM::WrapKeyAsym(&oaepMech, token, wrapKey, emphkeydata, wrapped_1);
+
+	// Zeroizes the temporary AES emph key
+	emphkeydata.wipe();
+	emphKeyValue.wipe();
+
+	if (rv != CKR_OK)
+	{
+		return rv;
+	}
+
+	// Concatenates two wrapped keys and outputs the concatenated blob.
+	wrapped = wrapped_1 + wrapped_2;
+
+	return rv;
+}
+
 
 // Wrap the specified key using the specified wrapping key and mechanism
 CK_RV SoftHSM::C_WrapKey
@@ -6498,6 +6601,11 @@ CK_RV SoftHSM::C_WrapKey
 			if (rv != CKR_OK)
 				return rv;
 			break;
+		case CKM_RSA_AES_KEY_WRAP:
+			rv = MechParamCheckRSAAESKEYWRAP(pMechanism);
+			if (rv != CKR_OK)
+				return rv;
+			break;
 		case CKM_AES_CBC:
 	        case CKM_AES_CBC_PAD:
 			if (pMechanism->pParameter == NULL_PTR ||
@@ -6532,13 +6640,15 @@ CK_RV SoftHSM::C_WrapKey
 	// Check wrapping key class and type
 	if ((pMechanism->mechanism == CKM_AES_KEY_WRAP || pMechanism->mechanism == CKM_AES_KEY_WRAP_PAD) && wrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_SECRET_KEY)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP) && wrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PUBLIC_KEY)
+	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP || pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP) &&
+		wrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PUBLIC_KEY)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
 	if (pMechanism->mechanism == CKM_AES_KEY_WRAP && wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
 	if (pMechanism->mechanism == CKM_AES_KEY_WRAP_PAD && wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP) && wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
+	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP || pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP) &&
+		wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
 	if ((pMechanism->mechanism == CKM_AES_CBC || pMechanism->mechanism == CKM_AES_CBC_PAD) && wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
@@ -6712,12 +6822,24 @@ CK_RV SoftHSM::C_WrapKey
 
 	keyClass = wrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED);
 	ByteString wrapped;
-	if (keyClass == CKO_SECRET_KEY)
-		rv = SoftHSM::WrapKeySym(pMechanism, token, wrapKey, keydata, wrapped);
+
+	if (pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP)
+	{
+		rv = WrapMechRsaAesKw(hSession, pMechanism, token, wrapKey, keydata, wrapped);
+		if (rv != CKR_OK)
+		{
+			return rv;
+		}
+	}
 	else
-		rv = SoftHSM::WrapKeyAsym(pMechanism, token, wrapKey, keydata, wrapped);
-	if (rv != CKR_OK)
-		return rv;
+	{
+		if (keyClass == CKO_SECRET_KEY)
+			rv = SoftHSM::WrapKeySym(pMechanism, token, wrapKey, keydata, wrapped);
+		else
+			rv = SoftHSM::WrapKeyAsym(pMechanism, token, wrapKey, keydata, wrapped);
+		if (rv != CKR_OK)
+			return rv;
+	}
 
 	if (pWrappedKey != NULL) {
 		if (*pulWrappedKeyLen >= wrapped.size())
@@ -6901,6 +7023,148 @@ CK_RV SoftHSM::UnwrapKeyAsym
 	return rv;
 }
 
+// Internal: Unwrap with mechanism RSA_AES_KEY_WRAP
+CK_RV SoftHSM::UnwrapMechRsaAesKw
+(
+	CK_SESSION_HANDLE hSession,
+	CK_MECHANISM_PTR pMechanism,
+	Token *token,
+	OSObject *unwrapKey,
+	ByteString &wrapped,
+	ByteString &keydata
+)
+{
+	CK_RV rv = CKR_OK;
+	CK_OBJECT_HANDLE hEmphKey = CK_INVALID_HANDLE;
+	CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
+	ByteString emphkeydata;
+	ByteString modulus;
+	ByteString modulusValue = unwrapKey->getByteStringValue(CKA_MODULUS);
+
+	CK_BBOOL isUnwrapKeyPrivate = unwrapKey->getBooleanValue(CKA_PRIVATE, true);
+	if(isUnwrapKeyPrivate)
+	{
+		token->decrypt(modulusValue, modulus);
+	}
+	else
+	{
+		modulus = modulusValue;
+	}
+
+	CK_ULONG ulWrappedKeyLen = wrapped.size();
+	CK_ULONG wrappedLen1 = modulus.size();
+	CK_ULONG wrappedLen2 = ulWrappedKeyLen - wrappedLen1;
+
+	ByteString wrapped_1(&wrapped[0], wrappedLen1); // the wrapped AES key
+	CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
+
+	// Un-wraps the temporary AES key from the first part with the private RSA key using CKM_RSA_PKCS_OAEP.
+	rv = UnwrapKeyAsym(&oaepMech, wrapped_1, token, unwrapKey, emphkeydata);
+	if (rv != CKR_OK)
+	{
+		emphkeydata.wipe();
+		return rv;
+	}
+
+	CK_OBJECT_CLASS emphKeyClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE emphKeyType = CKK_AES;
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_ATTRIBUTE emph_temp[] = {
+		{CKA_CLASS, &emphKeyClass, sizeof(CK_OBJECT_CLASS)},
+		{CKA_KEY_TYPE, &emphKeyType, sizeof(CK_KEY_TYPE)},
+		{CKA_TOKEN, &bFalse, sizeof(CK_BBOOL)},
+		{CKA_PRIVATE, &bTrue, sizeof(CK_BBOOL)},
+		{CKA_UNWRAP, &bTrue, sizeof(CK_BBOOL)}
+	};
+
+	// Create the temporary AES object using C_CreateObject
+	rv = this->CreateObject(hSession, emph_temp, sizeof(emph_temp) / sizeof(CK_ATTRIBUTE), &hEmphKey, OBJECT_OP_UNWRAP);
+	if (rv != CKR_OK)
+	{
+		// Remove secret that may have been created already when the function fails.
+		if (hEmphKey != CK_INVALID_HANDLE)
+		{
+			OSObject *emphKey = (OSObject *)handleManager->getObject(hEmphKey);
+			handleManager->destroyObject(hEmphKey);
+			if(emphKey) emphKey->destroyObject();
+			hEmphKey = CK_INVALID_HANDLE;
+		}
+		emphkeydata.wipe();
+		return rv;
+	}
+
+	// Store the attributes of emphkey
+	OSObject *emphKey = (OSObject *)handleManager->getObject(hEmphKey);
+	if (emphKey == NULL_PTR || !emphKey->isValid())
+	{
+		rv = CKR_FUNCTION_FAILED;
+		handleManager->destroyObject(hEmphKey);
+		if(emphKey) emphKey->destroyObject();
+		hEmphKey = CK_INVALID_HANDLE;
+		emphkeydata.wipe();
+		return rv;
+	}
+
+	if (emphKey->startTransaction())
+	{
+		bool bOK = true;
+		// Common Attributes
+		bOK = bOK && emphKey->setAttribute(CKA_LOCAL, false);
+		// Common Secret Key Attributes
+		bOK = bOK && emphKey->setAttribute(CKA_ALWAYS_SENSITIVE, false);
+		bOK = bOK && emphKey->setAttribute(CKA_NEVER_EXTRACTABLE, false);
+		// Secret Attributes
+		ByteString emphKeyValue;
+		token->encrypt(emphkeydata, emphKeyValue);
+		bOK = bOK && emphKey->setAttribute(CKA_VALUE, emphKeyValue);
+
+		if (bOK)
+		{
+			bOK = emphKey->commitTransaction();
+		}
+		else
+		{
+			emphKey->abortTransaction();
+		}
+
+		// Zeroizes the temporary AES key.
+		emphkeydata.wipe();
+		emphKeyValue.wipe();
+
+		if (!bOK)
+		{
+			rv = CKR_FUNCTION_FAILED;
+			handleManager->destroyObject(hEmphKey);
+			emphKey->destroyObject();
+			hEmphKey = CK_INVALID_HANDLE;
+			return rv;
+		}
+	}
+	else
+	{
+		rv = CKR_FUNCTION_FAILED;
+		emphkeydata.wipe();
+		handleManager->destroyObject(hEmphKey);
+		emphKey->destroyObject();
+		hEmphKey = CK_INVALID_HANDLE;
+		return rv;
+	}
+
+	ByteString wrapped_2(&wrapped[wrappedLen1], wrappedLen2); // the wrapped target key
+	CK_MECHANISM emphMech = {CKM_AES_KEY_WRAP_PAD, NULL_PTR, 0};
+
+	// Un-wraps the target key from the second part with the temporary AES key using CKM_AES_KEY_WRAP_PAD (RFC5649)
+	rv = UnwrapKeySym(&emphMech, wrapped_2, token, emphKey, keydata);
+
+	// remove the emphkey handle
+	handleManager->destroyObject(hEmphKey);
+	emphKey->destroyObject();
+	hEmphKey = CK_INVALID_HANDLE;
+
+	return rv;
+}
+
 // Unwrap the specified key using the specified unwrapping key
 CK_RV SoftHSM::C_UnwrapKey
 (
@@ -6957,6 +7221,11 @@ CK_RV SoftHSM::C_UnwrapKey
 			if (rv != CKR_OK)
 				return rv;
 			break;
+		case CKM_RSA_AES_KEY_WRAP:
+			rv = MechParamCheckRSAAESKEYWRAP(pMechanism);
+			if (rv != CKR_OK)
+				return rv;
+			break;
 
 	        case CKM_AES_CBC_PAD:
 			// TODO check block length
@@ -7004,9 +7273,11 @@ CK_RV SoftHSM::C_UnwrapKey
 		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
 	if (pMechanism->mechanism == CKM_AES_KEY_WRAP_PAD && unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
 		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
-	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP) && unwrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PRIVATE_KEY)
+	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP || pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP) &&
+		unwrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PRIVATE_KEY)
 		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
-	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP) && unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
+	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP || pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP) &&
+		unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
 		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
 	if ((pMechanism->mechanism == CKM_AES_CBC || pMechanism->mechanism == CKM_AES_CBC_PAD) && unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
@@ -7128,14 +7399,26 @@ CK_RV SoftHSM::C_UnwrapKey
 	// Unwrap the key
 	ByteString wrapped(pWrappedKey, ulWrappedKeyLen);
 	ByteString keydata;
-	if (unwrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) == CKO_SECRET_KEY)
-		rv = UnwrapKeySym(pMechanism, wrapped, token, unwrapKey, keydata);
-	else if (unwrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) == CKO_PRIVATE_KEY)
-		rv = UnwrapKeyAsym(pMechanism, wrapped, token, unwrapKey, keydata);
+
+	if (pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP)
+	{
+		rv = UnwrapMechRsaAesKw(hSession, pMechanism, token, unwrapKey, wrapped, keydata);
+		if (rv != CKR_OK)
+		{
+			return rv;
+		}
+	}
 	else
-		rv = CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
-	if (rv != CKR_OK)
-		return rv;
+	{
+		if (unwrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) == CKO_SECRET_KEY)
+			rv = UnwrapKeySym(pMechanism, wrapped, token, unwrapKey, keydata);
+		else if (unwrapKey->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) == CKO_PRIVATE_KEY)
+			rv = UnwrapKeyAsym(pMechanism, wrapped, token, unwrapKey, keydata);
+		else
+			rv = CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
+		if (rv != CKR_OK)
+			return rv;
+	}
 
 	// Create the secret object using C_CreateObject
 	rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, hKey, OBJECT_OP_UNWRAP);
@@ -12857,6 +13140,56 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 		ERROR_MSG("ulSourceDataLen must be 0");
 		return CKR_ARGUMENTS_BAD;
 	}
+	return CKR_OK;
+}
+
+
+CK_RV SoftHSM::MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism)
+{
+	// This is a programming error
+	if (pMechanism->mechanism != CKM_RSA_AES_KEY_WRAP) {
+		ERROR_MSG("MechParamCheckRSAAESKEYWRAP called on wrong mechanism");
+		return CKR_GENERAL_ERROR;
+	}
+	if (pMechanism->pParameter == NULL_PTR ||
+	    pMechanism->ulParameterLen != sizeof(CK_RSA_AES_KEY_WRAP_PARAMS))
+	{
+		ERROR_MSG("pParameter must be of type CK_RSA_AES_KEY_WRAP_PARAMS");
+		return CKR_ARGUMENTS_BAD;
+	}
+
+	CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
+	if (params->aes_key_bits != 128 && params->aes_key_bits != 192 && params->aes_key_bits != 256)
+	{
+		ERROR_MSG("length of the temporary AES key in bits can be only 128, 192 or 256");
+		return CKR_ARGUMENTS_BAD;
+	}
+	if (params->oaep_params == NULL_PTR)
+	{
+		ERROR_MSG("oaep_params must be of type CK_RSA_PKCS_OAEP_PARAMS");
+		return CKR_ARGUMENTS_BAD;
+	}
+	if (params->oaep_params->mgf < 1UL || params->oaep_params->mgf > 5UL)
+	{
+		ERROR_MSG("mgf not supported");
+		return CKR_ARGUMENTS_BAD;
+	}
+	if (params->oaep_params->source != CKZ_DATA_SPECIFIED)
+	{
+		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
+		return CKR_ARGUMENTS_BAD;
+	}
+	if (params->oaep_params->pSourceData != NULL)
+	{
+		ERROR_MSG("pSourceData must be NULL");
+		return CKR_ARGUMENTS_BAD;
+	}
+	if (params->oaep_params->ulSourceDataLen != 0)
+	{
+		ERROR_MSG("ulSourceDataLen must be 0");
+		return CKR_ARGUMENTS_BAD;
+	}
+
 	return CKR_OK;
 }
 

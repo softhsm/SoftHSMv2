@@ -487,7 +487,28 @@ private:
 		ByteString &keydata
 	);
 
+	CK_RV WrapMechRsaAesKw
+	(
+		CK_SESSION_HANDLE hSession,
+		CK_MECHANISM_PTR pMechanism,
+		Token *token,
+		OSObject *wrapKey,
+		ByteString &keydata,
+		ByteString &wrapped
+	);
+
+	CK_RV UnwrapMechRsaAesKw
+	(
+		CK_SESSION_HANDLE hSession,
+		CK_MECHANISM_PTR pMechanism,
+		Token *token,
+		OSObject *unwrapKey,
+		ByteString &wrapped,
+		ByteString &keydata
+	);
+
 	CK_RV MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism);
+	CK_RV MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism);
 
 	bool isMechanismPermitted(OSObject* key, CK_MECHANISM_PTR pMechanism);
 	void prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE> &t);
