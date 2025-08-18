@@ -31,6 +31,12 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 		return false;
 	}
 
+	if (privateKey == NULL)
+    {
+        ERROR_MSG("No private key supplied");
+        return false;
+    }
+
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(OSSLMLDSAPrivateKey::type))
 	{
@@ -68,6 +74,12 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	memset(&signature[0], 0, len);
 
 	EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+	if (ctx == NULL)
+    {
+        ERROR_MSG("ML-DSA sign ctx alloc failed");
+        return false;
+    }
+
 	if (!EVP_DigestSignInit(ctx, NULL, NULL, NULL, pkey))
 	{
 		ERROR_MSG("ML-DSA sign init failed (0x%08X)", ERR_get_error());
@@ -117,6 +129,12 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 		return false;
 	}
 
+	if (publicKey == NULL)
+    {
+        ERROR_MSG("No public key supplied");
+        return false;
+    }
+
 	// Check if the private key is the right type
 	if (!publicKey->isOfType(OSSLMLDSAPublicKey::type))
 	{
@@ -159,6 +177,14 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 
 	unsigned long parameterSet = pk->getParameterSet();
 	const char* name = OSSL::mldsaParameterSet2Name(parameterSet);
+	
+	if (name == NULL) 
+	{
+        ERROR_MSG("Unknown ML-DSA parameter set (%lu)", parameterSet);
+        EVP_PKEY_CTX_free(vctx);
+        return false;
+    }
+
 	sig_alg = EVP_SIGNATURE_fetch(NULL, name, NULL);
 	if (sig_alg == NULL) {
 		ERROR_MSG("ML-DSA EVP_SIGNATURE_fetch failed (0x%08X)", ERR_get_error());
@@ -176,12 +202,20 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	int verifyRV = EVP_PKEY_verify(vctx, signature.const_byte_str(), signature.size(),
                                             originalData.const_byte_str(), originalData.size());
 
-	if (verifyRV != 1) {
-		ERROR_MSG("ML-DSA verify failed (0x%08X)", verifyRV);
-		EVP_PKEY_CTX_free(vctx);
-		EVP_SIGNATURE_free(sig_alg);
-		return false;
-	}
+	if (verifyRV != 1) 
+	{
+        if (verifyRV == 0) 
+		{
+            ERROR_MSG("ML-DSA signature invalid");
+        } else 
+		{
+            ERROR_MSG("ML-DSA verify error (0x%08X)", ERR_get_error());
+        }
+        EVP_PKEY_CTX_free(vctx);
+        EVP_SIGNATURE_free(sig_alg);
+        return false;
+    }
+
     EVP_PKEY_CTX_free(vctx);
 	EVP_SIGNATURE_free(sig_alg);
 	return true;
@@ -265,6 +299,12 @@ bool OSSLMLDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParamet
 	unsigned long parameterSet = params->getParameterSet();
 	const char* name = OSSL::mldsaParameterSet2Name(parameterSet);
 
+	if (name == NULL) 
+	{
+        ERROR_MSG("Unknown ML-DSA parameter set (%lu)", parameterSet);
+        return false;
+    }
+
 	EVP_PKEY_CTX *ctx = NULL;
 	EVP_PKEY *pkey = NULL;
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
@@ -288,8 +328,11 @@ bool OSSLMLDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParamet
 	// Create an asymmetric key-pair object to return
 	OSSLMLDSAKeyPair *kp = new OSSLMLDSAKeyPair();
 
-	((OSSLMLDSAPrivateKey *)kp->getPrivateKey())->setFromOSSL(pkey);
-	((OSSLMLDSAPublicKey *)kp->getPublicKey())->setFromOSSL(pkey);
+	// bump refcount for each wrapper
+	EVP_PKEY_up_ref(pkey);
+	((OSSLMLDSAPrivateKey*)kp->getPrivateKey())->setFromOSSL(pkey);
+	EVP_PKEY_up_ref(pkey);
+	((OSSLMLDSAPublicKey*) kp->getPublicKey())->setFromOSSL(pkey);
 
 	*ppKeyPair = kp;
 	

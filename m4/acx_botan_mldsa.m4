@@ -8,26 +8,21 @@ AC_DEFUN([ACX_BOTAN_MLDSA],[
 	LIBS="$CRYPTO_LIBS $LIBS"
 
 	AC_LANG_PUSH([C++])
-	AC_CACHE_VAL([acx_cv_lib_botan_mldsa_support],[
-		acx_cv_lib_botan_mldsa_support=no
-		AC_RUN_IFELSE([
-			AC_LANG_SOURCE([[
-				#include <botan/version.h>
-				int main()
-				{
-					// TODO
-					return 1;
-				}
-			]])
-		],[
-			AC_MSG_RESULT([yes])
+	AC_CACHE_VAL([acx_cv_lib_botan_mldsa_support], [
+		AC_COMPILE_IFELSE([
+			AC_LANG_SOURCE([
+			#include <botan/version.h>
+			#ifndef BOTAN_HAS_ML_DSA
+			# error "no ML-DSA support"
+			#endif
+			int main(void){ return 0; }
+			])
+		], [
 			acx_cv_lib_botan_mldsa_support=yes
-		],[
+			AC_MSG_RESULT([yes])
+		], [
+			acx_cv_lib_botan_mldsa_support=no
 			AC_MSG_RESULT([no])
-			acx_cv_lib_botan_mldsa_support=no
-		],[
-			AC_MSG_WARN([Cannot test, assuming no ML-DSA])
-			acx_cv_lib_botan_mldsa_support=no
 		])
 	])
 	AC_LANG_POP([C++])

@@ -62,7 +62,7 @@ void OSSLMLDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 // Check if the key is of the given type
 bool OSSLMLDSAPublicKey::isOfType(const char* inType)
 {
-	return !strcmp(type, inType);
+	 return !strcmp(OSSLMLDSAPublicKey::type, inType) || MLDSAPublicKey::isOfType(inType);
 }
 
 void OSSLMLDSAPublicKey::setValue(const ByteString& inValue)
@@ -87,8 +87,6 @@ EVP_PKEY* OSSLMLDSAPublicKey::getOSSLKey()
 void OSSLMLDSAPublicKey::createOSSLKey()
 {
 	if (pkey != NULL) return;
-
-	pkey = EVP_PKEY_new();
 
 	ByteString localValue = getValue();
 
