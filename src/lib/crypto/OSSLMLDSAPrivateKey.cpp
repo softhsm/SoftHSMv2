@@ -148,6 +148,16 @@ void OSSLMLDSAPrivateKey::createOSSLKey()
 	ByteString localValue = getValue();
 
 	const char* name = OSSL::mldsaParameterSet2Name(getParameterSet());
+	if (name == NULL) 
+	{
+		ERROR_MSG("Unknown ML-DSA parameter set (value length: %zu)", localValue.size());
+		return;
+	}
+	if (localValue.size() == 0) 
+	{
+		ERROR_MSG("Empty ML-DSA private key value; cannot create EVP_PKEY");
+		return;
+	}
 
 	int selection = 0;
     EVP_PKEY_CTX *ctx = NULL;
