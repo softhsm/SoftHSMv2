@@ -3,6 +3,8 @@ MAINTAINERCLEANFILES = 		$(srcdir)/Makefile.in
 AM_CPPFLAGS =			-I$(srcdir)/.. \
 				-I$(srcdir)/../common \
 				-I$(srcdir)/../data_mgr \
+				-I$(srcdir)/../slot_mgr \
+				-I$(srcdir)/../object_store \
 				-I$(srcdir)/../pkcs11 \
 				@CRYPTO_INCLUDES@
 
@@ -31,6 +33,7 @@ libsofthsm_crypto_la_SOURCES =	AESKey.cpp \
 				MLDSAParameters.cpp \
                 MLDSAPrivateKey.cpp \
             	MLDSAPublicKey.cpp \
+            	MLDSAUtil.cpp \
 				RSAParameters.cpp \
 				RSAPrivateKey.cpp \
 				RSAPublicKey.cpp \

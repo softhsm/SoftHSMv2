@@ -35,6 +35,7 @@
 #include "DerUtil.h"
 #include "OSSLUtil.h"
 #include "MLDSAParameters.h"
+#include <map>
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
