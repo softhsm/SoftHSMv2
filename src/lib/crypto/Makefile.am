@@ -28,6 +28,9 @@ libsofthsm_crypto_la_SOURCES =	AESKey.cpp \
 				GOSTPrivateKey.cpp \
 				HashAlgorithm.cpp \
 				MacAlgorithm.cpp \
+				MLDSAParameters.cpp \
+                MLDSAPrivateKey.cpp \
+            	MLDSAPublicKey.cpp \
 				RSAParameters.cpp \
 				RSAPrivateKey.cpp \
 				RSAPublicKey.cpp \
@@ -76,6 +79,10 @@ libsofthsm_crypto_la_SOURCES +=	OSSLAES.cpp \
 				OSSLCMAC.cpp \
 				OSSLHMAC.cpp \
 				OSSLMD5.cpp \
+				OSSLMLDSA.cpp \
+				OSSLMLDSAKeyPair.cpp \
+				OSSLMLDSAPrivateKey.cpp \
+				OSSLMLDSAPublicKey.cpp \
 				OSSLRNG.cpp \
 				OSSLRSA.cpp \
 				OSSLRSAKeyPair.cpp \
