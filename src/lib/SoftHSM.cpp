@@ -62,9 +62,12 @@
 #include "DHPrivateKey.h"
 #include "GOSTPublicKey.h"
 #include "GOSTPrivateKey.h"
+#ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
 #include "MLDSAPublicKey.h"
 #include "MLDSAPrivateKey.h"
+#include "MLDSAUtil.h"
+#endif
 #include "cryptoki.h"
 #include "SoftHSM.h"
 #include "osmutex.h"
@@ -4570,7 +4573,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			return CKR_HOST_MEMORY;
 		}
 
-		if (getMLDSAPrivateKey((MLDSAPrivateKey*)privateKey, token, key) != CKR_OK)
+		if (MLDSAUtil::getMLDSAPrivateKey((MLDSAPrivateKey*)privateKey, token, key) != CKR_OK)
 		{
 			asymCrypto->recyclePrivateKey(privateKey);
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
@@ -5602,7 +5605,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			return CKR_HOST_MEMORY;
 		}
 
-		if (getMLDSAPublicKey((MLDSAPublicKey*)publicKey, token, key) != CKR_OK)
+		if (MLDSAUtil::getMLDSAPublicKey((MLDSAPublicKey*)publicKey, token, key) != CKR_OK)
 		{
 			asymCrypto->recyclePublicKey(publicKey);
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
@@ -6996,7 +6999,7 @@ CK_RV SoftHSM::C_WrapKey
 #endif
 #ifdef WITH_ML_DSA
 			case CKK_ML_DSA:
-				rv = getMLDSAPrivateKey((MLDSAPrivateKey*)privateKey, token, key);
+				rv = MLDSAUtil::getMLDSAPrivateKey((MLDSAPrivateKey*)privateKey, token, key);
 				break;
 #endif
 		}
@@ -7678,7 +7681,7 @@ CK_RV SoftHSM::C_UnwrapKey
 #ifdef WITH_ML_DSA
 			else if (keyType == CKK_ML_DSA)
 			{
-				bOK = bOK && setMLDSAPrivateKey(osobject, keydata, token, isPrivate != CK_FALSE);
+				bOK = bOK && MLDSAUtil::setMLDSAPrivateKey(osobject, keydata, token, isPrivate != CK_FALSE);
 			}
 #endif
 			else
@@ -13060,65 +13063,7 @@ CK_RV SoftHSM::getEDPublicKey(EDPublicKey* publicKey, Token* token, OSObject* ke
 	return CKR_OK;
 }
 
-CK_RV SoftHSM::getMLDSAPrivateKey(MLDSAPrivateKey* privateKey, Token* token, OSObject* key)
-{
-	if (privateKey == NULL) return CKR_ARGUMENTS_BAD;
-	if (token == NULL) return CKR_ARGUMENTS_BAD;
-	if (key == NULL) return CKR_ARGUMENTS_BAD;
 
-	// Get the CKA_PRIVATE attribute, when the attribute is not present use default false
-	bool isKeyPrivate = key->getBooleanValue(CKA_PRIVATE, false);
-
-	// ML-DSA Private Key Attributes
-	ByteString value;
-	ByteString seed;
-	if (isKeyPrivate)
-	{
-		bool bOK = true;
-		bOK = bOK && token->decrypt(key->getByteStringValue(CKA_VALUE), value);
-		bOK = bOK && token->decrypt(key->getByteStringValue(CKA_SEED), seed);
-		if (!bOK)
-			return CKR_GENERAL_ERROR;
-	}
-	else
-	{
-		value = key->getByteStringValue(CKA_VALUE);
-		seed = key->getByteStringValue(CKA_SEED);
-	}
-
-	privateKey->setValue(value);
-	privateKey->setSeed(seed);
-
-	return CKR_OK;
-}
-
-CK_RV SoftHSM::getMLDSAPublicKey(MLDSAPublicKey* publicKey, Token* token, OSObject* key)
-{
-	if (publicKey == NULL) return CKR_ARGUMENTS_BAD;
-	if (token == NULL) return CKR_ARGUMENTS_BAD;
-	if (key == NULL) return CKR_ARGUMENTS_BAD;
-
-	// Get the CKA_PRIVATE attribute, when the attribute is not present use default false
-	bool isKeyPrivate = key->getBooleanValue(CKA_PRIVATE, false);
-
-	// EC Public Key Attributes
-	ByteString value;
-	if (isKeyPrivate)
-	{
-		bool bOK = true;
-		bOK = bOK && token->decrypt(key->getByteStringValue(CKA_VALUE), value);
-		if (!bOK)
-			return CKR_GENERAL_ERROR;
-	}
-	else
-	{
-		value = key->getByteStringValue(CKA_VALUE);
-	}
-
-	publicKey->setValue(value);
-
-	return CKR_OK;
-}
 
 CK_RV SoftHSM::getDHPrivateKey(DHPrivateKey* privateKey, Token* token, OSObject* key)
 {
@@ -13573,48 +13518,6 @@ bool SoftHSM::setEDPrivateKey(OSObject* key, const ByteString &ber, Token* token
 
 	ecc->recyclePrivateKey(priv);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(ecc);
-
-	return bOK;
-}
-
-bool SoftHSM::setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const
-{
-	AsymmetricAlgorithm* mldsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLDSA);
-	if (mldsa == NULL)
-		return false;
-	PrivateKey* priv = mldsa->newPrivateKey();
-	if (priv == NULL)
-	{
-		CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
-		return false;
-	}
-	if (!priv->PKCS8Decode(ber))
-	{
-		mldsa->recyclePrivateKey(priv);
-		CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
-		return false;
-	}
-	// ML-DSA Private Key Attributes
-	ByteString parameterSet;
-	ByteString seed;
-	ByteString value;
-	if (isPrivate)
-	{
-		token->encrypt(((MLDSAPrivateKey*)priv)->getSeed(), seed);
-		token->encrypt(((MLDSAPrivateKey*)priv)->getValue(), value);
-	}
-	else
-	{
-		seed = ((MLDSAPrivateKey*)priv)->getSeed();
-		value = ((MLDSAPrivateKey*)priv)->getValue();
-	}
-	bool bOK = true;
-	bOK = bOK && key->setAttribute(CKA_PARAMETER_SET, ((MLDSAPrivateKey*)priv)->getParameterSet());
-	bOK = bOK && key->setAttribute(CKA_SEED, seed);
-	bOK = bOK && key->setAttribute(CKA_VALUE, value);
-
-	mldsa->recyclePrivateKey(priv);
-	CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
 
 	return bOK;
 }
