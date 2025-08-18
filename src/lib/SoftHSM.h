@@ -455,10 +455,6 @@ private:
 	CK_RV getGOSTPrivateKey(GOSTPrivateKey* privateKey, Token* token, OSObject* key);
 	CK_RV getGOSTPublicKey(GOSTPublicKey* publicKey, Token* token, OSObject* key);
 	CK_RV getSymmetricKey(SymmetricKey* skey, Token* token, OSObject* key);
-#ifdef WITH_ML_DSA
-	CK_RV getMLDSAPrivateKey(MLDSAPrivateKey* privateKey, Token* token, OSObject* key);
-	CK_RV getMLDSAPublicKey(MLDSAPublicKey* publicKey, Token* token, OSObject* key);
-#endif
 
 	ByteString getECDHPubData(ByteString& pubData);
 
@@ -468,9 +464,6 @@ private:
 	bool setECPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
 	bool setEDPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
 	bool setGOSTPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
-#ifdef WITH_ML_DSA
-	bool setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate) const;
-#endif
 
 
 	CK_RV WrapKeyAsym

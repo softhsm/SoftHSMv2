@@ -31,6 +31,7 @@ set(SOURCES AESKey.cpp
             MLDSAParameters.cpp
             MLDSAPrivateKey.cpp
             MLDSAPublicKey.cpp
+            MLDSAUtil.cpp
             RSAParameters.cpp
             RSAPrivateKey.cpp
             RSAPublicKey.cpp
