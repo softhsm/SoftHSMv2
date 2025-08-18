@@ -24,6 +24,7 @@ cryptotest_SOURCES =		cryptotest.cpp \
 				GOSTTests.cpp \
 				HashTests.cpp \
 				MacTests.cpp \
+				MLDSATests.cpp \
 				RNGTests.cpp \
 				RSATests.cpp \
 				chisq.c \

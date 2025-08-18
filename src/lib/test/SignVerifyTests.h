@@ -49,6 +49,9 @@ class SignVerifyTests : public TestsBase
 	CPPUNIT_TEST_PARAMETERIZED(testEdSignVerify, {"Ed25519", "Ed448"});
 #endif
 	CPPUNIT_TEST(testMacSignVerify);
+#ifdef WITH_ML_DSA
+	CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify, {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
+#endif
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -60,6 +63,9 @@ public:
 	void testEdSignVerify(const char* curve);
 #endif
 	void testMacSignVerify();
+#ifdef WITH_ML_DSA
+	void testMLDSASignVerify(CK_ULONG parameterSet);
+#endif
 
 protected:
 	CK_RV generateRSA(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
@@ -68,6 +74,9 @@ protected:
 #endif
 #ifdef WITH_EDDSA
 	CK_RV generateED(const char* curve, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+#endif
+#ifdef WITH_ML_DSA
+	CK_RV generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #endif
 	void signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
 	void signVerifySingleData(size_t dataSize, CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);

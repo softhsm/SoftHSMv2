@@ -34,9 +34,21 @@
 #include "log.h"
 #include "DerUtil.h"
 #include "OSSLUtil.h"
+#ifdef WITH_ML_DSA
+#include "MLDSAParameters.h"
+#include <map>
+#endif
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+
+#ifdef WITH_ML_DSA
+static const std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet {
+	{MLDSAParameters::ML_DSA_44_PARAMETER_SET, "ML-DSA-44"},
+	{MLDSAParameters::ML_DSA_65_PARAMETER_SET, "ML-DSA-65"},
+	{MLDSAParameters::ML_DSA_87_PARAMETER_SET, "ML-DSA-87"}
+};
+#endif
 
 // Convert an OpenSSL BIGNUM to a ByteString
 ByteString OSSL::bn2ByteString(const BIGNUM* bn)
@@ -207,5 +219,18 @@ int OSSL::byteString2oid(const ByteString& byteString)
 	}
 
 	return NID_undef;
+}
+#endif
+
+#ifdef WITH_ML_DSA
+const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
+
+	std::map<unsigned long, const char*>::const_iterator it = mldsaAlgNameFromParameterSet.find(parameterSet);
+
+	if (it != mldsaAlgNameFromParameterSet.end()) {
+		return it->second;
+	}
+
+	return NULL;
 }
 #endif
