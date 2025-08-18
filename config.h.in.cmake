@@ -151,6 +151,9 @@
 /* Compile with EDDSA support */
 #cmakedefine WITH_EDDSA @WITH_EDDSA@
 
+/* Compile with ML-DSA support */
+#cmakedefine WITH_ML_DSA @WITH_ML_DSA@
+
 /* Compile with FIPS 140-2 mode */
 #cmakedefine WITH_FIPS @WITH_FIPS@
 
