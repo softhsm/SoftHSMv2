@@ -397,7 +397,7 @@ void SecureDataManager::logout()
 // Decrypt the supplied data
 bool SecureDataManager::decrypt(const ByteString& encrypted, ByteString& plaintext)
 {
-	DEBUG_MSG("encrypted %s", encrypted.const_byte_str());
+	DEBUG_MSG(">> decrypt() encrypted: %s", encrypted.hex_str().c_str());
 	// Check the object logged in state
 	if ((!userLoggedIn && !soLoggedIn) || (maskedKey.size() != 32))
 	{
@@ -435,7 +435,7 @@ bool SecureDataManager::decrypt(const ByteString& encrypted, ByteString& plainte
 		return false;
 	}
 
-	DEBUG_MSG("IV %s", IV.const_byte_str());
+	DEBUG_MSG("IV: %s", IV.hex_str().c_str());
 
 	ByteString finalBlock;
 
@@ -449,7 +449,7 @@ bool SecureDataManager::decrypt(const ByteString& encrypted, ByteString& plainte
 
 	plaintext += finalBlock;
 
-	DEBUG_MSG("plaintext %s", plaintext.const_byte_str());
+	DEBUG_MSG("plaintext: %s", plaintext.hex_str().c_str());
 
 	return true;
 }

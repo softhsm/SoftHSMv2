@@ -140,7 +140,7 @@ bool AsymmetricAlgorithm::verifyFinal(const ByteString& /*signature*/)
 	return true;
 }
 
-bool AsymmetricAlgorithm::checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode)
+bool AsymmetricAlgorithm::checkEncryptedDataSize(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/, int* /*errorCode*/)
 {
 	return true;
 }

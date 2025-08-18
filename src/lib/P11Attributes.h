@@ -1145,6 +1145,24 @@ protected:
 };
 
 /*****************************************
+ * CKA_PARAMETER_SET
+ *****************************************/
+
+class P11AttrParameterSet : public P11Attribute
+{
+public:
+	// Constructor
+	P11AttrParameterSet(OSObject* inobject, CK_ULONG inchecks = 0) : P11Attribute(inobject) { type = CKA_PARAMETER_SET; size = sizeof(CK_ULONG); checks = ck1|inchecks; }
+
+protected:
+	// Set the default value of the attribute
+	virtual bool setDefault();
+
+	// Update the value if allowed
+	virtual CK_RV updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op);
+};
+
+/*****************************************
  * CKA_GOSTR3410_PARAMS
  *****************************************/
 
@@ -1252,6 +1270,24 @@ class P11AttrAllowedMechanisms : public P11Attribute
 public:
 	// Constructor
 	P11AttrAllowedMechanisms(OSObject* inobject) : P11Attribute(inobject) { type = CKA_ALLOWED_MECHANISMS; checks = 0; }
+
+protected:
+	// Set the default value of the attribute
+	virtual bool setDefault();
+
+	// Update the value if allowed
+	virtual CK_RV updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op);
+};
+
+/*****************************************
+ * CKA_SEED
+ *****************************************/
+
+class P11AttrSeed : public P11Attribute
+{
+public:
+	// Constructor
+	P11AttrSeed(OSObject* inobject) : P11Attribute(inobject) { type = CKA_SEED; checks = ck4|ck6|ck7; }
 
 protected:
 	// Set the default value of the attribute

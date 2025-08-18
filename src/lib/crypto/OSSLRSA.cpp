@@ -1336,18 +1336,21 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	}
 
 	// Retrieve the OpenSSL key object
-	RSA* rsa = ((OSSLRSAPrivateKey*) privateKey)->getOSSLKey();
+	RSA* rsa = ((OSSLRSAPrivateKey*) privateKey)->getOSSLKey();	
+
+	EVP_PKEY *pkey = EVP_PKEY_new();
+	EVP_PKEY_set1_RSA(pkey, rsa);
+
+	int pkeySize = EVP_PKEY_get_size(pkey);
 
 	// Check the input size
-	if (encryptedData.size() != (size_t) RSA_size(rsa))
+	if (encryptedData.size() != (size_t) EVP_PKEY_get_size(pkey))
 	{
 		ERROR_MSG("Invalid amount of input data supplied for RSA decryption");
 
 		return false;
 	}
 
-	EVP_PKEY *pkey = EVP_PKEY_new();
-	EVP_PKEY_set1_RSA(pkey, rsa);
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pkey, NULL);
 	EVP_PKEY_decrypt_init(ctx);
 
