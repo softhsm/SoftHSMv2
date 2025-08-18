@@ -146,8 +146,10 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 				*p11object = new P11GOSTPublicKeyObj();
 			else if (keyType == CKK_EC_EDWARDS)
 				*p11object = new P11EDPublicKeyObj();
+#ifdef WITH_ML_DSA
 			else if (keyType == CKK_ML_DSA)
 				*p11object = new P11MLDSAPublicKeyObj();
+#endif
 			else
 				return CKR_ATTRIBUTE_VALUE_INVALID;
 			break;
@@ -165,8 +167,10 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 				*p11object = new P11GOSTPrivateKeyObj();
 			else if (keyType == CKK_EC_EDWARDS)
 				*p11object = new P11EDPrivateKeyObj();
+#ifdef WITH_ML_DSA
 			else if (keyType == CKK_ML_DSA)
 				*p11object = new P11MLDSAPrivateKeyObj();
+#endif
 			else
 				return CKR_ATTRIBUTE_VALUE_INVALID;
 			break;
@@ -10126,8 +10130,8 @@ CK_RV SoftHSM::generateMLDSA
 		return CKR_TEMPLATE_INCOMPLETE;
 	}
 
-	if (paramSet != 1UL && paramSet != 2UL && paramSet != 3UL) {
-		INFO_MSG("Wrong parameterSet: %ld", paramSet);
+	if (paramSet != CKP_ML_DSA_44 && paramSet != CKP_ML_DSA_65 && paramSet != CKP_ML_DSA_87) {
+		INFO_MSG("Unsupported parameter set: %lu", (unsigned long)paramSet);
 		return CKR_PARAMETER_SET_NOT_SUPPORTED;
 	}
 
