@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "PublicKey.h"
+#include "ByteString.h"
 
 class MLDSAPublicKey : public PublicKey
 {

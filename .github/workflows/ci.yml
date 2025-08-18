@@ -84,7 +84,8 @@ jobs:
         env:
           OPENSSL_VERSION: 3.5.2
           OPENSSL_INSTALL_DIR: /usr/local/openssl-3.5
-          LDFLAGS: "-Wl,-R/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
+          LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
+          PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y libcppunit-dev p11-kit build-essential checkinstall zlib1g-dev sudo autoconf libtool git
@@ -102,7 +103,8 @@ jobs:
           # Once all OpenSSL deprecations fixed, uncomment this
           #   CXXFLAGS: -Werror
           OPENSSL_INSTALL_DIR: /usr/local/openssl-3.5
-          LDFLAGS: "-Wl,-R/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
+          LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
+          PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
         run: |
           ./autogen.sh
           ./configure --with-crypto-backend=openssl --with-openssl=${{ env.OPENSSL_INSTALL_DIR }}

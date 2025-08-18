@@ -10100,13 +10100,17 @@ CK_RV SoftHSM::generateMLDSA
 		return CKR_GENERAL_ERROR;
 
 	// Extract desired key information
-	unsigned long* params = 0;
+	CK_ULONG paramSet = 0;
 	for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount; i++)
 	{
 		switch (pPublicKeyTemplate[i].type)
 		{
 			case CKA_PARAMETER_SET:
-				params = (unsigned long*)pPublicKeyTemplate[i].pValue;
+				if (pPublicKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
+                    INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
+                    return CKR_ATTRIBUTE_VALUE_INVALID;
+                }
+                paramSet = *(CK_ULONG*)pPublicKeyTemplate[i].pValue;
 				break;
 			default:
 				break;
@@ -10114,21 +10118,19 @@ CK_RV SoftHSM::generateMLDSA
 	}
 
 	// The parameters must be specified to be able to generate a key pair.
-	if (params == 0) {
+	if (paramSet == 0) {
 		INFO_MSG("Missing parameter(s) in pPublicKeyTemplate");
 		return CKR_TEMPLATE_INCOMPLETE;
 	}
 
-	if (*params != 1UL && *params != 2UL && *params != 3UL) {
-		INFO_MSG("Wrong parameterSet: %ld", *params);
+	if (paramSet != 1UL && paramSet != 2UL && paramSet != 3UL) {
+		INFO_MSG("Wrong parameterSet: %ld", paramSet);
 		return CKR_PARAMETER_SET_NOT_SUPPORTED;
 	}
 
 	// Set the parameters
 	MLDSAParameters p;
-	p.setParameterSet(*params);
-
-	DEBUG_MSG("params=%d, p.parameterSet=%d", *params, p.getParameterSet());
+	p.setParameterSet(paramSet);
 
 	// Generate key pair
 	AsymmetricKeyPair* kp = NULL;
@@ -10193,8 +10195,6 @@ CK_RV SoftHSM::generateMLDSA
 				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
 				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_DSA_KEY_PAIR_GEN;
 				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
-
-				DEBUG_MSG("pub->getParameterSet()=%d, pub->getValue()=%s", pub->getParameterSet(), pub->getValue().hex_str().c_str());
 
 				// ML-DSA Public Key Attributes
 				ByteString value;
@@ -10277,7 +10277,6 @@ CK_RV SoftHSM::generateMLDSA
 				ByteString parameterSet;
 				ByteString value;
 				ByteString seed;
-				DEBUG_MSG("priv->getParameterSet()=%d, priv->getSeed()=%s, priv->getValue()=%s", priv->getParameterSet(), priv->getSeed().hex_str().c_str(), priv->getValue().hex_str().c_str());
 				if (isPrivateKeyPrivate)
 				{
 					token->encrypt(priv->getValue(), value);
@@ -10288,8 +10287,6 @@ CK_RV SoftHSM::generateMLDSA
 					value = priv->getValue();
 					seed = priv->getSeed();
 				}
-
-				DEBUG_MSG("parameterSet=%d, seed=%s, value=%s", priv->getParameterSet(), seed.hex_str().c_str(), value.hex_str().c_str());
 
 				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, priv->getParameterSet());
 				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);

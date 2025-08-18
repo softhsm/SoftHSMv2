@@ -12,13 +12,16 @@
 // Set the public key
 void OSSLMLDSAKeyPair::setPublicKey(OSSLMLDSAPublicKey& publicKey)
 {
-	pubKey = publicKey;
+	// Copy only the public material; avoid sharing OpenSSL handles
+	pubKey.setValue(publicKey.getValue());
 }
 
 // Set the private key
 void OSSLMLDSAKeyPair::setPrivateKey(OSSLMLDSAPrivateKey& privateKey)
 {
-	privKey = privateKey;
+	// Copy only the raw material; avoid sharing OpenSSL handles
+	privKey.setSeed(privateKey.getSeed());
+	privKey.setValue(privateKey.getValue());
 }
 
 // Return the public key

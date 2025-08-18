@@ -4,6 +4,7 @@
  OpenSSL ML-DSA key-pair class
  *****************************************************************************/
 
+#ifdef WITH_ML_DSA
 #ifndef _SOFTHSM_V2_OSSLMLDSAKEYPAIR_H
 #define _SOFTHSM_V2_OSSLMLDSAKEYPAIR_H
 
@@ -38,4 +39,4 @@ private:
 };
 
 #endif // !_SOFTHSM_V2_OSSLMLDSAKEYPAIR_H
-
+#endif // WITH_ML_DSA

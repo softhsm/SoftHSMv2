@@ -51,5 +51,5 @@ public:
 private:
 };
 
-#endif // !_SOFTHSM_V2_OSSLEDDSA_H
+#endif // !_SOFTHSM_V2_OSSLMLDSA_H
 
