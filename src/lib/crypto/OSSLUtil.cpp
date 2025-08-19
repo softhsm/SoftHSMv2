@@ -41,7 +41,7 @@
 #include <openssl/err.h>
 
 #ifdef WITH_ML_DSA
-static std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet {
+static const std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet {
 	{MLDSAParameters::ML_DSA_44_PARAMETER_SET, "ML-DSA-44"},
 	{MLDSAParameters::ML_DSA_65_PARAMETER_SET, "ML-DSA-65"},
 	{MLDSAParameters::ML_DSA_87_PARAMETER_SET, "ML-DSA-87"}
