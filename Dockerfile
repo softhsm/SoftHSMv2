@@ -53,7 +53,7 @@ COPY . /app
 
 RUN sh autogen.sh
 
-RUN ./configure --with-objectstore-backend-db --disable-gost --enable-eddsa --enable-ecc --with-crypto-backend=openssl
+RUN ./configure --with-objectstore-backend-db --disable-gost --enable-eddsa --with-crypto-backend=openssl
 
 RUN make
 
