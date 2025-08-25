@@ -411,7 +411,7 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 	//    given non-Cryptoki attribute is read-only is obviously outside the scope of Cryptoki.
 
 	// Attributes cannot be changed if CKA_MODIFIABLE is set to false
-	if (!isModifiable() && op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE) {
+	if (!isModifiable() && op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE && op != OBJECT_OP_UNWRAP) {
 		ERROR_MSG("An object is with CKA_MODIFIABLE set to false is not modifiable");
 		return CKR_ATTRIBUTE_READ_ONLY;
 	}
