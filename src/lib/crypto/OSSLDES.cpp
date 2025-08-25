@@ -53,7 +53,10 @@ const EVP_CIPHER* OSSLDES::getCipher() const
 {
 	if (currentKey == NULL) return NULL;
 
-	// Check currentKey bit length; 3DES only supports 56-bit, 112-bit or 168-bit keys 
+	// Accept both effective (without parity) and parity-included lengths:
+	//   DES:   56 or 64 bits (64 includes parity)
+	//   2-key 3DES: 112 or 128 bits (128 includes parity)
+	//   3-key 3DES: 168 or 192 bits (192 includes parity)
 	if (
 #ifndef WITH_FIPS
 	    (currentKey->getBitLen() != 56) &&
@@ -69,10 +72,10 @@ const EVP_CIPHER* OSSLDES::getCipher() const
 		return NULL;
 	}
 
-	// People shouldn't really be using 56-bit DES keys, generate a warning
+	// Single-DES (effective 56-bit) is weak; warn irrespective of representation
 	if (currentKey->getBitLen() == 56 || currentKey->getBitLen() == 64)
 	{
-		DEBUG_MSG("CAUTION: use of 56-bit DES keys is not recommended!");
+		DEBUG_MSG("CAUTION: use of single-DES keys (effective 56-bit) is not recommended!");
 	}
 
 	// Determine the cipher mode

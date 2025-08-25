@@ -62,8 +62,8 @@ std::string BotanDES::getCipher() const
 	{
 		case 56:
 		case 64:
-			// People shouldn't really be using 56-bit DES keys, generate a warning
-			DEBUG_MSG("CAUTION: use of 56-bit DES keys is not recommended!");
+			// Single-DES (effective 56-bit) is weak; warn irrespective of representation
+			DEBUG_MSG("CAUTION: use of single-DES keys (effective 56-bit) is not recommended!");
 			algo = "DES";
 			break;
 		case 112:

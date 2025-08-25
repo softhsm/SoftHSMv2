@@ -6307,18 +6307,22 @@ CK_RV SoftHSM::WrapKeySym
 			wrappedlen = RFC5652Pad(keydata, blocksize);
             algo = SymAlgo::DES3;
             sym_mode = SymMode::CBC;
+			bb = 7;
             break;
 
 		case CKM_DES3_CBC:
 			blocksize = 8;
 			algo = SymAlgo::DES3;
             sym_mode = SymMode::CBC;
+			bb = 7;
             break;
 
 		case CKM_DES3_ECB:
+			// ECB mode has no IV; keep blocksize=0 so iv remains empty
             blocksize = 0;
 			algo = SymAlgo::DES3;
 			sym_mode = SymMode::ECB;
+			bb = 7;
 			break;
 			
 		default:
@@ -6921,12 +6925,15 @@ CK_RV SoftHSM::UnwrapKeySym
 			algo = SymAlgo::DES3;
 			sym_mode = SymMode::CBC;
 			blocksize = 8;
+			bb = 7;
 			break;
 
 		case CKM_DES3_ECB:
 			algo = SymAlgo::DES3;
 			sym_mode = SymMode::ECB;
+			// ECB mode has no IV; keep blocksize=0 so iv remains empty
 			blocksize = 0;
+			bb = 7;
 			break;
 
 		default:
@@ -7484,8 +7491,8 @@ CK_RV SoftHSM::C_UnwrapKey
 			return rv;
 	}
 
-	// If the caller supplied CKA_VALUE_LEN, ensure it matches the unwrapped key length
-	if (haveRequestedValueLen && keydata.size() != requestedValueLen)
+	// If provided, enforce CKA_VALUE_LEN only for secret keys
+	if (objClass == CKO_SECRET_KEY && haveRequestedValueLen && keydata.size() != requestedValueLen)
 	{
 		return CKR_TEMPLATE_INCONSISTENT;
 	}
