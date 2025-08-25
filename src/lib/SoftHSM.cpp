@@ -6349,9 +6349,13 @@ CK_RV SoftHSM::WrapKeySym
 		case CKM_DES3_CBC:
 		case CKM_DES3_CBC_PAD:
 		case CKM_DES3_ECB:
-			iv.resize(blocksize);
-			memcpy(&iv[0], pMechanism->pParameter, blocksize);
-			
+			if (blocksize > 0) {
+				iv.resize(blocksize);
+				memcpy(&iv[0], pMechanism->pParameter, blocksize);
+			} else {
+				iv.wipe();
+			}
+
             if (!cipher->encryptInit(wrappingkey, sym_mode, iv, false))
 			{
 				cipher->recycleKey(wrappingkey);
@@ -6631,6 +6635,8 @@ CK_RV SoftHSM::C_WrapKey
             break;
 		case CKM_DES3_CBC:
 		case CKM_DES3_CBC_PAD:
+			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
+				return CKR_ARGUMENTS_BAD;
 			break;
 		default:
 			return CKR_MECHANISM_INVALID;
@@ -6952,10 +6958,14 @@ CK_RV SoftHSM::UnwrapKeySym
 		case CKM_DES3_CBC_PAD:
 		case CKM_DES3_CBC:
 		case CKM_DES3_ECB:
-			iv.resize(blocksize);
-			memcpy(&iv[0], pMechanism->pParameter, blocksize);
+			if (blocksize > 0) {
+				iv.resize(blocksize);
+				memcpy(&iv[0], pMechanism->pParameter, blocksize);
+			} else {
+				iv.wipe();
+			}
 
-			if (!cipher->decryptInit(unwrappingkey, SymMode::CBC, iv, false)) {
+			if (!cipher->decryptInit(unwrappingkey, sym_mode, iv, false)) {
 				cipher->recycleKey(unwrappingkey);
 				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
 				return CKR_MECHANISM_INVALID;
@@ -6977,7 +6987,7 @@ CK_RV SoftHSM::UnwrapKeySym
 				if (!RFC5652Unpad(keydata, blocksize)) {
 					cipher->recycleKey(unwrappingkey);
 					CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
-					return CKR_GENERAL_ERROR; // TODO should be another error
+					return CKR_WRAPPED_KEY_INVALID;
 				}
 			}
 			break;
@@ -7267,6 +7277,11 @@ CK_RV SoftHSM::C_UnwrapKey
 
         case CKM_DES3_CBC_PAD:
 			// TODO check block length
+			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
+				return CKR_ARGUMENTS_BAD;
+			break;
+
+		case CKM_DES3_CBC:
 			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
 			break;
