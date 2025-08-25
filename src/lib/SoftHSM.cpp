@@ -6989,7 +6989,6 @@ CK_RV SoftHSM::UnwrapKeySym
                 return (pMechanism->mechanism == CKM_AES_CBC_PAD || pMechanism->mechanism == CKM_DES3_CBC_PAD)
                        ? CKR_WRAPPED_KEY_INVALID
                        : CKR_GENERAL_ERROR;
-				return CKR_GENERAL_ERROR;
 			}
 			keydata += decryptedFinal;
 
@@ -7280,13 +7279,11 @@ CK_RV SoftHSM::C_UnwrapKey
 			break;
 
 		case CKM_AES_CBC_PAD:
-			// TODO check block length
 			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 16)
 				return CKR_ARGUMENTS_BAD;
 			break;
 
         case CKM_DES3_CBC_PAD:
-			// TODO check block length
 			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
 			break;
@@ -12124,7 +12121,7 @@ CK_RV SoftHSM::deriveSymmetric
 				// attributes set to CK_TRUE
 				bool bNeverExtractable = baseKey->getBooleanValue(CKA_NEVER_EXTRACTABLE, false) &&
 										 otherKey->getBooleanValue(CKA_NEVER_EXTRACTABLE, false);
-				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE, bNeverExtractable);
+				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
 			}
 			else if (pMechanism->mechanism == CKM_CONCATENATE_BASE_AND_DATA ||
 				 pMechanism->mechanism == CKM_CONCATENATE_DATA_AND_BASE)
