@@ -1138,13 +1138,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			/* FALLTHROUGH */
 #endif
 		case CKM_DES3_CBC:
-			pInfo->flags |= CKF_WRAP;
 			/* FALLTHROUGH */
 		case CKM_DES3_ECB:
 			// Key size is not in use
 			pInfo->ulMinKeySize = 0;
 			pInfo->ulMaxKeySize = 0;
-			pInfo->flags |= CKF_ENCRYPT | CKF_DECRYPT;
+			pInfo->flags |= CKF_ENCRYPT | CKF_DECRYPT | CKF_WRAP | CKF_UNWRAP;
 			break;
 		case CKM_DES3_CMAC:
 			// Key size is not in use
@@ -6293,6 +6292,7 @@ CK_RV SoftHSM::WrapKeySym
 		case CKM_AES_CBC:
 			algo = SymAlgo::AES;
             sym_mode = SymMode::CBC;
+			blocksize = 16;
 			break;
 			
 		case CKM_AES_CBC_PAD:
@@ -6982,10 +6982,13 @@ CK_RV SoftHSM::UnwrapKeySym
 				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
 				return CKR_GENERAL_ERROR;
 			}
-			// Finalize encryption
+			// Finalize decryption
 			if (!cipher->decryptFinal(decryptedFinal)) {
 				cipher->recycleKey(unwrappingkey);
 				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+                return (pMechanism->mechanism == CKM_AES_CBC_PAD || pMechanism->mechanism == CKM_DES3_CBC_PAD)
+                       ? CKR_WRAPPED_KEY_INVALID
+                       : CKR_GENERAL_ERROR;
 				return CKR_GENERAL_ERROR;
 			}
 			keydata += decryptedFinal;
