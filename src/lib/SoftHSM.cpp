@@ -6311,6 +6311,8 @@ CK_RV SoftHSM::WrapKeySym
             break;
 
 		case CKM_DES3_CBC:
+			if (wrappedlen % 8) != 0)
+				return CKR_KEY_SIZE_RANGE;
 			blocksize = 8;
 			algo = SymAlgo::DES3;
             sym_mode = SymMode::CBC;
@@ -6319,6 +6321,8 @@ CK_RV SoftHSM::WrapKeySym
 
 		case CKM_DES3_ECB:
 			// ECB mode has no IV; keep blocksize=0 so iv remains empty
+			if (wrappedlen % 8) != 0)
+				return CKR_KEY_SIZE_RANGE;
             blocksize = 0;
 			algo = SymAlgo::DES3;
 			sym_mode = SymMode::ECB;
@@ -6986,9 +6990,7 @@ CK_RV SoftHSM::UnwrapKeySym
 			if (!cipher->decryptFinal(decryptedFinal)) {
 				cipher->recycleKey(unwrappingkey);
 				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
-                return (pMechanism->mechanism == CKM_AES_CBC_PAD || pMechanism->mechanism == CKM_DES3_CBC_PAD)
-                       ? CKR_WRAPPED_KEY_INVALID
-                       : CKR_GENERAL_ERROR;
+				return CKR_WRAPPED_KEY_INVALID;
 			}
 			keydata += decryptedFinal;
 
@@ -7286,16 +7288,22 @@ CK_RV SoftHSM::C_UnwrapKey
         case CKM_DES3_CBC_PAD:
 			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
+			if (ulWrappedKeyLen == 0 || (ulWrappedKeyLen % 8) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
 			break;
 
 		case CKM_DES3_CBC:
 			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
+			if ((ulWrappedKeyLen % 8) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
 			break;
 
 		case CKM_DES3_ECB:
 			if (pMechanism->ulParameterLen != 0)
 				return CKR_ARGUMENTS_BAD; // ECB takes no IV; allow NULL or non-NULL pointer when length==0
+			if ((ulWrappedKeyLen % 8) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
 			break;
 
 		default:
