@@ -6293,6 +6293,8 @@ CK_RV SoftHSM::WrapKeySym
 			algo = SymAlgo::AES;
             sym_mode = SymMode::CBC;
 			blocksize = 16;
+			if ((wrappedlen % 16) != 0)
+				return CKR_KEY_SIZE_RANGE;
 			break;
 			
 		case CKM_AES_CBC_PAD:
@@ -6311,7 +6313,7 @@ CK_RV SoftHSM::WrapKeySym
             break;
 
 		case CKM_DES3_CBC:
-			if (wrappedlen % 8) != 0)
+			if ((wrappedlen % 8) != 0)
 				return CKR_KEY_SIZE_RANGE;
 			blocksize = 8;
 			algo = SymAlgo::DES3;
@@ -6321,7 +6323,7 @@ CK_RV SoftHSM::WrapKeySym
 
 		case CKM_DES3_ECB:
 			// ECB mode has no IV; keep blocksize=0 so iv remains empty
-			if (wrappedlen % 8) != 0)
+			if ((wrappedlen % 8) != 0)
 				return CKR_KEY_SIZE_RANGE;
             blocksize = 0;
 			algo = SymAlgo::DES3;
@@ -7283,6 +7285,8 @@ CK_RV SoftHSM::C_UnwrapKey
 		case CKM_AES_CBC_PAD:
 			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 16)
 				return CKR_ARGUMENTS_BAD;
+			if (ulWrappedKeyLen == 0 || (ulWrappedKeyLen % 16) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
 			break;
 
         case CKM_DES3_CBC_PAD:
