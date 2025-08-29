@@ -46,7 +46,8 @@ RUN apt update && \
     libp11-kit-dev \
     libcppunit-dev \
     sudo \
-    git
+    opensc \
+    opensc-pkcs11
 
 WORKDIR /app
 COPY . /app
@@ -65,7 +66,5 @@ RUN make install
 RUN mkdir -p /var/lib/softhsm/tokens/
 
 RUN softhsm2-util --init-token --slot 0 --label "My SoftHSM Token" --so-pin 0000 --pin 0000
-
-RUN apt install -y opensc opensc-pkcs11
 
 CMD ["bash"]
