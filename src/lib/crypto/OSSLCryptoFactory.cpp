@@ -58,6 +58,9 @@
 #ifdef WITH_EDDSA
 #include "OSSLEDDSA.h"
 #endif
+#ifdef WITH_SLHDSA
+#include "OSSLSLHDSA.h"
+#endif
 
 #include <algorithm>
 #include <string.h>
@@ -347,6 +350,10 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 #ifdef WITH_EDDSA
 		case AsymAlgo::EDDSA:
 			return new OSSLEDDSA();
+#endif
+#ifdef WITH_SLHDSA
+		case AsymAlgo::SLHDSA:
+			return new OSSLSLHDSA();
 #endif
 		default:
 			break;

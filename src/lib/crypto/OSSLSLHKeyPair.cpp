@@ -25,54 +25,47 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ OSSLSLHKeyPair.cpp
 
- OpenSSL convenience functions
+ OpenSSL SLHDSA key-pair class
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
-
 #include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#if defined(WITH_EDDSA) || defined(WITH_SLHDSA)
-#include <openssl/objects.h>
-#endif
+#ifdef WITH_SLHDSA
+#include "log.h"
+#include "OSSLSLHKeyPair.h"
 
-namespace OSSL
+// Set the public key
+void OSSLSLHKeyPair::setPublicKey(OSSLSLHPublicKey& publicKey)
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
-
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
-
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
-
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
-
-#if defined(WITH_EDDSA) || defined(WITH_SLHDSA)
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
-
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
+	pubKey = publicKey;
 }
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+// Set the private key
+void OSSLSLHKeyPair::setPrivateKey(OSSLSLHPrivateKey& privateKey)
+{
+	privKey = privateKey;
+}
 
+// Return the public key
+PublicKey* OSSLSLHKeyPair::getPublicKey()
+{
+	return &pubKey;
+}
+
+const PublicKey* OSSLSLHKeyPair::getConstPublicKey() const
+{
+	return &pubKey;
+}
+
+// Return the private key
+PrivateKey* OSSLSLHKeyPair::getPrivateKey()
+{
+	return &privKey;
+}
+
+const PrivateKey* OSSLSLHKeyPair::getConstPrivateKey() const
+{
+	return &privKey;
+}
+#endif
