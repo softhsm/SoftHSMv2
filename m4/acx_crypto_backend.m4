@@ -185,13 +185,9 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			detect-*) enable_eddsa="${have_lib_botan_eddsa_support}";;
 		esac
 
-		case "${enable_mldsa}" in
-			yes|detect) ACX_BOTAN_MLDSA;;
-		esac
-		case "${enable_mldsa}-${have_lib_botan_mldsa_support}" in
-			yes-no) AC_MSG_ERROR([Botan library has no ML-DSA support]);;
-			detect-*) enable_mldsa="${have_lib_botan_mldsa_support}";;
-		esac
+		if test	"x${enable_mldsa}" = "xyes"; then
+            AC_MSG_ERROR([Botan does not support ML-DSA])
+        fi
 
 		case "${enable_gost}" in
 			yes|detect) ACX_BOTAN_GOST;;
