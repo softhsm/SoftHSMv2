@@ -41,6 +41,8 @@
 #include "PrivateKey.h"
 #include "RNG.h"
 #include "SymmetricKey.h"
+#include "pkcs11.h"  // For CK_MECHANISM_TYPE and other types
+
 
 struct AsymAlgo
 {
@@ -138,10 +140,10 @@ public:
 	virtual bool verifyFinal(const ByteString& signature);
 
 	// Encryption functions
-	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding) = 0;
+	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding, const CK_RSA_PKCS_OAEP_PARAMS* oaepParams = nullptr) = 0;
 
 	// Decryption functions
-	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding) = 0;
+	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding, const CK_RSA_PKCS_OAEP_PARAMS* oaepParams = nullptr) = 0;
 
 	// Wrap/Unwrap keys
 	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);

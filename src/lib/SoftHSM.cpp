@@ -113,6 +113,24 @@ std::auto_ptr<SoftHSM> SoftHSM::instance(NULL);
 
 #endif
 
+// Helper function to get hash length in bytes for OAEP parameters
+static CK_ULONG getOAEPHashLength(CK_MECHANISM_TYPE hashAlg) {
+    switch (hashAlg) {
+        case CKM_SHA_1:
+            return 20;  // 160 bits / 8
+        case CKM_SHA224:
+            return 28;  // 224 bits / 8
+        case CKM_SHA256:
+            return 32;  // 256 bits / 8
+        case CKM_SHA384:
+            return 48;  // 384 bits / 8
+        case CKM_SHA512:
+            return 64;  // 512 bits / 8
+        default:
+            return 0;  // Unsupported
+    }
+}
+
 static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERTIFICATE_TYPE certType, P11Object **p11object)
 {
 	switch(objClass) {
@@ -2514,6 +2532,7 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setOpType(SESSION_OP_ENCRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
+	session->setParameters(pMechanism->pParameter, pMechanism->ulParameterLen);
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
@@ -2648,10 +2667,21 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 	data += ByteString(pData, ulDataLen);
 
 	// Encrypt the data
-	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism))
+	// Get OAEP parameters from session if this is an OAEP operation
+	const CK_RSA_PKCS_OAEP_PARAMS* oaepParams = nullptr;
+	if (mechanism == AsymMech::RSA_PKCS_OAEP) {
+	    size_t paramLen;
+	    void* param = session->getParameters(paramLen);
+	    if (param != nullptr && paramLen == sizeof(CK_RSA_PKCS_OAEP_PARAMS)) {
+		oaepParams = (CK_RSA_PKCS_OAEP_PARAMS*)param;
+	    }
+	}
+
+	
+	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism,oaepParams))
 	{
-		session->resetOp();
-		return CKR_GENERAL_ERROR;
+	    session->resetOp();
+	    return CKR_GENERAL_ERROR;
 	}
 
 	// Check size
@@ -3214,16 +3244,9 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				DEBUG_MSG("pParameter must be of type CK_RSA_PKCS_OAEP_PARAMS");
 				return CKR_ARGUMENTS_BAD;
 			}
-			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA_1)
-			{
-				DEBUG_MSG("hashAlg must be CKM_SHA_1");
-				return CKR_ARGUMENTS_BAD;
-			}
-			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA1)
-			{
-				DEBUG_MSG("mgf must be CKG_MGF1_SHA1");
-				return CKR_ARGUMENTS_BAD;
-			}
+			rv = MechParamCheckRSAPKCSOAEP(pMechanism);
+			if (rv != CKR_OK)
+			    return rv;
 
 			mechanism = AsymMech::RSA_PKCS_OAEP;
 			isRSA = true;
@@ -3267,6 +3290,7 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setOpType(SESSION_OP_DECRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
+	session->setParameters(pMechanism->pParameter, pMechanism->ulParameterLen);
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPrivateKey(privateKey);
@@ -3392,10 +3416,20 @@ static CK_RV AsymDecrypt(Session* session, CK_BYTE_PTR pEncryptedData, CK_ULONG 
 	ByteString data;
 
 	// Decrypt the data
-	if (!asymCrypto->decrypt(privateKey,encryptedData,data,mechanism))
+	// Get OAEP parameters from session if this is an OAEP operation
+	const CK_RSA_PKCS_OAEP_PARAMS* oaepParams = nullptr;
+	if (mechanism == AsymMech::RSA_PKCS_OAEP) {
+	    size_t paramLen;
+	    void* param = session->getParameters(paramLen);
+	    if (param != nullptr && paramLen == sizeof(CK_RSA_PKCS_OAEP_PARAMS)) {
+		oaepParams = (CK_RSA_PKCS_OAEP_PARAMS*)param;
+	    }
+	}
+	
+	if (!asymCrypto->decrypt(privateKey,encryptedData,data,mechanism,oaepParams))
 	{
-		session->resetOp();
-		return CKR_ENCRYPTED_DATA_INVALID;
+	    session->resetOp();
+	    return CKR_ENCRYPTED_DATA_INVALID;
 	}
 
 	// Check size
@@ -6474,12 +6508,21 @@ CK_RV SoftHSM::WrapKeyAsym
 			break;
 
 		case CKM_RSA_PKCS_OAEP:
-			mech = AsymMech::RSA_PKCS_OAEP;
-			// SHA-1 is the only supported option
-			// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
-			if (keydata.size() > modulus_length - 2 - 2 * 160 / 8)
-				return CKR_KEY_SIZE_RANGE;
-			break;
+		{
+		    mech = AsymMech::RSA_PKCS_OAEP;
+		    // Get hash length from OAEP parameters
+		    CK_ULONG hashLen = 20; // Default to SHA-1 (160 bits / 8)
+		    if (pMechanism->pParameter != NULL_PTR &&
+		        pMechanism->ulParameterLen == sizeof(CK_RSA_PKCS_OAEP_PARAMS)) {
+		        CK_RSA_PKCS_OAEP_PARAMS_PTR oaepParams = (CK_RSA_PKCS_OAEP_PARAMS_PTR)pMechanism->pParameter;
+		        hashLen = getOAEPHashLength(oaepParams->hashAlg);
+		        if (hashLen == 0) return CKR_MECHANISM_PARAM_INVALID;
+		    }
+		    // PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
+		    if (keydata.size() > modulus_length - 2 - 2 * hashLen)
+		        return CKR_KEY_SIZE_RANGE;
+		    break;
+		}
 
 		default:
 			return CKR_MECHANISM_INVALID;
@@ -13175,15 +13218,27 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 	}
 
 	CK_RSA_PKCS_OAEP_PARAMS_PTR params = (CK_RSA_PKCS_OAEP_PARAMS_PTR)pMechanism->pParameter;
-	if (params->hashAlg != CKM_SHA_1)
-	{
-		ERROR_MSG("hashAlg must be CKM_SHA_1");
-		return CKR_ARGUMENTS_BAD;
+	switch (params->hashAlg) {
+	    case CKM_SHA_1:
+	    case CKM_SHA256:
+	    case CKM_SHA224:
+	    case CKM_SHA384:
+	    case CKM_SHA512:
+	        break;  // Valid hash algorithms
+	    default:
+	        ERROR_MSG("hashAlg must be CKM_SHA_1, CKM_SHA256, CKM_SHA224, CKM_SHA384, or CKM_SHA512");
+	        return CKR_ARGUMENTS_BAD;
 	}
-	if (params->mgf != CKG_MGF1_SHA1)
-	{
-		ERROR_MSG("mgf must be CKG_MGF1_SHA1");
-		return CKR_ARGUMENTS_BAD;
+	switch (params->mgf) {
+	    case CKG_MGF1_SHA1:
+	    case CKG_MGF1_SHA224:
+	    case CKG_MGF1_SHA256:
+	    case CKG_MGF1_SHA384:
+	    case CKG_MGF1_SHA512:
+	        break;  // Valid MGF types
+	    default:
+	        ERROR_MSG("mgf must be CKG_MGF1_SHA1, CKG_MGF1_SHA224, CKG_MGF1_SHA256, CKG_MGF1_SHA384, or CKG_MGF1_SHA512");
+	        return CKR_ARGUMENTS_BAD;
 	}
 	if (params->source != CKZ_DATA_SPECIFIED)
 	{
