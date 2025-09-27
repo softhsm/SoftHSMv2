@@ -1427,14 +1427,16 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		    const EVP_MD* hashMD = EVP_sha1(); // Default to SHA-1
 		    const EVP_MD* mgfMD = EVP_sha1();  // Default to SHA-1
 		    
-		    if (oaepParams != nullptr) {
+		    if (oaepParams != NULL) {
 		        hashMD = getEVPMDFromCKM(oaepParams->hashAlg);
-		        mgfMD = getEVPMDFromCKM(oaepParams->mgf == 1 ? 0x220 : // CKG_MGF1_SHA1 -> CKM_SHA_1
-		                                oaepParams->mgf == 2 ? 0x250 : // CKG_MGF1_SHA256 -> CKM_SHA256
-		                                oaepParams->mgf == 3 ? 0x240 : // CKG_MGF1_SHA224 -> CKM_SHA224
-		                                oaepParams->mgf == 4 ? 0x260 : // CKG_MGF1_SHA384 -> CKM_SHA384
-		                                oaepParams->mgf == 5 ? 0x270 : // CKG_MGF1_SHA512 -> CKM_SHA512
-		                                0x220); // Default to SHA-1
+                switch (oaepParams->mgf) {
+                    case CKG_MGF1_SHA1:   mgfMD = EVP_sha1();   break;
+                    case CKG_MGF1_SHA224: mgfMD = EVP_sha224(); break;
+                    case CKG_MGF1_SHA256: mgfMD = EVP_sha256(); break;
+                    case CKG_MGF1_SHA384: mgfMD = EVP_sha384(); break;
+                    case CKG_MGF1_SHA512: mgfMD = EVP_sha512(); break;
+                    default: /* keep default SHA-1 */           break;
+                }
 		    }
 		    
 		    if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hashMD) <= 0) {
@@ -1450,6 +1452,28 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
                         EVP_PKEY_free(pkey);
                         return false;
                     }
+
+            // Optional: set OAEP label if provided
+            if (oaepParams != NULL &&
+                oaepParams->source == CKZ_DATA_SPECIFIED &&
+                oaepParams->pSourceData != NULL &&
+                oaepParams->ulSourceDataLen > 0) {
+                unsigned char* label = (unsigned char*) OPENSSL_malloc(oaepParams->ulSourceDataLen);
+                if (label == NULL) {
+                    ERROR_MSG("Failed to allocate memory for OAEP label");
+                    EVP_PKEY_CTX_free(ctx);
+                    EVP_PKEY_free(pkey);
+                    return false;
+                }
+                memcpy(label, oaepParams->pSourceData, oaepParams->ulSourceDataLen);
+                if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, label, (int)oaepParams->ulSourceDataLen) <= 0) {
+                    ERROR_MSG("Failed to set OAEP label");
+                    OPENSSL_free(label); // free on failure; ownership transfers on success
+                    EVP_PKEY_CTX_free(ctx);
+                    EVP_PKEY_free(pkey);
+                    return false;
+                }
+            }
 		
 		    // Perform decryption
 		    size_t outlen;
