@@ -45,18 +45,12 @@
 // Helper to convert PKCS#11 hash mechanism to OpenSSL EVP_MD
 static const EVP_MD* getEVPMDFromCKM(CK_MECHANISM_TYPE hashAlg) {
     switch (hashAlg) {
-        case 0x220: // CKM_SHA_1
-            return EVP_sha1();
-        case 0x250: // CKM_SHA256
-            return EVP_sha256();
-        case 0x240: // CKM_SHA224
-            return EVP_sha224();
-        case 0x260: // CKM_SHA384
-            return EVP_sha384();
-        case 0x270: // CKM_SHA512
-            return EVP_sha512();
-        default:
-            return EVP_sha1(); // Fallback to SHA-1
+        case CKM_SHA_1:   return EVP_sha1();
+        case CKM_SHA224:  return EVP_sha224();
+        case CKM_SHA256:  return EVP_sha256();
+        case CKM_SHA384:  return EVP_sha384();
+        case CKM_SHA512:  return EVP_sha512();
+        default:          return EVP_sha1(); // Fallback to SHA-1
     }
 }
 
@@ -1257,7 +1251,15 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	{
 	    // Use EVP API for OAEP to support configurable hash algorithms
 	    EVP_PKEY* pkey = EVP_PKEY_new();
-	    EVP_PKEY_set1_RSA(pkey, rsa);
+	    if (pkey == NULL) {
+	        ERROR_MSG("Failed to allocate EVP_PKEY");
+	        return false;
+	    }
+	    if (EVP_PKEY_set1_RSA(pkey, rsa) <= 0) {
+	        ERROR_MSG("Failed to set RSA key on EVP_PKEY");
+	        EVP_PKEY_free(pkey);
+	        return false;
+	    }
 	    
 	    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pkey, NULL);
 	    if (ctx == NULL) {
@@ -1284,14 +1286,16 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
             const EVP_MD* hashMD = EVP_sha1(); // Default to SHA-1
             const EVP_MD* mgfMD = EVP_sha1();  // Default to SHA-1
             
-            if (oaepParams != nullptr) {
+            if (oaepParams != NULL) {
                 hashMD = getEVPMDFromCKM(oaepParams->hashAlg);
-                mgfMD = getEVPMDFromCKM(oaepParams->mgf == 1 ? 0x220 : // CKG_MGF1_SHA1 -> CKM_SHA_1
-                                        oaepParams->mgf == 2 ? 0x250 : // CKG_MGF1_SHA256 -> CKM_SHA256
-                                        oaepParams->mgf == 3 ? 0x240 : // CKG_MGF1_SHA224 -> CKM_SHA224
-                                        oaepParams->mgf == 4 ? 0x260 : // CKG_MGF1_SHA384 -> CKM_SHA384
-                                        oaepParams->mgf == 5 ? 0x270 : // CKG_MGF1_SHA512 -> CKM_SHA512
-                                        0x220); // Default to SHA-1
+		switch (oaepParams->mgf) {
+		    case CKG_MGF1_SHA1:   mgfMD = EVP_sha1();   break;
+		    case CKG_MGF1_SHA224: mgfMD = EVP_sha224(); break;
+		    case CKG_MGF1_SHA256: mgfMD = EVP_sha256(); break;
+		    case CKG_MGF1_SHA384: mgfMD = EVP_sha384(); break;
+		    case CKG_MGF1_SHA512: mgfMD = EVP_sha512(); break;
+		    default: /* keep default SHA-1 */           break;
+		}
             }
             
             if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hashMD) <= 0) {
@@ -1400,7 +1404,15 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		{
 		    // Use EVP API for OAEP to support configurable hash algorithms
 		    EVP_PKEY* pkey = EVP_PKEY_new();
-		    EVP_PKEY_set1_RSA(pkey, rsa);
+		    if (pkey == NULL) {
+		        ERROR_MSG("Failed to allocate EVP_PKEY");
+		        return false;
+		    }
+		    if (EVP_PKEY_set1_RSA(pkey, rsa) <= 0) {
+		        ERROR_MSG("Failed to set RSA key on EVP_PKEY");
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
 		
 		    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pkey, NULL);
 		    if (ctx == NULL) {

@@ -208,7 +208,7 @@ bool OSSLEDDSA::verifyFinal(const ByteString& /*signature*/)
 
 // Encryption functions
 bool OSSLEDDSA::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/, const CK_RSA_PKCS_OAEP_PARAMS* oaepParams)
+			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/, const CK_RSA_PKCS_OAEP_PARAMS* /*oaepParams*/)
 {
 	ERROR_MSG("EDDSA does not support encryption");
 
@@ -217,7 +217,7 @@ bool OSSLEDDSA::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool OSSLEDDSA::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-			ByteString& /*data*/, const AsymMech::Type /*padding*/, const CK_RSA_PKCS_OAEP_PARAMS* oaepParams)
+			ByteString& /*data*/, const AsymMech::Type /*padding*/, const CK_RSA_PKCS_OAEP_PARAMS* /*oaepParams*/)
 {
 	ERROR_MSG("EDDSA does not support decryption");
 
