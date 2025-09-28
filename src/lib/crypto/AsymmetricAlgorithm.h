@@ -111,9 +111,16 @@ struct AsymRSAMGF
 
 struct RSA_PKCS_PSS_PARAMS
 {
-	HashAlgo::Type hashAlg;
-	AsymRSAMGF::Type mgf;
-	size_t sLen;
+        HashAlgo::Type hashAlg;
+        AsymRSAMGF::Type mgf;
+        size_t sLen;
+};
+
+struct RSA_PKCS_OAEP_PARAMS
+{
+        HashAlgo::Type hashAlg;
+        AsymRSAMGF::Type mgf;
+        size_t hashLen;
 };
 
 class AsymmetricAlgorithm
@@ -138,14 +145,14 @@ public:
 	virtual bool verifyFinal(const ByteString& signature);
 
 	// Encryption functions
-	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding) = 0;
+        virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0) = 0;
 
-	// Decryption functions
-	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding) = 0;
+        // Decryption functions
+        virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0) = 0;
 
-	// Wrap/Unwrap keys
-	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
-	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+        // Wrap/Unwrap keys
+        bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0);
+        bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0);
 
 	// Key factory
 	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL) = 0;
