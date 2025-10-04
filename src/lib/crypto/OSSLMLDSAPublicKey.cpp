@@ -37,6 +37,27 @@ OSSLMLDSAPublicKey::~OSSLMLDSAPublicKey()
 	}
 }
 
+OSSLMLDSAPublicKey::OSSLMLDSAPublicKey(OSSLMLDSAPublicKey&& other) noexcept
+    : MLDSAPublicKey(std::move(other)), pkey(other.pkey)
+{
+    other.pkey = NULL;
+}
+
+OSSLMLDSAPublicKey& OSSLMLDSAPublicKey::operator=(OSSLMLDSAPublicKey&& other) noexcept
+{
+    if (this != &other)
+    {
+        // move base
+        MLDSAPublicKey::operator=(std::move(other));
+        // release current
+        if (pkey) { EVP_PKEY_free(pkey); }
+        // steal
+        pkey = other.pkey;
+        other.pkey = NULL;
+    }
+    return *this;
+}
+
 // The type
 /*static*/ const char* OSSLMLDSAPublicKey::type = "OpenSSL ML-DSA Public Key";
 
