@@ -23,6 +23,14 @@ public:
 	// Destructor
 	virtual ~OSSLMLDSAPublicKey();
 
+	// Non-copyable (raw ownership of EVP_PKEY)
+    OSSLMLDSAPublicKey(const OSSLMLDSAPublicKey&) = delete;
+    OSSLMLDSAPublicKey& operator=(const OSSLMLDSAPublicKey&) = delete;
+
+	// Movable
+	OSSLMLDSAPublicKey(OSSLMLDSAPublicKey&&) noexcept;
+	OSSLMLDSAPublicKey& operator=(OSSLMLDSAPublicKey&&) noexcept;
+
 	// The type
 	static const char* type;
 

@@ -34,8 +34,10 @@
 #include "log.h"
 #include "DerUtil.h"
 #include "OSSLUtil.h"
+#ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
 #include <map>
+#endif
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>

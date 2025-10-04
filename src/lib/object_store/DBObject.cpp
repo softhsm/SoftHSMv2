@@ -520,6 +520,7 @@ static AttributeKind attributeKind(CK_ATTRIBUTE_TYPE type)
 	case CKA_OS_USERPIN: return akBinary;
 
 	case CKA_PARAMETER_SET: return akInteger;
+	case CKA_SEED: return akBinary;
 
 	default: return akUnknown;
 	}
