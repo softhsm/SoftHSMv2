@@ -25,55 +25,50 @@
  */
 
 /*****************************************************************************
- OSSLSLHPublicKey.h
+ SLHParameters.cpp
 
- OpenSSL SLHDSA public key class
+ SLH-DSA parameters (only used for key generation)
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLSLHPUBLICKEY_H
-#define _SOFTHSM_V2_OSSLSLHPUBLICKEY_H
-
 #include "config.h"
-#include "SLHPublicKey.h"
-#include <openssl/evp.h>
+#include "log.h"
+#include "SLHParameters.h"
+#include <string.h>
 
-class OSSLSLHPublicKey : public SLHPublicKey
+const char* SLHParameters::type = "Generic SLH parameters";
+
+void SLHParameters::setName(const ByteString& inName)
 {
-public:
-	// Constructors
-	OSSLSLHPublicKey();
+	name = inName;
+}
 
-	OSSLSLHPublicKey(const EVP_PKEY* inPKEY);
+const ByteString& SLHParameters::getName() const
+{
+	return name;
+}
 
-	// Destructor
-	virtual ~OSSLSLHPublicKey();
+bool SLHParameters::areOfType(const char* inType)
+{
+	return (strcmp(type, inType) == 0);
+}
 
-	// The type
-	static const char* type;
+// Serialisation
+ByteString SLHParameters::serialise() const
+{
+	return name.serialise();
+}
 
-	// Check if the key is of the given type
-	virtual bool isOfType(const char* inType);
+bool SLHParameters::deserialise(ByteString& serialised)
+{
+	ByteString dName = ByteString::chainDeserialise(serialised);
 
-	// Get the base point order length
-	virtual unsigned long getOrderLength() const;
+	if (dName.size() == 0)
+	{
+		return false;
+	}
 
-	// Setters for the SLHDSA public key components
-	virtual void setDerPublicKey(const ByteString& inPk);
+	setName(dName);
 
-	// Set from OpenSSL representation
-	virtual void setFromOSSL(const EVP_PKEY* inPKEY);
-
-	// Retrieve the OpenSSL representation of the key
-	EVP_PKEY* getOSSLKey();
-
-private:
-	// The internal OpenSSL representation
-	const char* name;
-	EVP_PKEY* pkey;
-
-	// Create the OpenSSL representation of the key
-	void createOSSLKey();
-};
-
-#endif // !_SOFTHSM_V2_OSSLDSAPUBLICKEY_H
+	return true;
+}
 

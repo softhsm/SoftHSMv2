@@ -144,20 +144,17 @@ typedef struct eddsa_key_material_t {
 
 #ifdef WITH_SLHDSA
 typedef struct slhdsa_key_material_t {
-	CK_ULONG sizeOID;
-	CK_ULONG sizeK;
-	CK_ULONG sizeA;
-	CK_VOID_PTR derOID;
-	CK_VOID_PTR bigK;
-	CK_VOID_PTR bigA;
-	slhdsa_key_material_t() {
-		sizeOID = 0;
-		sizeK = 0;
-		sizeA = 0;
-		derOID = NULL_PTR;
-		bigK = NULL_PTR;
-		bigA = NULL_PTR;
-	}
+    CK_ULONG sizePrivateKey;
+    CK_ULONG sizePublicKey;
+    CK_VOID_PTR derPrivateKey;
+    CK_VOID_PTR derPublicKey;
+
+    slhdsa_key_material_t() {
+        sizePrivateKey = 0;
+        sizePublicKey = 0;
+        derPrivateKey = NULL_PTR;
+        derPublicKey = NULL_PTR;
+    }
 } slhdsa_key_material_t;
 #endif
 

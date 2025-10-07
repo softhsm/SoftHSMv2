@@ -35,7 +35,7 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			[Enable support for SLHDSA (default detect, OpenSSL only)]
 		),
 		[enable_slhdsa="${enableval}"],
-		[enable_slhdsa="detect"]
+		[enable_slhdsa="no"]
 	)
 
 	# Second check for the FIPS 140-2 mode
@@ -194,6 +194,11 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 
 		if test	"x${enable_fips}" = "xyes"; then
 			AC_MSG_ERROR([Botan does not support FIPS 140-2 mode])
+		fi
+
+		if test "x${enable_slhdsa}" = "xyes"; then
+    		AC_MSG_WARN([SLHDSA is not supported with Botan. Disabling.])
+    		enable_slhdsa="no"
 		fi
 
 		ACX_BOTAN_RFC5649

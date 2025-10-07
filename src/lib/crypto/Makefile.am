@@ -20,6 +20,7 @@ libsofthsm_crypto_la_SOURCES =	AESKey.cpp \
 				DSAPublicKey.cpp \
 				DSAPrivateKey.cpp \
 				ECParameters.cpp \
+        SLHParameters.cpp \
 				ECPublicKey.cpp \
 				ECPrivateKey.cpp \
 				EDPublicKey.cpp \

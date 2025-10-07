@@ -25,55 +25,37 @@
  */
 
 /*****************************************************************************
- OSSLSLHPublicKey.h
+ SLHParameters.h
 
- OpenSSL SLHDSA public key class
+ SLH-DSA parameters (only used for key generation)
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLSLHPUBLICKEY_H
-#define _SOFTHSM_V2_OSSLSLHPUBLICKEY_H
+#ifndef _SOFTHSM_V2_SLHPARAMETERS_H
+#define _SOFTHSM_V2_SLHPARAMETERS_H
 
 #include "config.h"
-#include "SLHPublicKey.h"
-#include <openssl/evp.h>
+#include "ByteString.h"
+#include "AsymmetricParameters.h"
 
-class OSSLSLHPublicKey : public SLHPublicKey
+class SLHParameters : public AsymmetricParameters
 {
 public:
-	// Constructors
-	OSSLSLHPublicKey();
-
-	OSSLSLHPublicKey(const EVP_PKEY* inPKEY);
-
-	// Destructor
-	virtual ~OSSLSLHPublicKey();
-
 	// The type
 	static const char* type;
 
-	// Check if the key is of the given type
-	virtual bool isOfType(const char* inType);
+	void setName(const ByteString& inName);
+	const ByteString& getName() const;
 
-	// Get the base point order length
-	virtual unsigned long getOrderLength() const;
+	// Are the parameters of the given type?
+	virtual bool areOfType(const char* inType);
 
-	// Setters for the SLHDSA public key components
-	virtual void setDerPublicKey(const ByteString& inPk);
-
-	// Set from OpenSSL representation
-	virtual void setFromOSSL(const EVP_PKEY* inPKEY);
-
-	// Retrieve the OpenSSL representation of the key
-	EVP_PKEY* getOSSLKey();
+	// Serialisation
+	virtual ByteString serialise() const;
+	virtual bool deserialise(ByteString& serialised);
 
 private:
-	// The internal OpenSSL representation
-	const char* name;
-	EVP_PKEY* pkey;
-
-	// Create the OpenSSL representation of the key
-	void createOSSLKey();
+	ByteString name;
 };
 
-#endif // !_SOFTHSM_V2_OSSLDSAPUBLICKEY_H
+#endif // !_SOFTHSM_V2_SLHPARAMETERS_H
 

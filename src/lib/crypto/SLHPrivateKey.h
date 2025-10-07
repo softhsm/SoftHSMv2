@@ -51,31 +51,24 @@ public:
 	// Get the output length
 	virtual unsigned long getOutputLength() const;
 
-	// Get the base point order length
+	// Get the order length
 	virtual unsigned long getOrderLength() const = 0;
 
 	// Setters for the SLHDSA private key components
-	virtual void setK(const ByteString& inK);
-
-	// Setters for the SLHDSA public key components
-	virtual void setEC(const ByteString& inEC);
+	virtual void setDerPrivateKey(const ByteString& inSk);
 
 	// Getters for the SLHDSA private key components
-	virtual const ByteString& getK() const;
-
-	// Getters for the SLHDSA public key components
-	virtual const ByteString& getEC() const;
+	virtual const ByteString& getDerPrivateKey() const;
 
 	// Serialisation
 	virtual ByteString serialise() const;
 	virtual bool deserialise(ByteString& serialised);
 
 protected:
-	// Private components
-	ByteString k;
-
-	// Public components
-	ByteString ec;
+	// TODO: Replace derPrivateKey with attrs + getters and setters.
+	// generally these attrs are from type ByteString
+	// SK = (SK.seed, SK.prf, PK)
+	ByteString derPrivateKey;
 };
 
 #endif // !_SOFTHSM_V2_SLHPRIVATEKEY_H

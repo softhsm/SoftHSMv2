@@ -2228,6 +2228,17 @@ bool P11AttrEcPoint::setDefault()
 }
 
 /*****************************************
+ * CKA_SLHDSA_PARAMS
+ *****************************************/
+
+// Set default value
+bool P11AttrSLHDSAParams::setDefault()
+{
+	OSAttribute attr(ByteString(""));
+	return osobject->setAttribute(type, attr);
+}
+
+/*****************************************
  * CKA_GOSTR3410_PARAMS
  *****************************************/
 

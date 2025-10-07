@@ -47,57 +47,43 @@ bool SLHPublicKey::isOfType(const char* inType)
 // Get the bit length
 unsigned long SLHPublicKey::getBitLength() const
 {
-	return getA().size() * 8;
+	return getDerPublicKey().size() * 8;
 }
 
 // Get the output length
 unsigned long SLHPublicKey::getOutputLength() const
 {
-	return getOrderLength() * 2;
+	return getOrderLength();
 }
 
-// Setters for the EC public key components
-void SLHPublicKey::setEC(const ByteString& inEC)
+// Setters for the SLH public key components
+void SLHPublicKey::setDerPublicKey(const ByteString& inPk)
 {
-	ec = inEC;
+	derPublicKey = inPk;
 }
 
-void SLHPublicKey::setA(const ByteString& inA)
+// Getters for the SLH public key components
+const ByteString& SLHPublicKey::getDerPublicKey() const
 {
-	a = inA;
-}
-
-// Getters for the EC public key components
-const ByteString& SLHPublicKey::getEC() const
-{
-	return ec;
-}
-
-const ByteString& SLHPublicKey::getA() const
-{
-	return a;
+	return derPublicKey;
 }
 
 // Serialisation
 ByteString SLHPublicKey::serialise() const
 {
-	return ec.serialise() +
-	       a.serialise();
+	return derPublicKey.serialise();
 }
 
 bool SLHPublicKey::deserialise(ByteString& serialised)
 {
-	ByteString dEC = ByteString::chainDeserialise(serialised);
-	ByteString dA = ByteString::chainDeserialise(serialised);
+	ByteString dDerPublicKey = ByteString::chainDeserialise(serialised);
 
-	if ((dEC.size() == 0) ||
-	    (dA.size() == 0))
+	if (dDerPublicKey.size() == 0)
 	{
 		return false;
 	}
 
-	setEC(dEC);
-	setA(dA);
+	setDerPublicKey(dDerPublicKey);
 
 	return true;
 }

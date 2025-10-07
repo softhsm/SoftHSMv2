@@ -189,10 +189,12 @@ CK_RV P11Object::loadTemplate(Token *token, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG
 // Save template
 CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulAttributeCount, int op)
 {
+	INFO_MSG("INIT saveTemplate, OBJECT_OP_GENERATE %d, isPrivate %d", OBJECT_OP_GENERATE == op,isPrivate)
 	if (osobject == NULL)
 		return CKR_GENERAL_ERROR;
 	if (osobject->startTransaction() == false)
 		return CKR_GENERAL_ERROR;
+	INFO_MSG("osobject is not NULL and started transaction OK")
 
 	if (op == OBJECT_OP_SET)
 	{
@@ -226,6 +228,7 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 
 		if (attr == NULL)
 		{
+    	ERROR_MSG("ATTR is NULL for attribute type 0x%08X, abortTransaction", (unsigned int)pTemplate[i].type);
 			osobject->abortTransaction();
 			return CKR_ATTRIBUTE_TYPE_INVALID;
 		}
@@ -234,6 +237,7 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 		CK_RV rv = attr->update(token,isPrivate, pTemplate[i].pValue, pTemplate[i].ulValueLen, op);
 		if (rv != CKR_OK)
 		{
+			ERROR_MSG("ATTR update error, abortTransaction")
 			osobject->abortTransaction();
 			return rv;
 		}
@@ -297,6 +301,7 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 		return CKR_GENERAL_ERROR;
 	}
 
+	INFO_MSG("END saveTemplate")
 	return CKR_OK;
 }
 
@@ -939,6 +944,7 @@ P11SLHPublicKeyObj::P11SLHPublicKeyObj()
 // Add attributes
 bool P11SLHPublicKeyObj::init(OSObject *inobject)
 {
+	INFO_MSG("INIT P11SLHPublicKeyObj");
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
@@ -951,27 +957,28 @@ bool P11SLHPublicKeyObj::init(OSObject *inobject)
 	if (!P11PublicKeyObj::init(inobject)) return false;
 
 	// Create attributes
-	P11Attribute* attrEcParams = new P11AttrEcParams(osobject,P11Attribute::ck3);
-	P11Attribute* attrEcPoint = new P11AttrEcPoint(osobject);
+	P11Attribute* attrSLHDSAParams = new P11AttrSLHDSAParams(osobject,P11Attribute::ck3);
+	P11Attribute* attrValue = new P11AttrValue(osobject,P11Attribute::ck1|P11Attribute::ck4|P11Attribute::ck6|P11Attribute::ck7);
 
 	// Initialize the attributes
 	if
 	(
-		!attrEcParams->init() ||
-		!attrEcPoint->init()
+		!attrSLHDSAParams->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
-		delete attrEcParams;
-		delete attrEcPoint;
+		delete attrSLHDSAParams;
+		delete attrValue;
 		return false;
 	}
 
 	// Add them to the map
-	attributes[attrEcParams->getType()] = attrEcParams;
-	attributes[attrEcPoint->getType()] = attrEcPoint;
+	attributes[attrSLHDSAParams->getType()] = attrSLHDSAParams;
+	attributes[attrValue->getType()] = attrValue;
 
 	initialized = true;
+	INFO_MSG("END P11SLHPublicKeyObj");
 	return true;
 }
 
@@ -1389,6 +1396,7 @@ P11SLHPrivateKeyObj::P11SLHPrivateKeyObj()
 // Add attributes
 bool P11SLHPrivateKeyObj::init(OSObject *inobject)
 {
+	INFO_MSG("INIT P11SLHPrivateKeyObj");
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
@@ -1401,27 +1409,28 @@ bool P11SLHPrivateKeyObj::init(OSObject *inobject)
 	if (!P11PrivateKeyObj::init(inobject)) return false;
 
 	// Create attributes
-	P11Attribute* attrEcParams = new P11AttrEcParams(osobject,P11Attribute::ck4|P11Attribute::ck6);
+	P11Attribute* attrSLHDSAParams = new P11AttrSLHDSAParams(osobject,P11Attribute::ck4|P11Attribute::ck6);
 	P11Attribute* attrValue = new P11AttrValue(osobject,P11Attribute::ck1|P11Attribute::ck4|P11Attribute::ck6|P11Attribute::ck7);
 
 	// Initialize the attributes
 	if
 	(
-		!attrEcParams->init() ||
+		!attrSLHDSAParams->init() ||
 		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
-		delete attrEcParams;
+		delete attrSLHDSAParams;
 		delete attrValue;
 		return false;
 	}
 
 	// Add them to the map
-	attributes[attrEcParams->getType()] = attrEcParams;
+	attributes[attrSLHDSAParams->getType()] = attrSLHDSAParams;
 	attributes[attrValue->getType()] = attrValue;
 
 	initialized = true;
+	INFO_MSG("END P11SLHPrivateKeyObj");
 	return true;
 }
 

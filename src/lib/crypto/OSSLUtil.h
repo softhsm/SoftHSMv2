@@ -65,7 +65,7 @@ namespace OSSL
 	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
 #endif
 
-#if defined(WITH_EDDSA) || defined(WITH_SLHDSA)
+#if defined(WITH_EDDSA)
 	// Convert an OpenSSL NID to a ByteString
 	ByteString oid2ByteString(int nid);
 

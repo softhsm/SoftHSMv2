@@ -20,6 +20,7 @@ set(SOURCES AESKey.cpp
             DSAPrivateKey.cpp
             DSAPublicKey.cpp
             ECParameters.cpp
+            SLHParameters.cpp
             ECPrivateKey.cpp
             ECPublicKey.cpp
             EDPrivateKey.cpp
