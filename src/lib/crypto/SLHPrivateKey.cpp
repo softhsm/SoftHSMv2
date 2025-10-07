@@ -47,60 +47,41 @@ bool SLHPrivateKey::isOfType(const char* inType)
 // Get the bit length
 unsigned long SLHPrivateKey::getBitLength() const
 {
-	return getK().bits();
+	return getDerPrivateKey().size() * 8;
 }
 
 // Get the output length
 unsigned long SLHPrivateKey::getOutputLength() const
 {
-	return getOrderLength() * 2;
+	return getOrderLength();
 }
 
-// Setters for the SLHDSA private key components
-void SLHPrivateKey::setK(const ByteString& inK)
+void SLHPrivateKey::setDerPrivateKey(const ByteString& inSk)
 {
-	k = inK;
+	derPrivateKey = inSk;
 }
 
-// Setters for the SLHDSA public key components
-void SLHPrivateKey::setEC(const ByteString& inEC)
+const ByteString& SLHPrivateKey::getDerPrivateKey() const
 {
-	ec = inEC;
-}
-
-// Getters for the SLHDSA private key components
-const ByteString& SLHPrivateKey::getK() const
-{
-	return k;
-}
-
-// Getters for the SLHDSA public key components
-const ByteString& SLHPrivateKey::getEC() const
-{
-	return ec;
+	return derPrivateKey;
 }
 
 // Serialisation
 ByteString SLHPrivateKey::serialise() const
 {
-	return ec.serialise() +
-	       k.serialise();
+	return derPrivateKey.serialise();
 }
 
 bool SLHPrivateKey::deserialise(ByteString& serialised)
 {
-	ByteString dEC = ByteString::chainDeserialise(serialised);
-	ByteString dK = ByteString::chainDeserialise(serialised);
+	ByteString dDerPrivateKey = ByteString::chainDeserialise(serialised);
 
-	if ((dEC.size() == 0) ||
-	    (dK.size() == 0))
+	if (dDerPrivateKey.size() == 0)
 	{
 		return false;
 	}
 
-	setEC(dEC);
-	setK(dK);
-
+	setDerPrivateKey(dDerPrivateKey);
 	return true;
 }
 

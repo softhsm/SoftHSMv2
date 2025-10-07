@@ -23,9 +23,14 @@
 #include <sys/timeb.h>
 #include "sample.h"
 
-#define CKK_EC_EDWARDS		(0x40UL)
-#define CKM_EC_EDWARDS_KEY_PAIR_GEN	(0x1055UL)
-#define CKM_EDDSA			(0x1057UL)
+// eddsa
+/* #define CKM_KEY_PAIR_GEN	(0x1055UL) */
+/* #define CKM_SIGN			(0x1057UL) */
+
+// New definitions, slh-dsa
+#define CKM_KEY_PAIR_GEN	(0x80010003UL)
+#define CKM_SIGN			(0x80010006UL)
+#define CKA_PARAMS (0x80000030UL)
 
 CK_FUNCTION_LIST  *funcs;
 CK_BYTE           tokenNameBuf[32];
@@ -190,13 +195,28 @@ int main( int argc, char **argv )
     return !CKR_OK;
   }
 
-  // Use Ed25519 key to sign & verify
-  printf("Generating Ed25519 key pair... \n");
+  // Use SLH-DSA-SHA2-128s key to sign & verify
+  printf("Generating SLH-DSA key pair... \n");
   
-  CK_KEY_TYPE keyType = CKK_EC_EDWARDS;
   CK_OBJECT_CLASS keyClass = CKO_PRIVATE_KEY;
-  /* DER OID for id-Ed25519 (1.3.101.112) */
-  CK_BYTE ED25519_EC_PARAMS[] = { 0x06, 0x03, 0x2B, 0x65, 0x70 };
+
+  CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHA2-128s";
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHAKE-128s"; */
+  //--------------------
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHA2-128f"; */
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHAKE-128f"; */
+  //--------------------------------------------------
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHA2-192s"; */
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHAKE-192s"; */
+  //--------------------
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHA2-192f"; */
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHAKE-192f"; */
+  //--------------------------------------------------
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHA2-256s"; */
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHAKE-256s"; */
+  //--------------------
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHA2-256f"; */
+  /* CK_BYTE SLH_DSA_PARAMS[] = "SLH-DSA-SHAKE-256f"; */
   
 /* Public key template */
 CK_ATTRIBUTE pub_tmpl[] = {
@@ -204,8 +224,8 @@ CK_ATTRIBUTE pub_tmpl[] = {
     { CKA_VERIFY,    &isTrue,  sizeof(isTrue) },
     { CKA_LABEL,     keyLabel, (CK_ULONG)strlen((char*)keyLabel) },
     { CKA_ID,        id,       (CK_ULONG)sizeof(id) },
-    { CKA_EC_PARAMS, (CK_VOID_PTR)ED25519_EC_PARAMS,
-                     (CK_ULONG)sizeof(ED25519_EC_PARAMS) }
+    { CKA_PARAMS, (CK_VOID_PTR)SLH_DSA_PARAMS,
+                     (CK_ULONG)sizeof(SLH_DSA_PARAMS) }
 };
 
 /* Private key template */
@@ -216,7 +236,7 @@ CK_ATTRIBUTE priv_tmpl[] = {
     { CKA_ID,      id,       (CK_ULONG)sizeof(id) }
 };
   
-  mech.mechanism      = CKM_EC_EDWARDS_KEY_PAIR_GEN;
+  mech.mechanism      = CKM_KEY_PAIR_GEN;
   mech.ulParameterLen = 0;
   mech.pParameter     = NULL;
 
@@ -255,11 +275,16 @@ CK_ATTRIBUTE priv_tmpl[] = {
   fclose(fp);
   
   CK_ULONG dataToBeSignedLen = file_size;
-  CK_BYTE signature[1024];
+  CK_BYTE signature[7856];
+  /* CK_BYTE signature[17088]; */
+  /* CK_BYTE signature[16224]; */
+  /* CK_BYTE signature[35664]; */
+  /* CK_BYTE signature[29792]; */
+  /* CK_BYTE signature[49856]; */
   CK_ULONG signatureLen = sizeof(signature);
 
-  printf("Signing the data from %s with Ed25519 private key... \n", file_to_sign);
-  mech.mechanism      = CKM_EDDSA;
+  printf("Signing the data from %s with SLH-DSA-SHA2-128s private key... \n", file_to_sign);
+  mech.mechanism      = CKM_SIGN;
   mech.ulParameterLen = 0;
   mech.pParameter     = NULL;
 
@@ -281,7 +306,7 @@ CK_ATTRIBUTE priv_tmpl[] = {
   
   DUMP_HEXA(signature, signatureLen);
 
-  printf("Verifying the data with Ed25519 public key... \n");
+  printf("Verifying the data with SLH-DSA-SHA2-128s public key... \n");
   rc = funcs->C_VerifyInit(session, &mech, publicKey);
   if (rc != CKR_OK) {
     printf("error C_VerifyInit: rc=0x%04lx\n", rc );

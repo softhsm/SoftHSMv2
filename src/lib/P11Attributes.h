@@ -1145,6 +1145,21 @@ protected:
 };
 
 /*****************************************
+ * CKA_SLHDSA_PARAMS
+ *****************************************/
+
+class P11AttrSLHDSAParams : public P11Attribute
+{
+public:
+	// Constructor
+	P11AttrSLHDSAParams(OSObject* inobject, CK_ULONG inchecks = 0) : P11Attribute(inobject) { type = CKA_SLHDSA_PARAMS; checks = ck1|inchecks; }
+
+protected:
+	// Set the default value of the attribute
+	virtual bool setDefault();
+};
+
+/*****************************************
  * CKA_GOSTR3410_PARAMS
  *****************************************/
 

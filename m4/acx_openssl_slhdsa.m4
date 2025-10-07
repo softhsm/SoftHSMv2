@@ -17,9 +17,7 @@ AC_DEFUN([ACX_OPENSSL_SLHDSA],[
 				int main()
 				{
 					EVP_PKEY_CTX *ctx;
-
-					/* Replace NID_SLHDSA with the actual NID your patched OpenSSL/liboqs uses */
-					ctx = EVP_PKEY_CTX_new_id(NID_ED25519, NULL);
+    			ctx = EVP_PKEY_CTX_new_from_name(NULL, "SLH-DSA-SHA2-128f", NULL);
 					if (ctx == NULL)
 						return 1;
 					return 0;
