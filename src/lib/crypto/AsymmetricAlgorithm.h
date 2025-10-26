@@ -118,6 +118,40 @@ struct RSA_PKCS_PSS_PARAMS
 	size_t sLen;
 };
 
+struct Hedge
+{
+	enum Type
+	{
+		HEDGE_PREFERRED,
+		HEDGE_REQUIRED,
+		DETERMINISTIC_REQUIRED
+	};
+};
+
+struct SIGN_ADDITIONAL_CONTEXT
+{
+	Hedge::Type hedgeType;
+	const unsigned char* contextAsChar;
+	size_t contextLength;
+
+	// Prevent shallow copies (Session::setParameters handles deep-copy)
+	SIGN_ADDITIONAL_CONTEXT(const SIGN_ADDITIONAL_CONTEXT&) = delete;
+	SIGN_ADDITIONAL_CONTEXT& operator=(const SIGN_ADDITIONAL_CONTEXT&) = delete;
+
+	SIGN_ADDITIONAL_CONTEXT(): 
+		hedgeType(Hedge::Type::HEDGE_PREFERRED),
+		contextAsChar(NULL),
+		contextLength(0){}
+	SIGN_ADDITIONAL_CONTEXT(Hedge::Type hedgeType): 
+		hedgeType(hedgeType),
+		contextAsChar(NULL),
+		contextLength(0){}
+	SIGN_ADDITIONAL_CONTEXT(Hedge::Type hedgeType, const unsigned char* contextAsChar, size_t contextLength): 
+		hedgeType(hedgeType),
+		contextAsChar(contextAsChar),
+		contextLength(contextLength){}
+};
+
 class AsymmetricAlgorithm
 {
 public:

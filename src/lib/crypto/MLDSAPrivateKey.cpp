@@ -24,7 +24,7 @@ unsigned long MLDSAPrivateKey::getBitLength() const
 	return getValue().bits();
 }
 
-// Get the bit length
+// Get the parameter set
 unsigned long MLDSAPrivateKey::getParameterSet() const
 {
 	switch(value.size()) {

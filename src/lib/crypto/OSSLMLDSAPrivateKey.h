@@ -8,6 +8,7 @@
 #define _SOFTHSM_V2_OSSLMLDSAPRIVATEKEY_H
 
 #include "config.h"
+#ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
 #include "MLDSAPrivateKey.h"
 #include <openssl/bn.h>
@@ -55,5 +56,6 @@ private:
 
 };
 
+#endif // WITH_ML_DSA
 #endif // !_SOFTHSM_V2_OSSLECPRIVATEKEY_H
 

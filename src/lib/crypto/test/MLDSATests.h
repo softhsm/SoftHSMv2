@@ -17,6 +17,15 @@ class MLDSATests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testSerialisation);
 	CPPUNIT_TEST(testPKCS8);
 	CPPUNIT_TEST(testSigningVerifying);
+	CPPUNIT_TEST(testSigningVerifyingHedgePreferred);
+	CPPUNIT_TEST(testSigningVerifyingHedgePreferredWithContext);
+	CPPUNIT_TEST(testSigningVerifyingHedgePreferredWithContextTooLong);
+	CPPUNIT_TEST(testSigningVerifyingHedgeRequired);
+	CPPUNIT_TEST(testSigningVerifyingHedgeRequiredWithContext);
+	CPPUNIT_TEST(testSigningVerifyingHedgeRequiredWithContextTooLong);
+	CPPUNIT_TEST(testSigningVerifyingDeterministic);
+	CPPUNIT_TEST(testSigningVerifyingDeterministicWithContext);
+	CPPUNIT_TEST(testSigningVerifyingDeterministicWithContextTooLong);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -24,6 +33,15 @@ public:
 	void testSerialisation();
 	void testPKCS8();
 	void testSigningVerifying();
+	void testSigningVerifyingHedgePreferred();
+	void testSigningVerifyingHedgePreferredWithContext();
+	void testSigningVerifyingHedgePreferredWithContextTooLong();
+	void testSigningVerifyingHedgeRequired();
+	void testSigningVerifyingHedgeRequiredWithContext();
+	void testSigningVerifyingHedgeRequiredWithContextTooLong();
+	void testSigningVerifyingDeterministic();
+	void testSigningVerifyingDeterministicWithContext();
+	void testSigningVerifyingDeterministicWithContextTooLong();
 	
 	void setUp();
 	void tearDown();
@@ -33,5 +51,5 @@ private:
 	AsymmetricAlgorithm* mldsa;
 };
 
-#endif // !_SOFTHSM_V2_EDDSATESTS_H
+#endif // !_SOFTHSM_V2_MLDSATESTS_H
 
