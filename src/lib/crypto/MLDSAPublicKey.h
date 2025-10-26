@@ -20,7 +20,7 @@ public:
 	// Check if the key is of the given type
 	virtual bool isOfType(const char* inType);
 
-	// Get the bit length
+	// Get the parameter set
 	virtual unsigned long getParameterSet() const;
 
 	// Get the signature length

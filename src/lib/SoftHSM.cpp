@@ -884,7 +884,7 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 				else
 					supportedMechanisms.remove(mechanism);
 			}
-			catch (const std::out_of_range& e)
+			catch (const std::out_of_range&)
 			{
 				WARNING_MSG("Unknown mechanism provided: %s", token.c_str());
 			}
@@ -4204,6 +4204,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 #endif
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
+	SIGN_ADDITIONAL_CONTEXT additionalContext = {};
 #endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -4476,6 +4477,51 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			mechanism = AsymMech::MLDSA;
 			bAllowMultiPartOp = false;
 			isMLDSA = true;
+			if (pMechanism->pParameter != NULL_PTR) {
+				if(pMechanism->ulParameterLen != sizeof(CK_SIGN_ADDITIONAL_CONTEXT))
+				{
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+				else
+				{
+					const CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (const CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
+					if (ckSignAdditionalContext->ulContextLen > 255)
+					{
+						ERROR_MSG("ML-DSA: Invalid parameters, context length > 255");
+						return CKR_ARGUMENTS_BAD;
+					}
+					
+					// Always initialize context fields
+					additionalContext.contextAsChar = NULL;
+					additionalContext.contextLength = 0;
+					if (ckSignAdditionalContext->ulContextLen > 0)
+					{
+						if (ckSignAdditionalContext->pContext == NULL)
+						{
+							ERROR_MSG("ML-DSA: Invalid parameters, pContext is NULL");
+							return CKR_ARGUMENTS_BAD;
+						}
+						additionalContext.contextAsChar = (unsigned char*) ckSignAdditionalContext->pContext;
+        				additionalContext.contextLength = ckSignAdditionalContext->ulContextLen;
+					}
+					switch (ckSignAdditionalContext->hedgeVariant) {
+						case CKH_HEDGE_REQUIRED:
+							additionalContext.hedgeType = Hedge::HEDGE_REQUIRED;
+							break;
+						case CKH_DETERMINISTIC_REQUIRED:
+							additionalContext.hedgeType = Hedge::DETERMINISTIC_REQUIRED;
+							break;
+						case CKH_HEDGE_PREFERRED:
+						// Per PKCS11v3.2 section 6.67.5
+						// "If no parameter is supplied the hedgeVariant will be CKH_HEDGE_PREFERRED"
+						default:
+							additionalContext.hedgeType = Hedge::HEDGE_PREFERRED;
+					}
+					param = &additionalContext;
+					paramLen = sizeof(SIGN_ADDITIONAL_CONTEXT);
+				}
+			}
 			break;
 #endif
 		default:
@@ -5238,6 +5284,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 #endif
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
+	SIGN_ADDITIONAL_CONTEXT additionalContext = {};
 #endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -5508,6 +5555,49 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			mechanism = AsymMech::MLDSA;
 			bAllowMultiPartOp = false;
 			isMLDSA = true;
+			if (pMechanism->pParameter != NULL_PTR) {
+				if(pMechanism->ulParameterLen != sizeof(CK_SIGN_ADDITIONAL_CONTEXT))
+				{
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+				else
+				{
+					const CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (const CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
+					if (ckSignAdditionalContext->ulContextLen > 255) {
+						ERROR_MSG("ML-DSA: Invalid parameters, context length > 255");
+						return CKR_ARGUMENTS_BAD;
+					}
+					// Always initialize context fields
+					additionalContext.contextAsChar = NULL;
+					additionalContext.contextLength = 0;
+					if (ckSignAdditionalContext->ulContextLen > 0) {
+						if (ckSignAdditionalContext->pContext == NULL)
+						{
+							ERROR_MSG("ML-DSA: Invalid parameters, pContext is NULL");
+							return CKR_ARGUMENTS_BAD;
+						}
+						additionalContext.contextAsChar = (unsigned char*) ckSignAdditionalContext->pContext;
+						additionalContext.contextLength = ckSignAdditionalContext->ulContextLen;
+					}
+
+					switch (ckSignAdditionalContext->hedgeVariant) {
+						case CKH_HEDGE_REQUIRED:
+							additionalContext.hedgeType = Hedge::HEDGE_REQUIRED;
+							break;
+						case CKH_DETERMINISTIC_REQUIRED:
+							additionalContext.hedgeType = Hedge::DETERMINISTIC_REQUIRED;
+							break;
+						// Per PKCS11v3.2 section 6.67.5
+						// "If no parameter is supplied the hedgeVariant will be CKH_HEDGE_PREFERRED"
+						case CKH_HEDGE_PREFERRED:
+						default:
+							additionalContext.hedgeType = Hedge::HEDGE_PREFERRED;
+					}
+					param = &additionalContext;
+					paramLen = sizeof(SIGN_ADDITIONAL_CONTEXT);
+				}
+			}
 			break;
 #endif
 		default:
@@ -10283,7 +10373,6 @@ CK_RV SoftHSM::generateMLDSA
 				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
 
 				// MLDSA Private Key Attributes
-				ByteString parameterSet;
 				ByteString value;
 				ByteString seed;
 				if (isPrivateKeyPrivate)

@@ -37,6 +37,24 @@ OSSLMLDSAPrivateKey::~OSSLMLDSAPrivateKey()
 	}
 }
 
+OSSLMLDSAPrivateKey::OSSLMLDSAPrivateKey(OSSLMLDSAPrivateKey&& other) noexcept  
+	: MLDSAPrivateKey(std::move(other)), pkey(other.pkey)  
+{  
+	other.pkey = NULL;  
+}  
+  
+OSSLMLDSAPrivateKey& OSSLMLDSAPrivateKey::operator=(OSSLMLDSAPrivateKey&& other) noexcept  
+{  
+	if (this != &other)  
+	{  
+		MLDSAPrivateKey::operator=(std::move(other));  
+		if (pkey) EVP_PKEY_free(pkey);  
+		pkey = other.pkey;  
+		other.pkey = NULL;  
+	}  
+	return *this;  
+}  
+
 // The type
 const char* OSSLMLDSAPrivateKey::type = "OpenSSL ML-DSA Private Key";
 

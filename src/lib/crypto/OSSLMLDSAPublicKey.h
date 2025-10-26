@@ -8,6 +8,7 @@
 #define _SOFTHSM_V2_OSSLMLDSAPUBLICKEY_H
 
 #include "config.h"
+#ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
 #include "MLDSAPublicKey.h"
 #include <openssl/evp.h>
@@ -53,5 +54,6 @@ private:
 	void createOSSLKey();
 };
 
-#endif // !_SOFTHSM_V2_OSSLDSAPUBLICKEY_H
+#endif // WITH_ML_DSA
+#endif // !_SOFTHSM_V2_OSSLMLDSAPUBLICKEY_H
 

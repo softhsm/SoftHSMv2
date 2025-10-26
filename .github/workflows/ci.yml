@@ -76,13 +76,13 @@ jobs:
           make check || (find . -name test-suite.log -exec cat {} \; && false)
 
   linux_ossl_35:
-    name: Linux with OpenSSL 3.5.2
+    name: Linux with OpenSSL 3.5.4
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Prepare
         env:
-          OPENSSL_VERSION: 3.5.2
+          OPENSSL_VERSION: 3.5.4
           OPENSSL_INSTALL_DIR: /usr/local/openssl-3.5
           LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
           PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
@@ -97,7 +97,7 @@ jobs:
           make -j$(nproc) > build.log
           sudo make install > install.log
           cd ${{ env.OPENSSL_INSTALL_DIR }}
-          sudo ln -s lib64 lib
+          sudo ln -sf lib64 lib
       - name: Build
         env:
           # Once all OpenSSL deprecations fixed, uncomment this

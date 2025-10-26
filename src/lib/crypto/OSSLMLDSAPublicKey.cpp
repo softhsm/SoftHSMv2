@@ -71,7 +71,7 @@ void OSSLMLDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
                                     localPub, sizeof(localPub), &pub_len);
 
 	if(!rv) {
-		ERROR_MSG("Could not get private key private, rv: %d", rv);
+		ERROR_MSG("Could not get ML-DSA public key, rv: %d", rv);
 		return;
 	}
 
