@@ -4,11 +4,11 @@
  OpenSSL ML-DSA key-pair class
  *****************************************************************************/
 
-#ifdef WITH_ML_DSA
 #ifndef _SOFTHSM_V2_OSSLMLDSAKEYPAIR_H
 #define _SOFTHSM_V2_OSSLMLDSAKEYPAIR_H
 
 #include "config.h"
+#ifdef WITH_ML_DSA
 #include "AsymmetricKeyPair.h"
 #include "OSSLMLDSAPublicKey.h"
 #include "OSSLMLDSAPrivateKey.h"
@@ -38,5 +38,5 @@ private:
 	OSSLMLDSAPrivateKey privKey;
 };
 
-#endif // !_SOFTHSM_V2_OSSLMLDSAKEYPAIR_H
 #endif // WITH_ML_DSA
+#endif // !_SOFTHSM_V2_OSSLMLDSAKEYPAIR_H

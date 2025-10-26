@@ -18,8 +18,8 @@ public:
 	virtual ~OSSLMLDSA() { }
 
 	// Signing functions
-	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
-	virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
+    virtual bool sign(PrivateKey *privateKey, const ByteString &dataToSign, ByteString &signature, const AsymMech::Type mechanism, const void *param = NULL, const size_t paramLen = 0);
+    virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
 	virtual bool signUpdate(const ByteString& dataToSign);
 	virtual bool signFinal(ByteString& signature);
 
@@ -49,6 +49,8 @@ public:
 	virtual AsymmetricParameters* newParameters();
 
 private:
+	static int OSSL_RANDOM;
+	static int OSSL_DETERMINISTIC;
 };
 
 #endif // !_SOFTHSM_V2_OSSLMLDSA_H

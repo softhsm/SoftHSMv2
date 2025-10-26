@@ -26,5 +26,5 @@ public:
 	static bool setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate);
 };
 
+#endif // WITH_ML_DSA
 #endif // !_SOFTHSM_V2_MLDSAUTIL_H
-#endif

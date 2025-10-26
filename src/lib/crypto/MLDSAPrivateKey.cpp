@@ -24,7 +24,7 @@ unsigned long MLDSAPrivateKey::getBitLength() const
 	return getValue().bits();
 }
 
-// Get the bit length
+// Get the parameter set
 unsigned long MLDSAPrivateKey::getParameterSet() const
 {
 	switch(value.size()) {
@@ -81,17 +81,17 @@ ByteString MLDSAPrivateKey::serialise() const
 
 bool MLDSAPrivateKey::deserialise(ByteString& serialised)
 {
-	ByteString seed = ByteString::chainDeserialise(serialised);
-	ByteString value = ByteString::chainDeserialise(serialised);
+	ByteString deserializedSeed = ByteString::chainDeserialise(serialised);
+	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
 
-	if ((seed.size() == 0) ||
-	    (value.size() == 0))
+	if ((deserializedSeed.size() == 0) ||
+	    (deserializedValue.size() == 0))
 	{
 		return false;
 	}
 
-	setSeed(seed);
-	setValue(value);
+	setSeed(deserializedSeed);
+	setValue(deserializedValue);
 	
 	return true;
 }

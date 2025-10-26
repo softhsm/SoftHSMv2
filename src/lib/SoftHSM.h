@@ -52,10 +52,6 @@
 #include "DHPrivateKey.h"
 #include "GOSTPublicKey.h"
 #include "GOSTPrivateKey.h"
-#ifdef WITH_ML_DSA
-#include "MLDSAPublicKey.h"
-#include "MLDSAPrivateKey.h"
-#endif
 
 #include <memory>
 

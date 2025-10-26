@@ -228,12 +228,55 @@ CK_RV SignVerifyTests::generateED(const char* curve, CK_SESSION_HANDLE hSession,
 }
 #endif
 
+#ifdef WITH_ML_DSA
+CK_RV SignVerifyTests::generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk)
+{
+	CK_MECHANISM mechanism = { CKM_ML_DSA_KEY_PAIR_GEN, NULL_PTR, 0 };
+	CK_KEY_TYPE keyType = CKK_ML_DSA;
+	CK_BYTE label[] = { 0x12, 0x34 }; // dummy
+	CK_BYTE id[] = { 123 } ; // dummy
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+
+	CK_ATTRIBUTE pukAttribs[] = {
+		{ CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet) },
+		{ CKA_LABEL, &label[0], sizeof(label) },
+		{ CKA_ID, &id[0], sizeof(id) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_VERIFY, &bTrue, sizeof(bTrue) },
+		{ CKA_ENCRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_WRAP, &bFalse, sizeof(bFalse) },
+		{ CKA_TOKEN, &bTokenPuk, sizeof(bTokenPuk) },
+		{ CKA_PRIVATE, &bPrivatePuk, sizeof(bPrivatePuk) }
+	};
+	CK_ATTRIBUTE prkAttribs[] = {
+		{ CKA_LABEL, &label[0], sizeof(label) },
+		{ CKA_ID, &id[0], sizeof(id) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_SIGN, &bTrue, sizeof(bTrue) },
+		{ CKA_DECRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_UNWRAP, &bFalse, sizeof(bFalse) },
+		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) },
+		{ CKA_TOKEN, &bTokenPrk, sizeof(bTokenPrk) },
+		{ CKA_PRIVATE, &bPrivatePrk, sizeof(bPrivatePrk) },
+		{ CKA_EXTRACTABLE, &bFalse, sizeof(bFalse) }
+	};
+
+	hPuk = CK_INVALID_HANDLE;
+	hPrk = CK_INVALID_HANDLE;
+	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
+}
+#endif
+
 void SignVerifyTests::signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param /* = NULL_PTR */, CK_ULONG paramLen /* = 0 */)
 {
 	CK_RV rv;
 	CK_MECHANISM mechanism = { mechanismType, param, paramLen };
 	CK_BYTE data[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
-	CK_BYTE signature[256];
+	CK_BYTE signature[64 * 1024];
 	CK_ULONG ulSignatureLen = 0;
 
 	rv = CRYPTOKI_F_PTR( C_SignInit(hSession,&mechanism,hPrivateKey) );
@@ -800,6 +843,97 @@ void SignVerifyTests::testEdSignVerify(const char* curve)
 	rv = generateED(curve, hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	signVerifySingle(CKM_EDDSA, hSessionRO, hPuk,hPrk);
+}
+#endif
+
+#ifdef WITH_ML_DSA
+void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSessionRO;
+	CK_SESSION_HANDLE hSessionRW;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	// Open read-only session on when the token is not initialized should fail
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, &hSessionRO) );
+	CPPUNIT_ASSERT(rv == CKR_CRYPTOKI_NOT_INITIALIZED);
+
+	// Initialize the library and start the test.
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Open read-only session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, &hSessionRO) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Open read-write session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSessionRW) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Login USER into the sessions so we can create a private objects
+	rv = CRYPTOKI_F_PTR( C_Login(hSessionRO,CKU_USER,m_userPin1,m_userPin1Length) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+
+	CK_OBJECT_HANDLE hPuk = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE hPrk = CK_INVALID_HANDLE;
+
+    CK_BYTE data[] = "context-context-context";
+    CK_ULONG dataSize = (CK_ULONG)(sizeof(data) - 1); // exclude trailing NUL
+
+	CK_SIGN_ADDITIONAL_CONTEXT params[] = {
+		{ CKH_HEDGE_PREFERRED,  NULL,   0  },
+		{ CKH_HEDGE_PREFERRED,  data,   dataSize  },
+		{ CKH_HEDGE_REQUIRED,  NULL,   0  },
+		{ CKH_HEDGE_REQUIRED,  data,   dataSize  },
+		{ CKH_DETERMINISTIC_REQUIRED,  NULL,   0  },
+		{ CKH_DETERMINISTIC_REQUIRED,  data,   dataSize  },
+	};
+
+	// Public Session keys
+	rv = generateMLDSA(parameterSet,hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+
+	// Private Session Keys
+	rv = generateMLDSA(parameterSet,hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+
+	// Public Token Keys
+	rv = generateMLDSA(parameterSet,hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+
+	// Private Token Keys
+	rv = generateMLDSA(parameterSet, hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
 }
 #endif
 

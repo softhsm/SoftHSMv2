@@ -70,14 +70,14 @@ ByteString MLDSAPublicKey::serialise() const
 
 bool MLDSAPublicKey::deserialise(ByteString& serialised)
 {
-	ByteString value = ByteString::chainDeserialise(serialised);
+	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
 
-	if ((value.size() == 0))
+	if ((deserializedValue.size() == 0))
 	{
 		return false;
 	}
 
-	setValue(value);
+	setValue(deserializedValue);
 
 	return true;
 }
