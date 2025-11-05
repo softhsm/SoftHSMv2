@@ -77,7 +77,6 @@ unsigned long OSSLSLHPrivateKey::getOrderLength() const
   size_t name_len = strnlen(name, 100);
   size_t signature_size = 0;
 
-  INFO_MSG("name %s", name);
   if (strncmp(&name[name_len - 4], "128s", 4) == 0) {
     signature_size = 7856;
   } else if (strncmp(&name[name_len - 4], "128f", 4) == 0) {
