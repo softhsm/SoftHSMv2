@@ -233,7 +233,6 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 			case CKA_CLASS:
 				if (pTemplate[i].ulValueLen == sizeof(CK_OBJECT_CLASS))
 				{
-					INFO_MSG("Extracted CKA_CLASS");
 					objClass = *(CK_OBJECT_CLASS_PTR)pTemplate[i].pValue;
 					bHasClass = true;
 				}
@@ -241,7 +240,6 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 			case CKA_KEY_TYPE:
 				if (pTemplate[i].ulValueLen == sizeof(CK_KEY_TYPE))
 				{
-					INFO_MSG("Extracted CKA_KEY_TYPE");
 					keyType = *(CK_KEY_TYPE*)pTemplate[i].pValue;
 					bHasKeyType = true;
 				}
@@ -249,7 +247,6 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 			case CKA_CERTIFICATE_TYPE:
 				if (pTemplate[i].ulValueLen == sizeof(CK_CERTIFICATE_TYPE))
 				{
-					INFO_MSG("Extracted CKA_CERTIFICATE_TYPE");
 					certType = *(CK_CERTIFICATE_TYPE*)pTemplate[i].pValue;
 					bHasCertType = true;
 				}
@@ -257,14 +254,12 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 			case CKA_TOKEN:
 				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
 				{
-					INFO_MSG("Extracted CKA_TOKEN");
 					isOnToken = *(CK_BBOOL*)pTemplate[i].pValue;
 				}
 				break;
 			case CKA_PRIVATE:
 				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
 				{
-					INFO_MSG("Extracted CKA_PRIVATE");
 					isPrivate = *(CK_BBOOL*)pTemplate[i].pValue;
 					bHasPrivate = true;
 				}
@@ -273,9 +268,6 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 				break;
 		}
 	}
-
-	INFO_MSG("(class = %d, key_type = %d, cert_type = %d, private = %d, isOnToken=%d, isPrivate=%d)",
-			bHasClass, bHasKeyType, bHasCertType, bHasPrivate, isOnToken, isPrivate);
 
 	if (bImplicit)
 	{
@@ -4148,7 +4140,6 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 // AsymmetricAlgorithm version of C_SignInit
 CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey)
 {
-	INFO_MSG("here init signature")
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
 
 	if (pMechanism == NULL_PTR) return CKR_ARGUMENTS_BAD;
@@ -4704,7 +4695,6 @@ static CK_RV MacSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, CK
 // AsymmetricAlgorithm version of C_Sign
 static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, CK_BYTE_PTR pSignature, CK_ULONG_PTR pulSignatureLen)
 {
-	INFO_MSG("here signs the message")
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
 	PrivateKey* privateKey = session->getPrivateKey();
@@ -4777,7 +4767,6 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 	*pulSignatureLen = size;
 
 	session->resetOp();
-	INFO_MSG("Signature finished.");
 	return CKR_OK;
 }
 
@@ -5603,7 +5592,6 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 #ifdef WITH_SLHDSA
 	else if (isSLHDSA)
 	{
-		INFO_MSG("INIT take SLH-DSA public key.");
 		asymCrypto = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::SLHDSA);
 		if (asymCrypto == NULL) return CKR_MECHANISM_INVALID;
 
@@ -5620,7 +5608,6 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
 			return CKR_GENERAL_ERROR;
 		}
-		INFO_MSG("END take SLH-DSA public key.");
 	}
 #endif
 	else
@@ -5663,7 +5650,6 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
 
-	INFO_MSG("END AsymVerifyInit.");
 	return CKR_OK;
 }
 
@@ -6249,7 +6235,6 @@ CK_RV SoftHSM::C_GenerateKeyPair
 	CK_BBOOL ispublicKeyToken = CK_FALSE;
 	CK_BBOOL ispublicKeyPrivate = CK_FALSE;
 	bool isPublicKeyImplicit = true;
-	INFO_MSG("INIT public key extractObjectInformation (CKM_SLH_KEY_PAIR_GEN, CKK_SLHDSA)");
 	extractObjectInformation(pPublicKeyTemplate, ulPublicKeyAttributeCount, publicKeyClass, keyType, dummy, ispublicKeyToken, ispublicKeyPrivate, isPublicKeyImplicit);
 
 	// Report errors caused by accidental template mix-ups in the application using this cryptoki lib.
@@ -6270,14 +6255,12 @@ CK_RV SoftHSM::C_GenerateKeyPair
 	if (pMechanism->mechanism == CKM_SLH_KEY_PAIR_GEN && keyType != CKK_SLHDSA)
 		return CKR_TEMPLATE_INCONSISTENT;
 
-	INFO_MSG("END public key extractObjectInformation (CKM_SLH_KEY_PAIR_GEN, CKK_SLHDSA)");
 	// Extract information from the private key template that is needed to create the object.
 	CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
 	CK_BBOOL isprivateKeyToken = CK_FALSE;
 	CK_BBOOL isprivateKeyPrivate = CK_TRUE;
 	bool isPrivateKeyImplicit = true;
 
-	INFO_MSG("INIT private key extractObjectInformation (CKM_SLH_KEY_PAIR_GEN, CKK_SLHDSA)");
 	extractObjectInformation(pPrivateKeyTemplate, ulPrivateKeyAttributeCount, privateKeyClass, keyType, dummy, isprivateKeyToken, isprivateKeyPrivate, isPrivateKeyImplicit);
 
 	// Report errors caused by accidental template mix-ups in the application using this cryptoki lib.
@@ -6297,7 +6280,6 @@ CK_RV SoftHSM::C_GenerateKeyPair
 		return CKR_TEMPLATE_INCONSISTENT;
 	if (pMechanism->mechanism == CKM_SLH_KEY_PAIR_GEN && keyType != CKK_SLHDSA)
 		return CKR_TEMPLATE_INCONSISTENT;
-	INFO_MSG("END private key extractObjectInformation (CKM_SLH_KEY_PAIR_GEN, CKK_SLHDSA)");
 
 	// Check user credentials
 	CK_RV rv = haveWrite(session->getState(), ispublicKeyToken || isprivateKeyToken, ispublicKeyPrivate || isprivateKeyPrivate);
@@ -10115,8 +10097,6 @@ CK_RV SoftHSM::generateSLH
 				break;
 		}
 	}
-	INFO_MSG("Extracted public key params <%s>", params.const_byte_str());
-
 
 	// The parameters must be specified to be able to generate a key pair.
 	if (params.size() == 0) {
@@ -10127,7 +10107,6 @@ CK_RV SoftHSM::generateSLH
 	// Set the parameters
 	SLHParameters p;
 	p.setName(params);
-	INFO_MSG("seted params for SLH-DSA");
 
 	// Generate key pair
 	AsymmetricKeyPair* kp = NULL;
@@ -10140,10 +10119,8 @@ CK_RV SoftHSM::generateSLH
 		return CKR_GENERAL_ERROR;
 	}
 
-	INFO_MSG("INIT Get Public/Private Key");
 	SLHPublicKey* pub = (SLHPublicKey*) kp->getPublicKey();
 	SLHPrivateKey* priv = (SLHPrivateKey*) kp->getPrivateKey();
-	INFO_MSG("END Get Public/Private Key");
 
 	CK_RV rv = CKR_OK;
 
@@ -10180,15 +10157,12 @@ CK_RV SoftHSM::generateSLH
 
 		if (rv == CKR_OK)
 		{
-			INFO_MSG("INIT PublicKey CreateObject");
 			rv = this->CreateObject(hSession,publicKeyAttribs,publicKeyAttribsCount,phPublicKey,OBJECT_OP_GENERATE);
-			INFO_MSG("END PublicKey CreateObject");
 		}
 
 		// Store the attributes that are being supplied by the key generation to the object
 		if (rv == CKR_OK)
 		{
-			INFO_MSG("INIT PublicKey STORING");
 			OSObject* osobject = (OSObject*)handleManager->getObject(*phPublicKey);
 			if (osobject == NULL_PTR || !osobject->isValid()) {
 				rv = CKR_FUNCTION_FAILED;
@@ -10221,7 +10195,6 @@ CK_RV SoftHSM::generateSLH
 					rv = CKR_FUNCTION_FAILED;
 			} else
 				rv = CKR_FUNCTION_FAILED;
-			INFO_MSG("END PublicKey STORING");
 		}
 	}
 
@@ -10256,15 +10229,12 @@ CK_RV SoftHSM::generateSLH
 
 		if (rv == CKR_OK)
 		{
-			INFO_MSG("INIT PrivateKey CreateObject");
 			rv = this->CreateObject(hSession,privateKeyAttribs,privateKeyAttribsCount,phPrivateKey,OBJECT_OP_GENERATE);
-			INFO_MSG("END PrivateKey CreateObject");
 		}
 
 		// Store the attributes that are being supplied by the key generation to the object
 		if (rv == CKR_OK)
 		{
-			INFO_MSG("INIT PrivateKey STORING");
 			OSObject* osobject = (OSObject*)handleManager->getObject(*phPrivateKey);
 			if (osobject == NULL_PTR || !osobject->isValid()) {
 				rv = CKR_FUNCTION_FAILED;
@@ -10303,7 +10273,6 @@ CK_RV SoftHSM::generateSLH
 					rv = CKR_FUNCTION_FAILED;
 			} else
 				rv = CKR_FUNCTION_FAILED;
-			INFO_MSG("END PrivateKey STORING");
 		}
 	}
 
@@ -12640,33 +12609,24 @@ CK_RV SoftHSM::deriveSymmetric
 
 CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount, CK_OBJECT_HANDLE_PTR phObject, int op)
 {
-	INFO_MSG("INIT CreateObject");
-
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
-	INFO_MSG("isInitialised OK");
 
 	if (pTemplate == NULL_PTR) return CKR_ARGUMENTS_BAD;
-	INFO_MSG("template OK");
 	if (phObject == NULL_PTR) return CKR_ARGUMENTS_BAD;
-	INFO_MSG("phObject OK");
 
 	// Get the session
 	Session* session = (Session*)handleManager->getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
-	INFO_MSG("session OK");
 
 	// Get the slot
 	Slot* slot = session->getSlot();
 	if (slot == NULL_PTR) return CKR_GENERAL_ERROR;
-	INFO_MSG("slot OK");
 
 	// Get the token
 	Token* token = session->getToken();
 	if (token == NULL_PTR) return CKR_GENERAL_ERROR;
-	INFO_MSG("token OK");
 
 	// Extract information from the template that is needed to create the object.
-	INFO_MSG("INIT wheird extraction with RSA");
 	CK_OBJECT_CLASS objClass = CKO_DATA;
 	CK_KEY_TYPE keyType = CKK_RSA;
 	CK_CERTIFICATE_TYPE certType = CKC_X_509;
@@ -12679,7 +12639,6 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 		ERROR_MSG("Mandatory attribute not present in template");
 		return rv;
 	}
-	INFO_MSG("END wheird extraction with RSA");
 
 	// Check user credentials
 	rv = haveWrite(session->getState(), isOnToken, isPrivate);
@@ -12692,9 +12651,6 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 
 		return rv;
 	}
-	INFO_MSG("checked user credentials OK");
-
-	INFO_MSG("INIT change order of attributes");
 	// Change order of attributes
 	const CK_ULONG maxAttribs = 32;
 	CK_ATTRIBUTE attribs[maxAttribs];
@@ -12710,55 +12666,38 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 		switch (pTemplate[i].type)
 		{
 			case CKA_CHECK_VALUE:
-				INFO_MSG("CKA_CHECK_VALUE found");
 				saveAttribs[saveAttribsCount++] = pTemplate[i];
 				break;
 			default:
-				INFO_MSG("DEFAULT found");
 				attribs[attribsCount++] = pTemplate[i];
 		}
 	}
 	for (CK_ULONG i=0; i < saveAttribsCount; i++)
-	{
-		INFO_MSG("saveAttrib appended to attribs");
 		attribs[attribsCount++] = saveAttribs[i];
-	}
-	INFO_MSG("END change order of attributes");
-
-	INFO_MSG("objClass = %d, eq CKO_PRIVATE_KEY = %d, eq CKO_PUBLIC_KEY = %d", objClass, objClass == CKO_PRIVATE_KEY, objClass == CKO_PUBLIC_KEY)
 
 	P11Object* p11object = NULL;
 	rv = newP11Object(objClass,keyType,certType,&p11object);
 	if (rv != CKR_OK)
 		return rv;
-	INFO_MSG("created newP11Object OK")
 
 	// Create the object in session or on the token
 	OSObject *object = NULL_PTR;
 	if (isOnToken)
-	{
-		INFO_MSG("try create object on TOKEN")
 		object = (OSObject*) token->createObject();
-	}
 	else
-	{
-		INFO_MSG("try create object on SESSION")
 		object = sessionObjectStore->createObject(slot->getSlotID(), hSession, isPrivate != CK_FALSE);
-	}
 
 	if (object == NULL || !p11object->init(object))
 	{
 		delete p11object;
 		return CKR_GENERAL_ERROR;
 	}
-	INFO_MSG("created object OK")
 
 	rv = p11object->saveTemplate(token, isPrivate != CK_FALSE, attribs,attribsCount,op);
 	delete p11object;
 	if (rv != CKR_OK)
 		return rv;
 
-	INFO_MSG("saveTemplate OK")
 	if (op == OBJECT_OP_CREATE)
 	{
 		if (objClass == CKO_PUBLIC_KEY &&
@@ -12782,14 +12721,11 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 
 	if (isOnToken)
 	{
-		INFO_MSG("add object on token")
 		*phObject = handleManager->addTokenObject(slot->getSlotID(), isPrivate != CK_FALSE, object);
 	} else {
-		INFO_MSG("add object on session")
 		*phObject = handleManager->addSessionObject(slot->getSlotID(), hSession, isPrivate != CK_FALSE, object);
 	}
 
-	INFO_MSG("END CreateObject");
 	return CKR_OK;
 }
 
@@ -13141,10 +13077,7 @@ CK_RV SoftHSM::getSLHPublicKey(SLHPublicKey* publicKey, Token* token, OSObject* 
 		value = key->getByteStringValue(CKA_SLHDSA_PARAMS);
 	}
 
-	INFO_MSG("INIT setDerPublicKey");
 	publicKey->setDerPublicKey(value);
-	INFO_MSG("END setDerPublicKey");
-
 	return CKR_OK;
 }
 

@@ -134,7 +134,6 @@ bool OSSLSLHDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 		       const ByteString& signature, const AsymMech::Type mechanism,
 		       const void* /* param = NULL */, const size_t /* paramLen = 0 */)
 {
-	INFO_MSG("Init verify");
 	if (mechanism != AsymMech::SLHDSA)
 	{
 		ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
@@ -250,7 +249,6 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParame
 	SLHParameters* params = (SLHParameters*) parameters;
 
 	const unsigned char* name = params->getName().const_byte_str();
-	INFO_MSG("SLH-DSA name: <%s>", name);
 
 	// Generate the key-pair
 	EVP_PKEY* pkey = NULL;
@@ -258,7 +256,6 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParame
 	if (ctx == NULL)
 	{
 		ERROR_MSG("Failed to instantiate OpenSSL SLHDSA context");
-
 		return false;
 	}
 	int ret = EVP_PKEY_keygen_init(ctx);
@@ -280,13 +277,8 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParame
 	// Create an asymmetric key-pair object to return
 	OSSLSLHKeyPair* kp = new OSSLSLHKeyPair();
 
-	INFO_MSG("INIT PublicKey.setFromOSSL");
 	((OSSLSLHPublicKey*) kp->getPublicKey())->setFromOSSL(pkey);
-	INFO_MSG("END PublicKey.setFromOSSL");
-
-	INFO_MSG("INIT Private.setFromOSSL");
 	((OSSLSLHPrivateKey*) kp->getPrivateKey())->setFromOSSL(pkey);
-	INFO_MSG("END Private.setFromOSSL");
 
 	*ppKeyPair = kp;
 
