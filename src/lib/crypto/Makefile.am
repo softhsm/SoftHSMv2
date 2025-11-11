@@ -71,6 +71,7 @@ libsofthsm_crypto_la_SOURCES +=	OSSLAES.cpp \
 				OSSLSLHKeyPair.cpp \
 				OSSLSLHPrivateKey.cpp \
 				OSSLSLHPublicKey.cpp \
+				OSSLSLHUtil.cpp \
 				OSSLEVPHashAlgorithm.cpp \
 				OSSLEVPMacAlgorithm.cpp \
 				OSSLEVPCMacAlgorithm.cpp \

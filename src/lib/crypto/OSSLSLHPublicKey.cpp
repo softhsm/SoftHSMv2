@@ -38,6 +38,7 @@
 #include "OSSLUtil.h"
 #include <openssl/x509.h>
 #include <string.h>
+#include "OSSLSLHUtil.h"
 
 // Constructors
 OSSLSLHPublicKey::OSSLSLHPublicKey()
@@ -69,29 +70,7 @@ OSSLSLHPublicKey::~OSSLSLHPublicKey()
 
 unsigned long OSSLSLHPublicKey::getOrderLength() const
 {
-  if (name == NULL){
-    ERROR_MSG("Could not determine the signature size, name is NULL");
-    return 0;
-  }
-  size_t name_len = strnlen(name, 100);
-  size_t signature_size = 0;
-
-  if (strncmp(&name[name_len - 4], "128s", 4) == 0) {
-    signature_size = 7856;
-  } else if (strncmp(&name[name_len - 4], "128f", 4) == 0) {
-    signature_size = 17088;
-  } else if (strncmp(&name[name_len - 4], "192s", 4) == 0) {
-    signature_size = 16224;
-  } else if (strncmp(&name[name_len - 4], "192f", 4) == 0) {
-    signature_size = 35664;
-  } else if (strncmp(&name[name_len - 4], "256s", 4) == 0) {
-    signature_size = 29792;
-  } else if (strncmp(&name[name_len - 4], "256f", 4) == 0) {
-    signature_size = 49856;
-  } else{
-    ERROR_MSG("Could not determine the signature size");
-  }
-	return signature_size;
+	return OSSLSLH::getSignatureSizeFromName(name);
 }
 
 // Set from OpenSSL representation
