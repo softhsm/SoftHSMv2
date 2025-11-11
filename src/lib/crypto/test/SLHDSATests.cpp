@@ -69,29 +69,29 @@ void SLHDSATests::testKeyGeneration() {
   slhdsa_names.push_back(
       ByteString((const unsigned char *)"SLH-DSA-SHA2-128s", 18));
   slhdsa_names.push_back(
-      ByteString((const unsigned char *)"SLH-DSA-SHAKE-128s", 20));
+      ByteString((const unsigned char *)"SLH-DSA-SHAKE-128s", 19));
   slhdsa_names.push_back(
       ByteString((const unsigned char *)"SLH-DSA-SHA2-128f", 18));
   slhdsa_names.push_back(
-      ByteString((const unsigned char *)"SLH-DSA-SHAKE-128f", 20));
+      ByteString((const unsigned char *)"SLH-DSA-SHAKE-128f", 19));
 
   slhdsa_names.push_back(
       ByteString((const unsigned char *)"SLH-DSA-SHA2-192s", 18));
   slhdsa_names.push_back(
-      ByteString((const unsigned char *)"SLH-DSA-SHAKE-192s", 20));
+      ByteString((const unsigned char *)"SLH-DSA-SHAKE-192s", 19));
   slhdsa_names.push_back(
       ByteString((const unsigned char *)"SLH-DSA-SHA2-192f", 18));
   slhdsa_names.push_back(
-      ByteString((const unsigned char *)"SLH-DSA-SHAKE-192f", 20));
+      ByteString((const unsigned char *)"SLH-DSA-SHAKE-192f", 19));
 
   slhdsa_names.push_back(
       ByteString((const unsigned char *)"SLH-DSA-SHA2-256s", 18));
   slhdsa_names.push_back(
-      ByteString((const unsigned char *)"SLH-DSA-SHAKE-256s", 20));
+      ByteString((const unsigned char *)"SLH-DSA-SHAKE-256s", 19));
   slhdsa_names.push_back(
       ByteString((const unsigned char *)"SLH-DSA-SHA2-256f", 18));
   slhdsa_names.push_back(
-      ByteString((const unsigned char *)"SLH-DSA-SHAKE-256f", 20));
+      ByteString((const unsigned char *)"SLH-DSA-SHAKE-256f", 19));
 
   for (auto c = slhdsa_names.begin(); c != slhdsa_names.end(); c++) {
     AsymmetricKeyPair *kp;
@@ -196,19 +196,19 @@ void SLHDSATests::testSigningVerifying()
   // slhdsa_names to test
   std::vector<ByteString> slhdsa_names;
   slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHA2-128s", 18));
-  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-128s", 20));
+  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-128s", 19));
   slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHA2-128f", 18));
-  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-128f", 20));
+  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-128f", 19));
 
   slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHA2-192s", 18));
-  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-192s", 20));
+  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-192s", 19));
   slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHA2-192f", 18));
-  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-192f", 20));
+  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-192f", 19));
 
   slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHA2-256s", 18));
-  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-256s", 20));
+  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-256s", 19));
   slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHA2-256f", 18));
-  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-256f", 20));
+  slhdsa_names.push_back(ByteString((const unsigned char *)"SLH-DSA-SHAKE-256f", 19));
 
   for (auto c = slhdsa_names.begin(); c != slhdsa_names.end(); c++) {
     AsymmetricKeyPair *kp;
