@@ -39,7 +39,7 @@
 #ifdef WITH_ECC
 #include <openssl/ec.h>
 #endif
-#if defined(WITH_EDDSA) || defined(WITH_SLHDSA)
+#if defined(WITH_EDDSA)
 #include <openssl/objects.h>
 #endif
 
