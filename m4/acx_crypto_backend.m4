@@ -35,7 +35,7 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			[Enable support for SLHDSA (default detect, OpenSSL only)]
 		),
 		[enable_slhdsa="${enableval}"],
-		[enable_slhdsa="no"]
+		[enable_slhdsa="detect"]
 	)
 
 	# Second check for the FIPS 140-2 mode
