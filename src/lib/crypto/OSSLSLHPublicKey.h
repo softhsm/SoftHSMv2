@@ -75,5 +75,5 @@ private:
 	void createOSSLKey();
 };
 
-#endif // !_SOFTHSM_V2_OSSLDSAPUBLICKEY_H
+#endif // !_SOFTHSM_V2_OSSLSLHPUBLICKEY_H
 
