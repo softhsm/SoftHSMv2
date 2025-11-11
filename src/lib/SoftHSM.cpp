@@ -4724,7 +4724,6 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 	// Check buffer size
 	if (*pulSignatureLen < size)
 	{
-		ERROR_MSG("signatureLen=%d, size=%d", *pulSignatureLen, size);
 		*pulSignatureLen = size;
 		return CKR_BUFFER_TOO_SMALL;
 	}
@@ -13025,7 +13024,6 @@ CK_RV SoftHSM::getEDPublicKey(EDPublicKey* publicKey, Token* token, OSObject* ke
 	return CKR_OK;
 }
 
-// PTAL
 CK_RV SoftHSM::getSLHPrivateKey(SLHPrivateKey* privateKey, Token* token, OSObject* key)
 {
 	if (privateKey == NULL) return CKR_ARGUMENTS_BAD;

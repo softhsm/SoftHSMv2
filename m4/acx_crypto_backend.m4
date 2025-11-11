@@ -197,8 +197,8 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		fi
 
 		if test "x${enable_slhdsa}" = "xyes"; then
-    		AC_MSG_WARN([SLHDSA is not supported with Botan. Disabling.])
-    		enable_slhdsa="no"
+    	AC_MSG_WARN([SLHDSA is not supported with Botan. Disabling.])
+    	enable_slhdsa="no"
 		fi
 
 		ACX_BOTAN_RFC5649
