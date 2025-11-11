@@ -367,14 +367,12 @@ bool OSSLSLHDSA::deriveKey(SymmetricKey **ppSymmetricKey, PublicKey* publicKey, 
 
 unsigned long OSSLSLHDSA::getMinKeySize()
 {
-	// Ed25519 is supported
-	return 255;
+	return 7856;
 }
 
 unsigned long OSSLSLHDSA::getMaxKeySize()
 {
-	// Ed448 is supported
-	return 448;
+	return 49856;
 }
 
 bool OSSLSLHDSA::reconstructKeyPair(AsymmetricKeyPair** ppKeyPair, ByteString& serialisedData)
