@@ -981,7 +981,7 @@ struct ck_rsa_pkcs_oaep_params {
 
 struct ck_rsa_aes_key_wrap_params {
   unsigned long aes_key_bits;
-  ck_rsa_pkcs_oaep_params *oaep_params;
+  struct ck_rsa_pkcs_oaep_params *oaep_params;
 };
 
 struct ck_aes_ctr_params {
