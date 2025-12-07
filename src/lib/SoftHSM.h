@@ -507,7 +507,7 @@ private:
 		ByteString &keydata
 	);
 
-	CK_RV MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism);
+        CK_RV MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism, RSA_PKCS_OAEP_PARAMS* outParams = NULL);
 	CK_RV MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism);
 
 	bool isMechanismPermitted(OSObject* key, CK_MECHANISM_PTR pMechanism);

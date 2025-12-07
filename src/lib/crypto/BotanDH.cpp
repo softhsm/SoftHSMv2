@@ -93,7 +93,7 @@ bool BotanDH::verifyFinal(const ByteString& /*signature*/)
 
 // Encryption functions
 bool BotanDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-		      ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/)
+		      ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/, const void* /*param*/ /* = NULL */, const size_t /*paramLen*/ /* = 0 */)
 {
 	ERROR_MSG("DH does not support encryption");
 
@@ -102,7 +102,7 @@ bool BotanDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool BotanDH::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-		      ByteString& /*data*/, const AsymMech::Type /*padding*/)
+		      ByteString& /*data*/, const AsymMech::Type /*padding*/, const void* /*param*/ /* = NULL */, const size_t /*paramLen*/ /* = 0 */)
 {
 	ERROR_MSG("DH does not support decryption");
 

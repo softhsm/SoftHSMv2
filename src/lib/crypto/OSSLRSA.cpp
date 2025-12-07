@@ -38,6 +38,66 @@
 #include "RSAParameters.h"
 #include "OSSLRSAKeyPair.h"
 #include <algorithm>
+#include <vector>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+
+namespace
+{
+const EVP_MD* getHashMD(HashAlgo::Type hash)
+{
+        int nid = 0;
+        switch (hash)
+        {
+                case HashAlgo::SHA1:
+                        nid = NID_sha1;
+                        break;
+                case HashAlgo::SHA224:
+                        nid = NID_sha224;
+                        break;
+                case HashAlgo::SHA256:
+                        nid = NID_sha256;
+                        break;
+                case HashAlgo::SHA384:
+                        nid = NID_sha384;
+                        break;
+                case HashAlgo::SHA512:
+                        nid = NID_sha512;
+                        break;
+                default:
+                        return NULL;
+        }
+
+        return EVP_get_digestbynid(nid);
+}
+
+const EVP_MD* getMGFMD(AsymRSAMGF::Type mgf)
+{
+        int nid = 0;
+        switch (mgf)
+        {
+                case AsymRSAMGF::MGF1_SHA1:
+                        nid = NID_sha1;
+                        break;
+                case AsymRSAMGF::MGF1_SHA224:
+                        nid = NID_sha224;
+                        break;
+                case AsymRSAMGF::MGF1_SHA256:
+                        nid = NID_sha256;
+                        break;
+                case AsymRSAMGF::MGF1_SHA384:
+                        nid = NID_sha384;
+                        break;
+                case AsymRSAMGF::MGF1_SHA512:
+                        nid = NID_sha512;
+                        break;
+                default:
+                        return NULL;
+        }
+
+        return EVP_get_digestbynid(nid);
+}
+}
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
@@ -1206,139 +1266,235 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-		      ByteString& encryptedData, const AsymMech::Type padding)
+                      ByteString& encryptedData, const AsymMech::Type padding,
+                      const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	// Check if the public key is the right type
-	if (!publicKey->isOfType(OSSLRSAPublicKey::type))
-	{
-		ERROR_MSG("Invalid key type supplied");
+        // Check if the public key is the right type
+        if (!publicKey->isOfType(OSSLRSAPublicKey::type))
+        {
+                ERROR_MSG("Invalid key type supplied");
 
-		return false;
-	}
+                return false;
+        }
 
-	// Retrieve the OpenSSL key object
-	RSA* rsa = ((OSSLRSAPublicKey*) publicKey)->getOSSLKey();
+        // Retrieve the OpenSSL key object
+        RSA* rsa = ((OSSLRSAPublicKey*) publicKey)->getOSSLKey();
 
-	// Check the data and padding algorithm
-	int osslPadding = 0;
+        if (padding == AsymMech::RSA_PKCS_OAEP)
+        {
+                const RSA_PKCS_OAEP_PARAMS* oaep = NULL;
 
-	if (padding == AsymMech::RSA_PKCS)
-	{
-		// The size of the input data cannot be more than the modulus
-		// length of the key - 11
-		if (data.size() > (size_t) (RSA_size(rsa) - 11))
-		{
-			ERROR_MSG("Too much data supplied for RSA PKCS #1 encryption");
+                if (param != NULL)
+                {
+                        if (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+                        {
+                                ERROR_MSG("Invalid OAEP parameter size");
+                                return false;
+                        }
 
-			return false;
-		}
+                        oaep = static_cast<const RSA_PKCS_OAEP_PARAMS*>(param);
+                }
 
-		osslPadding = RSA_PKCS1_PADDING;
-	}
-	else if (padding == AsymMech::RSA_PKCS_OAEP)
-	{
-		// The size of the input data cannot be more than the modulus
-		// length of the key - 41
-		if (data.size() > (size_t) (RSA_size(rsa) - 41))
-		{
-			ERROR_MSG("Too much data supplied for RSA OAEP encryption");
+                HashAlgo::Type hashType = oaep ? oaep->hashAlg : HashAlgo::SHA1;
+                AsymRSAMGF::Type mgfType = oaep ? oaep->mgf : AsymRSAMGF::MGF1_SHA1;
 
-			return false;
-		}
+                const EVP_MD* hash = getHashMD(hashType);
+                const EVP_MD* mgfHash = getMGFMD(mgfType);
 
-		osslPadding = RSA_PKCS1_OAEP_PADDING;
-	}
-	else if (padding == AsymMech::RSA)
-	{
-		// The size of the input data should be exactly equal to the modulus length
-		if (data.size() != (size_t) RSA_size(rsa))
-		{
-			ERROR_MSG("Incorrect amount of input data supplied for raw RSA encryption");
+                if (hash == NULL || mgfHash == NULL)
+                {
+                        ERROR_MSG("Unsupported OAEP parameters for OpenSSL backend");
+                        return false;
+                }
 
-			return false;
-		}
+                size_t hashLen = oaep ? oaep->hashLen : static_cast<size_t>(EVP_MD_size(hash));
 
-		osslPadding = RSA_NO_PADDING;
-	}
-	else
-	{
-		ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+                if (data.size() > (size_t) (RSA_size(rsa) - 2 - 2 * hashLen))
+                {
+                        ERROR_MSG("Too much data supplied for RSA OAEP encryption");
+                        return false;
+                }
 
-		return false;
-	}
+                std::vector<unsigned char> padded(RSA_size(rsa));
 
-	// Perform the RSA operation
-	encryptedData.resize(RSA_size(rsa));
+                if (!RSA_padding_add_PKCS1_OAEP_mgf1(padded.data(), padded.size(),
+                                                      data.const_byte_str(), data.size(),
+                                                      NULL, 0, hash, mgfHash))
+                {
+                        ERROR_MSG("RSA OAEP padding failed (0x%08X)", ERR_get_error());
+                        return false;
+                }
 
-	if (RSA_public_encrypt(data.size(), (unsigned char*) data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
-	{
-		ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+                encryptedData.resize(RSA_size(rsa));
 
-		return false;
-	}
+                if (RSA_public_encrypt(padded.size(), padded.data(), &encryptedData[0], rsa, RSA_NO_PADDING) == -1)
+                {
+                        ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+                        return false;
+                }
 
-	return true;
+                return true;
+        }
+
+        // Check the data and padding algorithm
+        int osslPadding = 0;
+
+        if (padding == AsymMech::RSA_PKCS)
+        {
+                // The size of the input data cannot be more than the modulus
+                // length of the key - 11
+                if (data.size() > (size_t) (RSA_size(rsa) - 11))
+                {
+                        ERROR_MSG("Too much data supplied for RSA PKCS #1 encryption");
+
+                        return false;
+                }
+
+                osslPadding = RSA_PKCS1_PADDING;
+        }
+        else if (padding == AsymMech::RSA)
+        {
+                // The size of the input data should be exactly equal to the modulus length
+                if (data.size() != (size_t) RSA_size(rsa))
+                {
+                        ERROR_MSG("Incorrect amount of input data supplied for raw RSA encryption");
+
+                        return false;
+                }
+
+                osslPadding = RSA_NO_PADDING;
+        }
+        else
+        {
+                ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+
+                return false;
+        }
+
+        // Perform the RSA operation
+        encryptedData.resize(RSA_size(rsa));
+
+        if (RSA_public_encrypt(data.size(), (unsigned char*) data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
+        {
+                ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+
+                return false;
+        }
+
+        return true;
 }
 
 // Decryption functions
 bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-		      ByteString& data, const AsymMech::Type padding)
+                      ByteString& data, const AsymMech::Type padding,
+                      const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	// Check if the private key is the right type
-	if (!privateKey->isOfType(OSSLRSAPrivateKey::type))
-	{
-		ERROR_MSG("Invalid key type supplied");
+        // Check if the private key is the right type
+        if (!privateKey->isOfType(OSSLRSAPrivateKey::type))
+        {
+                ERROR_MSG("Invalid key type supplied");
 
-		return false;
-	}
+                return false;
+        }
 
-	// Retrieve the OpenSSL key object
-	RSA* rsa = ((OSSLRSAPrivateKey*) privateKey)->getOSSLKey();
+        // Retrieve the OpenSSL key object
+        RSA* rsa = ((OSSLRSAPrivateKey*) privateKey)->getOSSLKey();
 
-	// Check the input size
-	if (encryptedData.size() != (size_t) RSA_size(rsa))
-	{
-		ERROR_MSG("Invalid amount of input data supplied for RSA decryption");
+        // Check the input size
+        if (encryptedData.size() != (size_t) RSA_size(rsa))
+        {
+                ERROR_MSG("Invalid amount of input data supplied for RSA decryption");
 
-		return false;
-	}
+                return false;
+        }
 
-	// Determine the OpenSSL padding algorithm
-	int osslPadding = 0;
+        if (padding == AsymMech::RSA_PKCS_OAEP)
+        {
+                const RSA_PKCS_OAEP_PARAMS* oaep = NULL;
 
-	switch (padding)
-	{
-		case AsymMech::RSA_PKCS:
-			osslPadding = RSA_PKCS1_PADDING;
-			break;
-		case AsymMech::RSA_PKCS_OAEP:
-			osslPadding = RSA_PKCS1_OAEP_PADDING;
-			break;
-		case AsymMech::RSA:
-			osslPadding = RSA_NO_PADDING;
-			break;
-		default:
-			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
-			return false;
-	}
+                if (param != NULL)
+                {
+                        if (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+                        {
+                                ERROR_MSG("Invalid OAEP parameter size");
+                                return false;
+                        }
 
-	// Perform the RSA operation
-	data.resize(RSA_size(rsa));
+                        oaep = static_cast<const RSA_PKCS_OAEP_PARAMS*>(param);
+                }
 
-	int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char*) encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
+                HashAlgo::Type hashType = oaep ? oaep->hashAlg : HashAlgo::SHA1;
+                AsymRSAMGF::Type mgfType = oaep ? oaep->mgf : AsymRSAMGF::MGF1_SHA1;
 
-	if (decSize == -1)
-	{
-		ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
+                const EVP_MD* hash = getHashMD(hashType);
+                const EVP_MD* mgfHash = getMGFMD(mgfType);
 
-		return false;
-	}
+                if (hash == NULL || mgfHash == NULL)
+                {
+                        ERROR_MSG("Unsupported OAEP parameters for OpenSSL backend");
+                        return false;
+                }
 
-	data.resize(decSize);
+                std::vector<unsigned char> padded(RSA_size(rsa));
+                int decSize = RSA_private_decrypt(encryptedData.size(),
+                                                   (unsigned char*) encryptedData.const_byte_str(),
+                                                   padded.data(), rsa, RSA_NO_PADDING);
 
-	return true;
+                if (decSize == -1)
+                {
+                        ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
+                        return false;
+                }
+
+                std::vector<unsigned char> recovered(RSA_size(rsa));
+                int outLen = RSA_padding_check_PKCS1_OAEP_mgf1(recovered.data(), recovered.size(),
+                                                                padded.data(), decSize, RSA_size(rsa),
+                                                                NULL, 0, hash, mgfHash);
+
+                if (outLen == -1)
+                {
+                        ERROR_MSG("RSA OAEP unpadding failed (0x%08X)", ERR_get_error());
+                        return false;
+                }
+
+                data.resize(outLen);
+                memcpy(&data[0], recovered.data(), outLen);
+
+                return true;
+        }
+
+        // Determine the OpenSSL padding algorithm
+        int osslPadding = 0;
+
+        switch (padding)
+        {
+                case AsymMech::RSA_PKCS:
+                        osslPadding = RSA_PKCS1_PADDING;
+                        break;
+                case AsymMech::RSA:
+                        osslPadding = RSA_NO_PADDING;
+                        break;
+                default:
+                        ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+                        return false;
+        }
+
+        // Perform the RSA operation
+        data.resize(RSA_size(rsa));
+
+        int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char*) encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
+
+        if (decSize == -1)
+        {
+                ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
+
+                return false;
+        }
+
+        data.resize(decSize);
+
+        return true;
 }
-
 // Key factory
 bool OSSLRSA::generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* /*rng = NULL */)
 {

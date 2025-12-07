@@ -742,33 +742,110 @@ bool BotanRSA::verifyFinal(const ByteString& signature)
 	return verResult;
 }
 
+namespace
+{
+static bool getBotanOAEPParameters(const void* param, const size_t paramLen, std::string& eme)
+{
+        const RSA_PKCS_OAEP_PARAMS* oaep = NULL;
+
+        if (param != NULL)
+        {
+                if (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+                {
+                        ERROR_MSG("Invalid OAEP parameter size");
+                        return false;
+                }
+
+                oaep = static_cast<const RSA_PKCS_OAEP_PARAMS*>(param);
+        }
+
+        HashAlgo::Type hash = HashAlgo::SHA1;
+        AsymRSAMGF::Type mgf = AsymRSAMGF::MGF1_SHA1;
+
+        if (oaep != NULL)
+        {
+                hash = oaep->hashAlg;
+                mgf = oaep->mgf;
+        }
+
+        switch (hash)
+        {
+                case HashAlgo::SHA1:
+                        if (mgf != AsymRSAMGF::MGF1_SHA1)
+                        {
+                                ERROR_MSG("Unsupported OAEP MGF for Botan backend");
+                                return false;
+                        }
+                        eme = "EME1(SHA-160)";
+                        return true;
+                case HashAlgo::SHA224:
+                        if (mgf != AsymRSAMGF::MGF1_SHA224)
+                        {
+                                ERROR_MSG("Unsupported OAEP MGF for Botan backend");
+                                return false;
+                        }
+                        eme = "EME1(SHA-224)";
+                        return true;
+                case HashAlgo::SHA256:
+                        if (mgf != AsymRSAMGF::MGF1_SHA256)
+                        {
+                                ERROR_MSG("Unsupported OAEP MGF for Botan backend");
+                                return false;
+                        }
+                        eme = "EME1(SHA-256)";
+                        return true;
+                case HashAlgo::SHA384:
+                        if (mgf != AsymRSAMGF::MGF1_SHA384)
+                        {
+                                ERROR_MSG("Unsupported OAEP MGF for Botan backend");
+                                return false;
+                        }
+                        eme = "EME1(SHA-384)";
+                        return true;
+                case HashAlgo::SHA512:
+                        if (mgf != AsymRSAMGF::MGF1_SHA512)
+                        {
+                                ERROR_MSG("Unsupported OAEP MGF for Botan backend");
+                                return false;
+                        }
+                        eme = "EME1(SHA-512)";
+                        return true;
+                default:
+                        ERROR_MSG("Unsupported OAEP hash for Botan backend (%d)", hash);
+                        return false;
+        }
+}
+}
+
 // Encryption functions
 bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-		       ByteString& encryptedData, const AsymMech::Type padding)
+                       ByteString& encryptedData, const AsymMech::Type padding,
+                       const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	// Check if the public key is the right type
-	if (!publicKey->isOfType(BotanRSAPublicKey::type))
-	{
-		ERROR_MSG("Invalid key type supplied");
+        // Check if the public key is the right type
+        if (!publicKey->isOfType(BotanRSAPublicKey::type))
+        {
+                ERROR_MSG("Invalid key type supplied");
 
 		return false;
 	}
 
 	std::string eme;
 
-	switch (padding)
-	{
-		case AsymMech::RSA_PKCS:
-			eme = "PKCS1v15";
-			break;
-		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
-			break;
-		case AsymMech::RSA:
-			eme = "Raw";
-			break;
-		default:
-			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+        switch (padding)
+        {
+                case AsymMech::RSA_PKCS:
+                        eme = "PKCS1v15";
+                        break;
+                case AsymMech::RSA_PKCS_OAEP:
+                        if (!getBotanOAEPParameters(param, paramLen, eme))
+                                return false;
+                        break;
+                case AsymMech::RSA:
+                        eme = "Raw";
+                        break;
+                default:
+                        ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
 
 			return false;
 	}
@@ -823,31 +900,33 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 // Decryption functions
 bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-		       ByteString& data, const AsymMech::Type padding)
+                       ByteString& data, const AsymMech::Type padding,
+                       const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	// Check if the private key is the right type
-	if (!privateKey->isOfType(BotanRSAPrivateKey::type))
-	{
-		ERROR_MSG("Invalid key type supplied");
+        // Check if the private key is the right type
+        if (!privateKey->isOfType(BotanRSAPrivateKey::type))
+        {
+                ERROR_MSG("Invalid key type supplied");
 
 		return false;
 	}
 
 	std::string eme;
 
-	switch (padding)
-	{
-		case AsymMech::RSA_PKCS:
-			eme = "PKCS1v15";
-			break;
-		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
-			break;
-		case AsymMech::RSA:
-			eme = "Raw";
-			break;
-		default:
-			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+        switch (padding)
+        {
+                case AsymMech::RSA_PKCS:
+                        eme = "PKCS1v15";
+                        break;
+                case AsymMech::RSA_PKCS_OAEP:
+                        if (!getBotanOAEPParameters(param, paramLen, eme))
+                                return false;
+                        break;
+                case AsymMech::RSA:
+                        eme = "Raw";
+                        break;
+                default:
+                        ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
 
 			return false;
 	}

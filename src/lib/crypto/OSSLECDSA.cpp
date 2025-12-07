@@ -331,7 +331,7 @@ bool OSSLECDSA::verifyFinal(const ByteString& /*signature*/)
 
 // Encryption functions
 bool OSSLECDSA::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/)
+			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/, const void* /*param*/ /* = NULL */, const size_t /*paramLen*/ /* = 0 */)
 {
 	ERROR_MSG("ECDSA does not support encryption");
 
@@ -340,7 +340,7 @@ bool OSSLECDSA::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool OSSLECDSA::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-			ByteString& /*data*/, const AsymMech::Type /*padding*/)
+			ByteString& /*data*/, const AsymMech::Type /*padding*/, const void* /*param*/ /* = NULL */, const size_t /*paramLen*/ /* = 0 */)
 {
 	ERROR_MSG("ECDSA does not support decryption");
 

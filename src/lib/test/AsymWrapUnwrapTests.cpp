@@ -34,6 +34,7 @@
 #include <config.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 #include "AsymWrapUnwrapTests.h"
 
 // CKA_TOKEN
@@ -115,10 +116,9 @@ void AsymWrapUnwrapTests::rsaWrapUnwrapPvt(CK_SESSION_HANDLE hSession, CK_OBJECT
 {
 	CK_RV rv = CKR_OK;
 	CK_MECHANISM_INFO mechInfo;
-	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, CKZ_DATA_SPECIFIED, NULL_PTR, 0 };
-	CK_RSA_AES_KEY_WRAP_PARAMS rsa_aes_params = { 256, &oaepParams };
-	CK_MECHANISM mechanism = {CKM_RSA_AES_KEY_WRAP, &rsa_aes_params, sizeof(rsa_aes_params)};
-	CK_MECHANISM sv_mechanism = { CKM_RSA_PKCS, NULL_PTR, 0 };
+        CK_RSA_AES_KEY_WRAP_PARAMS rsa_aes_params = { 256, NULL };
+        CK_MECHANISM mechanism = {CKM_RSA_AES_KEY_WRAP, &rsa_aes_params, sizeof(rsa_aes_params)};
+        CK_MECHANISM sv_mechanism = { CKM_RSA_PKCS, NULL_PTR, 0 };
 	CK_BYTE data[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
 	CK_BYTE signature[256];
 	CK_ULONG ulSignatureLen = 0;
@@ -150,60 +150,68 @@ void AsymWrapUnwrapTests::rsaWrapUnwrapPvt(CK_SESSION_HANDLE hSession, CK_OBJECT
 	CPPUNIT_ASSERT(mechInfo.flags&CKF_WRAP);
 	CPPUNIT_ASSERT(mechInfo.flags&CKF_UNWRAP);
 
-	// Estimate wrapped length
-	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, NULL_PTR, &wrappedLenEstimation) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	CPPUNIT_ASSERT(wrappedLenEstimation>0);
+        std::vector<CK_RSA_PKCS_OAEP_PARAMS> paramsList = {
+                { CKM_SHA_1,   CKG_MGF1_SHA1,   CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                { CKM_SHA224,  CKG_MGF1_SHA224, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                { CKM_SHA256,  CKG_MGF1_SHA256, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                { CKM_SHA384,  CKG_MGF1_SHA384, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                { CKM_SHA512,  CKG_MGF1_SHA512, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                { CKM_SHA256,  0,               CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                { 0,           0,               CKZ_DATA_SPECIFIED, NULL_PTR, 0 }
+        };
 
-	// This should always fail because wrapped data have to be longer than 0 bytes
-	ulCipherTextLen = 0;
-	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, cipherText, &ulCipherTextLen) );
-	CPPUNIT_ASSERT(rv==CKR_BUFFER_TOO_SMALL);
+        for (std::vector<CK_RSA_PKCS_OAEP_PARAMS>::iterator it = paramsList.begin(); it != paramsList.end(); ++it)
+        {
+                rsa_aes_params.oaep_params = &(*it);
 
-	// Do real wrapping
-	ulCipherTextLen = sizeof(cipherText);
-	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, cipherText, &ulCipherTextLen) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	CPPUNIT_ASSERT(wrappedLenEstimation==ulCipherTextLen);
+                // Estimate wrapped length
+                rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, NULL_PTR, &wrappedLenEstimation) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(wrappedLenEstimation>0);
 
-	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hPrivateKey, cipherText, ulCipherTextLen, unwrapTemplate, sizeof(unwrapTemplate)/sizeof(CK_ATTRIBUTE), &unwrappedKey) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	CPPUNIT_ASSERT(unwrappedKey != CK_INVALID_HANDLE);
+                // This should always fail because wrapped data have to be longer than 0 bytes
+                ulCipherTextLen = 0;
+                rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, cipherText, &ulCipherTextLen) );
+                CPPUNIT_ASSERT(rv==CKR_BUFFER_TOO_SMALL);
 
-	// Verify the private key is unwrapped properly
-	rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &sv_mechanism, unwrappedKey) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                // Do real wrapping
+                ulCipherTextLen = sizeof(cipherText);
+                rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, targetPvtKey, cipherText, &ulCipherTextLen) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(wrappedLenEstimation==ulCipherTextLen);
 
-	ulSignatureLen = sizeof(signature);
-	rv = CRYPTOKI_F_PTR( C_Sign(hSession, data, sizeof(data), signature, &ulSignatureLen) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hPrivateKey, cipherText, ulCipherTextLen, unwrapTemplate, sizeof(unwrapTemplate)/sizeof(CK_ATTRIBUTE), &unwrappedKey) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(unwrappedKey != CK_INVALID_HANDLE);
 
-	rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &sv_mechanism, targetPubKey) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                // Verify the private key is unwrapped properly
+                rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &sv_mechanism, unwrappedKey) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	rv = CRYPTOKI_F_PTR( C_Verify(hSession, data, sizeof(data), signature, ulSignatureLen) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                ulSignatureLen = sizeof(signature);
+                rv = CRYPTOKI_F_PTR( C_Sign(hSession, data, sizeof(data), signature, &ulSignatureLen) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+
+                rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &sv_mechanism, targetPubKey) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+
+                rv = CRYPTOKI_F_PTR( C_Verify(hSession, data, sizeof(data), signature, ulSignatureLen) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+        }
 }
 
 void AsymWrapUnwrapTests::rsaWrapUnwrap(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey)
 {
-	CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
-	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, CKZ_DATA_SPECIFIED, NULL_PTR, 0 };
-	CK_BYTE cipherText[2048];
-	CK_ULONG ulCipherTextLen;
-	CK_BYTE symValue[64];
-	CK_ULONG ulSymValueLen = sizeof(symValue);
-	CK_BYTE unwrappedValue[64];
-	CK_ULONG ulUnwrappedValueLen = sizeof(unwrappedValue);
-	CK_OBJECT_HANDLE symKey = CK_INVALID_HANDLE;
-	CK_OBJECT_HANDLE unwrappedKey = CK_INVALID_HANDLE;
-	CK_RV rv;
-	CK_ULONG wrappedLenEstimation;
+        CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
+        CK_BYTE cipherText[2048];
+        CK_BYTE symValue[64];
+        CK_BYTE unwrappedValue[64];
+        CK_RV rv;
 
-	CK_BBOOL bFalse = CK_FALSE;
-	CK_BBOOL bTrue = CK_TRUE;
-	CK_OBJECT_CLASS keyClass = CKO_SECRET_KEY;
-	CK_KEY_TYPE keyType = CKK_AES;
+        CK_BBOOL bFalse = CK_FALSE;
+        CK_BBOOL bTrue = CK_TRUE;
+        CK_OBJECT_CLASS keyClass = CKO_SECRET_KEY;
+        CK_KEY_TYPE keyType = CKK_AES;
 	CK_ATTRIBUTE unwrapTemplate[] = {
 		{ CKA_CLASS, &keyClass, sizeof(keyClass) },
 		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
@@ -212,65 +220,95 @@ void AsymWrapUnwrapTests::rsaWrapUnwrap(CK_MECHANISM_TYPE mechanismType, CK_SESS
 		{ CKA_EXTRACTABLE, &bTrue, sizeof(bTrue) }
 	};
 
-	CK_ATTRIBUTE valueTemplate[] = {
-		{ CKA_VALUE, &symValue, ulSymValueLen }
-	};
+        CK_ATTRIBUTE valueTemplate[] = {
+                { CKA_VALUE, symValue, sizeof(symValue) }
+        };
 
 	CK_MECHANISM_INFO mechInfo;
 
-	if (mechanismType == CKM_RSA_PKCS_OAEP)
-	{
-		mechanism.pParameter = &oaepParams;
-		mechanism.ulParameterLen = sizeof(oaepParams);
-	}
+        if (mechanismType == CKM_RSA_AES_KEY_WRAP)
+        {
+                rsaWrapUnwrapPvt(hSession, hPublicKey, hPrivateKey);
+                return;
+        }
 
-	if (mechanismType == CKM_RSA_AES_KEY_WRAP)
-	{
-		rsaWrapUnwrapPvt(hSession, hPublicKey, hPrivateKey);
-		return;
-	}
+        auto runWrap = [&](void) {
+                CK_OBJECT_HANDLE symKey = CK_INVALID_HANDLE;
+                CK_OBJECT_HANDLE unwrappedKey = CK_INVALID_HANDLE;
+                CK_ULONG wrappedLenEstimation = 0;
+                CK_ULONG ulCipherTextLen = 0;
+                CK_ULONG ulSymValueLen = sizeof(symValue);
+                CK_ULONG ulUnwrappedValueLen = sizeof(unwrappedValue);
 
-	// Generate temporary symmetric key and remember it's value
-	rv = generateAesKey(hSession, symKey);
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                valueTemplate[0].pValue = symValue;
+                valueTemplate[0].ulValueLen = ulSymValueLen;
 
-	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, symKey, valueTemplate, sizeof(valueTemplate)/sizeof(CK_ATTRIBUTE)) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	ulSymValueLen = valueTemplate[0].ulValueLen;
+                // Generate temporary symmetric key and remember it's value
+                rv = generateAesKey(hSession, symKey);
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	// Check if the specified mechanism supports Wrap/Unwrap
-	rv = CRYPTOKI_F_PTR( C_GetMechanismInfo(m_initializedTokenSlotID, mechanismType, &mechInfo) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	CPPUNIT_ASSERT(mechInfo.flags&CKF_WRAP);
-	CPPUNIT_ASSERT(mechInfo.flags&CKF_UNWRAP);
+                rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, symKey, valueTemplate, sizeof(valueTemplate)/sizeof(CK_ATTRIBUTE)) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                ulSymValueLen = valueTemplate[0].ulValueLen;
 
-	// Estimate wrapped length
-	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, symKey, NULL_PTR, &wrappedLenEstimation) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	CPPUNIT_ASSERT(wrappedLenEstimation>0);
+                // Check if the specified mechanism supports Wrap/Unwrap
+                rv = CRYPTOKI_F_PTR( C_GetMechanismInfo(m_initializedTokenSlotID, mechanismType, &mechInfo) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(mechInfo.flags&CKF_WRAP);
+                CPPUNIT_ASSERT(mechInfo.flags&CKF_UNWRAP);
 
-	// This should always fail because wrapped data have to be longer than 0 bytes
-	ulCipherTextLen = 0;
-	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, symKey, cipherText, &ulCipherTextLen) );
-	CPPUNIT_ASSERT(rv==CKR_BUFFER_TOO_SMALL);
+                // Estimate wrapped length
+                rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, symKey, NULL_PTR, &wrappedLenEstimation) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(wrappedLenEstimation>0);
 
-	// Do real wrapping
-	ulCipherTextLen = sizeof(cipherText);
-	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, symKey, cipherText, &ulCipherTextLen) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	// Check length 'estimation'
-	CPPUNIT_ASSERT(wrappedLenEstimation>=ulCipherTextLen);
+                // This should always fail because wrapped data have to be longer than 0 bytes
+                ulCipherTextLen = 0;
+                rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, symKey, cipherText, &ulCipherTextLen) );
+                CPPUNIT_ASSERT(rv==CKR_BUFFER_TOO_SMALL);
 
-	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hPrivateKey, cipherText, ulCipherTextLen, unwrapTemplate, sizeof(unwrapTemplate)/sizeof(CK_ATTRIBUTE), &unwrappedKey) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                // Do real wrapping
+                ulCipherTextLen = sizeof(cipherText);
+                rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hPublicKey, symKey, cipherText, &ulCipherTextLen) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(wrappedLenEstimation>=ulCipherTextLen);
 
-	valueTemplate[0].pValue = &unwrappedValue;
-	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, unwrappedKey, valueTemplate, sizeof(valueTemplate)/sizeof(CK_ATTRIBUTE)) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
-	ulUnwrappedValueLen = valueTemplate[0].ulValueLen;
+                rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hPrivateKey, cipherText, ulCipherTextLen, unwrapTemplate, sizeof(unwrapTemplate)/sizeof(CK_ATTRIBUTE), &unwrappedKey) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	CPPUNIT_ASSERT(ulSymValueLen == ulUnwrappedValueLen);
-	CPPUNIT_ASSERT(memcmp(symValue, unwrappedValue, ulSymValueLen) == 0);
+                valueTemplate[0].pValue = unwrappedValue;
+                rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, unwrappedKey, valueTemplate, sizeof(valueTemplate)/sizeof(CK_ATTRIBUTE)) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
+                ulUnwrappedValueLen = valueTemplate[0].ulValueLen;
+
+                CPPUNIT_ASSERT(ulSymValueLen == ulUnwrappedValueLen);
+                CPPUNIT_ASSERT(memcmp(symValue, unwrappedValue, ulSymValueLen) == 0);
+        };
+
+        if (mechanismType == CKM_RSA_PKCS_OAEP)
+        {
+                std::vector<CK_RSA_PKCS_OAEP_PARAMS> paramsList = {
+                        { CKM_SHA_1,   CKG_MGF1_SHA1,   CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA224,  CKG_MGF1_SHA224, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA256,  CKG_MGF1_SHA256, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA384,  CKG_MGF1_SHA384, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA512,  CKG_MGF1_SHA512, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA256,  0,               CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { 0,           0,               CKZ_DATA_SPECIFIED, NULL_PTR, 0 }
+                };
+                for (std::vector<CK_RSA_PKCS_OAEP_PARAMS>::iterator it = paramsList.begin(); it != paramsList.end(); ++it)
+                {
+                        mechanism.pParameter = &(*it);
+                        mechanism.ulParameterLen = sizeof(*it);
+                        runWrap();
+                }
+        }
+        else
+        {
+                mechanism.pParameter = NULL_PTR;
+                mechanism.ulParameterLen = 0;
+                runWrap();
+        }
 }
 
 void AsymWrapUnwrapTests::testRsaWrapUnwrap()

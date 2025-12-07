@@ -34,6 +34,7 @@
 #include <config.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 #include "AsymEncryptDecryptTests.h"
 
 // CKA_TOKEN
@@ -84,43 +85,59 @@ CK_RV AsymEncryptDecryptTests::generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK
 
 void AsymEncryptDecryptTests::rsaEncryptDecrypt(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey)
 {
-	CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
-	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, 1, NULL_PTR, 0 };
-	CK_BYTE plainText[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
-	CK_BYTE cipherText[256];
-	CK_ULONG ulCipherTextLen;
-	CK_BYTE recoveredText[256];
-	CK_ULONG ulRecoveredTextLen;
-	CK_RV rv;
+        CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
+        CK_BYTE plainText[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
+        CK_BYTE cipherText[256];
+        CK_ULONG ulCipherTextLen;
+        CK_BYTE recoveredText[256];
+        CK_ULONG ulRecoveredTextLen;
 
-	if (mechanismType == CKM_RSA_PKCS_OAEP)
-	{
-		mechanism.pParameter = &oaepParams;
-		mechanism.ulParameterLen = sizeof(oaepParams);
-	}
+        auto runCase = [&](void) {
+                CK_RV rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechanism,hPublicKey) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechanism,hPublicKey) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                ulCipherTextLen = sizeof(cipherText);
+                rv = CRYPTOKI_F_PTR( C_Encrypt(hSession,plainText,sizeof(plainText),cipherText,&ulCipherTextLen) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	ulCipherTextLen = sizeof(cipherText);
-	rv =CRYPTOKI_F_PTR( C_Encrypt(hSession,plainText,sizeof(plainText),cipherText,&ulCipherTextLen) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                rv = CRYPTOKI_F_PTR( C_DecryptInit(hSession,&mechanism,hPrivateKey) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	rv = CRYPTOKI_F_PTR( C_DecryptInit(hSession,&mechanism,hPrivateKey) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                ulRecoveredTextLen = sizeof(recoveredText);
+                rv = CRYPTOKI_F_PTR( C_Decrypt(hSession,cipherText,ulCipherTextLen,recoveredText,&ulRecoveredTextLen) );
+                CPPUNIT_ASSERT(rv==CKR_OK);
 
-	ulRecoveredTextLen = sizeof(recoveredText);
-	rv = CRYPTOKI_F_PTR( C_Decrypt(hSession,cipherText,ulCipherTextLen,recoveredText,&ulRecoveredTextLen) );
-	CPPUNIT_ASSERT(rv==CKR_OK);
+                CPPUNIT_ASSERT(memcmp(plainText, &recoveredText[ulRecoveredTextLen-sizeof(plainText)], sizeof(plainText)) == 0);
+        };
 
-	CPPUNIT_ASSERT(memcmp(plainText, &recoveredText[ulRecoveredTextLen-sizeof(plainText)], sizeof(plainText)) == 0);
+        if (mechanismType == CKM_RSA_PKCS_OAEP)
+        {
+                std::vector<CK_RSA_PKCS_OAEP_PARAMS> paramsList = {
+                        { CKM_SHA_1,   CKG_MGF1_SHA1,   CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA224,  CKG_MGF1_SHA224, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA256,  CKG_MGF1_SHA256, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA384,  CKG_MGF1_SHA384, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA512,  CKG_MGF1_SHA512, CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { CKM_SHA256,  0,               CKZ_DATA_SPECIFIED, NULL_PTR, 0 },
+                        { 0,           0,               CKZ_DATA_SPECIFIED, NULL_PTR, 0 }
+                };
+                for (std::vector<CK_RSA_PKCS_OAEP_PARAMS>::iterator it = paramsList.begin(); it != paramsList.end(); ++it)
+                {
+                        mechanism.pParameter = &(*it);
+                        mechanism.ulParameterLen = sizeof(*it);
+                        runCase();
+                }
+                return;
+        }
+
+        runCase();
 }
 
 // Check that RSA OAEP mechanism properly validates all input parameters
 void AsymEncryptDecryptTests::rsaOAEPParams(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey)
 {
-	// This is only supported combination of parameters
-	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, CKZ_DATA_SPECIFIED, NULL_PTR, 0 };
+        // Start with a valid combination of parameters
+        CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, CKZ_DATA_SPECIFIED, NULL_PTR, 0 };
 	CK_MECHANISM mechanism = { CKM_RSA_PKCS_OAEP, NULL, 0 };
 	CK_RV rv;
 
