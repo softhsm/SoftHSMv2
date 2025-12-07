@@ -1143,13 +1143,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			/* FALLTHROUGH */
 #endif
 		case CKM_DES3_CBC:
-			pInfo->flags |= CKF_WRAP;
 			/* FALLTHROUGH */
 		case CKM_DES3_ECB:
 			// Key size is not in use
 			pInfo->ulMinKeySize = 0;
 			pInfo->ulMaxKeySize = 0;
-			pInfo->flags |= CKF_ENCRYPT | CKF_DECRYPT;
+			pInfo->flags |= CKF_ENCRYPT | CKF_DECRYPT | CKF_WRAP | CKF_UNWRAP;
 			break;
 		case CKM_DES3_CMAC:
 			// Key size is not in use
@@ -6329,6 +6328,7 @@ CK_RV SoftHSM::WrapKeySym
 	// Get the symmetric algorithm matching the mechanism
 	SymAlgo::Type algo = SymAlgo::Unknown;
 	SymWrap::Type mode = SymWrap::Unknown;
+	SymMode::Type sym_mode = SymMode::Unknown;
 	size_t bb = 8;
 	size_t blocksize = 0;
 	auto wrappedlen = keydata.size();
@@ -6351,22 +6351,44 @@ CK_RV SoftHSM::WrapKeySym
 #endif
 		case CKM_AES_CBC:
 			algo = SymAlgo::AES;
+            sym_mode = SymMode::CBC;
+			blocksize = 16;
+			if ((wrappedlen % 16) != 0)
+				return CKR_KEY_SIZE_RANGE;
 			break;
 			
 		case CKM_AES_CBC_PAD:
 			blocksize = 16;
 			wrappedlen = RFC5652Pad(keydata, blocksize);
 			algo = SymAlgo::AES;
-			break;
-			
-		case CKM_DES3_CBC:
-			algo = SymAlgo::DES3;
+            sym_mode = SymMode::CBC;
 			break;
 			
 		case CKM_DES3_CBC_PAD:
-			blocksize = 8;
+            blocksize = 8;
 			wrappedlen = RFC5652Pad(keydata, blocksize);
+            algo = SymAlgo::DES3;
+            sym_mode = SymMode::CBC;
+			bb = 7;
+            break;
+
+		case CKM_DES3_CBC:
+			if ((wrappedlen % 8) != 0)
+				return CKR_KEY_SIZE_RANGE;
+			blocksize = 8;
 			algo = SymAlgo::DES3;
+            sym_mode = SymMode::CBC;
+			bb = 7;
+            break;
+
+		case CKM_DES3_ECB:
+			// ECB mode has no IV; keep blocksize=0 so iv remains empty
+			if ((wrappedlen % 8) != 0)
+				return CKR_KEY_SIZE_RANGE;
+            blocksize = 0;
+			algo = SymAlgo::DES3;
+			sym_mode = SymMode::ECB;
+			bb = 7;
 			break;
 			
 		default:
@@ -6393,13 +6415,18 @@ CK_RV SoftHSM::WrapKeySym
 	switch(pMechanism->mechanism) {
 
 		case CKM_AES_CBC:
-	        case CKM_AES_CBC_PAD:
+		case CKM_AES_CBC_PAD:
 		case CKM_DES3_CBC:
-	        case CKM_DES3_CBC_PAD:
-			iv.resize(blocksize);
-			memcpy(&iv[0], pMechanism->pParameter, blocksize);
-			
-			if (!cipher->encryptInit(wrappingkey, SymMode::CBC, iv, false))
+		case CKM_DES3_CBC_PAD:
+		case CKM_DES3_ECB:
+			if (blocksize > 0) {
+				iv.resize(blocksize);
+				memcpy(&iv[0], pMechanism->pParameter, blocksize);
+			} else {
+				iv.wipe();
+			}
+
+            if (!cipher->encryptInit(wrappingkey, sym_mode, iv, false))
 			{
 				cipher->recycleKey(wrappingkey);
 				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
@@ -6672,6 +6699,15 @@ CK_RV SoftHSM::C_WrapKey
                             pMechanism->ulParameterLen != 16)
                                 return CKR_ARGUMENTS_BAD;
                         break;
+        case CKM_DES3_ECB:
+            if (pMechanism->ulParameterLen != 0)
+                return CKR_ARGUMENTS_BAD; // no IV for ECB; allow NULL or non-NULL pointer when length==0
+            break;
+		case CKM_DES3_CBC:
+		case CKM_DES3_CBC_PAD:
+			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
+				return CKR_ARGUMENTS_BAD;
+			break;
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -6712,9 +6748,11 @@ CK_RV SoftHSM::C_WrapKey
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
 	if ((pMechanism->mechanism == CKM_AES_CBC || pMechanism->mechanism == CKM_AES_CBC_PAD) && wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	if (pMechanism->mechanism == CKM_DES3_CBC && (wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES2 ||
-		wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES3))
-		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
+    if ((pMechanism->mechanism == CKM_DES3_CBC || pMechanism->mechanism == CKM_DES3_CBC_PAD || pMechanism->mechanism == CKM_DES3_ECB) &&
+        ((wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES2 &&
+          wrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES3))) {
+        return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
+    }
 
 	// Check if the wrapping key can be used for wrapping
 	if (wrapKey->getBooleanValue(CKA_WRAP, false) == false)
@@ -6925,6 +6963,7 @@ CK_RV SoftHSM::UnwrapKeySym
 	// Get the symmetric algorithm matching the mechanism
 	SymAlgo::Type algo = SymAlgo::Unknown;
 	SymWrap::Type mode = SymWrap::Unknown;
+	SymMode::Type sym_mode = SymMode::Unknown;
 	size_t bb = 8;
 	size_t blocksize = 0;
 	
@@ -6941,16 +6980,28 @@ CK_RV SoftHSM::UnwrapKeySym
 			mode = SymWrap::AES_KEYWRAP_PAD;
 			break;
 #endif
-	        case CKM_AES_CBC_PAD:
+		case CKM_AES_CBC_PAD:
 			algo = SymAlgo::AES;
+			sym_mode = SymMode::CBC;
 			blocksize = 16;
 			break;
-			
-	        case CKM_DES3_CBC_PAD:
+
+		case CKM_DES3_CBC_PAD:
+		case CKM_DES3_CBC:
 			algo = SymAlgo::DES3;
+			sym_mode = SymMode::CBC;
 			blocksize = 8;
-		        break;
-		  
+			bb = 7;
+			break;
+
+		case CKM_DES3_ECB:
+			algo = SymAlgo::DES3;
+			sym_mode = SymMode::ECB;
+			// ECB mode has no IV; keep blocksize=0 so iv remains empty
+			blocksize = 0;
+			bb = 7;
+			break;
+
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -6976,39 +7027,43 @@ CK_RV SoftHSM::UnwrapKeySym
 	
 	switch(pMechanism->mechanism) {
 
-	case CKM_AES_CBC_PAD:
-	case CKM_DES3_CBC_PAD:
-		iv.resize(blocksize);
-		memcpy(&iv[0], pMechanism->pParameter, blocksize);
-			
-		if (!cipher->decryptInit(unwrappingkey, SymMode::CBC, iv, false))
-		{
-			cipher->recycleKey(unwrappingkey);
-			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
-			return CKR_MECHANISM_INVALID;
-		}
-		if (!cipher->decryptUpdate(wrapped, keydata))
-		{
-			cipher->recycleKey(unwrappingkey);
-			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
-			return CKR_GENERAL_ERROR;
-		}
-		// Finalize encryption
-		if (!cipher->decryptFinal(decryptedFinal))
-		{
-			cipher->recycleKey(unwrappingkey);
-			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
-			return CKR_GENERAL_ERROR;
-		}
-		keydata += decryptedFinal;
+		case CKM_AES_CBC_PAD:
+		case CKM_DES3_CBC_PAD:
+		case CKM_DES3_CBC:
+		case CKM_DES3_ECB:
+			if (blocksize > 0) {
+				iv.resize(blocksize);
+				memcpy(&iv[0], pMechanism->pParameter, blocksize);
+			} else {
+				iv.wipe();
+			}
 
-		if(!RFC5652Unpad(keydata,blocksize))
-		{
-			cipher->recycleKey(unwrappingkey);
-			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
-			return CKR_GENERAL_ERROR; // TODO should be another error
-		}
-		break;
+			if (!cipher->decryptInit(unwrappingkey, sym_mode, iv, false)) {
+				cipher->recycleKey(unwrappingkey);
+				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+				return CKR_MECHANISM_INVALID;
+			}
+			if (!cipher->decryptUpdate(wrapped, keydata)) {
+				cipher->recycleKey(unwrappingkey);
+				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+				return CKR_GENERAL_ERROR;
+			}
+			// Finalize decryption
+			if (!cipher->decryptFinal(decryptedFinal)) {
+				cipher->recycleKey(unwrappingkey);
+				CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+				return CKR_WRAPPED_KEY_INVALID;
+			}
+			keydata += decryptedFinal;
+
+			if (pMechanism->mechanism == CKM_AES_CBC_PAD || pMechanism->mechanism == CKM_DES3_CBC_PAD) {
+				if (!RFC5652Unpad(keydata, blocksize)) {
+					cipher->recycleKey(unwrappingkey);
+					CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+					return CKR_WRAPPED_KEY_INVALID;
+				}
+			}
+			break;
 		
 	default:
 		// Unwrap the key
@@ -7287,20 +7342,34 @@ CK_RV SoftHSM::C_UnwrapKey
 				return rv;
 			break;
 
-	        case CKM_AES_CBC_PAD:
-			// TODO check block length
-			if (pMechanism->pParameter == NULL_PTR ||
-                            pMechanism->ulParameterLen != 16)
+		case CKM_AES_CBC_PAD:
+			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 16)
 				return CKR_ARGUMENTS_BAD;
+			if (ulWrappedKeyLen == 0 || (ulWrappedKeyLen % 16) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
 			break;
 
-	        case CKM_DES3_CBC_PAD:
-			// TODO check block length
-			if (pMechanism->pParameter == NULL_PTR ||
-                            pMechanism->ulParameterLen != 8)
+        case CKM_DES3_CBC_PAD:
+			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
+			if (ulWrappedKeyLen == 0 || (ulWrappedKeyLen % 8) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
 			break;
-			
+
+		case CKM_DES3_CBC:
+			if (pMechanism->pParameter == NULL_PTR || pMechanism->ulParameterLen != 8)
+				return CKR_ARGUMENTS_BAD;
+			if ((ulWrappedKeyLen % 8) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
+			break;
+
+		case CKM_DES3_ECB:
+			if (pMechanism->ulParameterLen != 0)
+				return CKR_ARGUMENTS_BAD; // ECB takes no IV; allow NULL or non-NULL pointer when length==0
+			if ((ulWrappedKeyLen % 8) != 0)
+				return CKR_WRAPPED_KEY_LEN_RANGE;
+			break;
+
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -7339,12 +7408,14 @@ CK_RV SoftHSM::C_UnwrapKey
 	if ((pMechanism->mechanism == CKM_RSA_PKCS || pMechanism->mechanism == CKM_RSA_PKCS_OAEP || pMechanism->mechanism == CKM_RSA_AES_KEY_WRAP) &&
 		unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
 		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
-	if ((pMechanism->mechanism == CKM_AES_CBC || pMechanism->mechanism == CKM_AES_CBC_PAD) && unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
-		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	if (pMechanism->mechanism == CKM_DES3_CBC && (unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES2 ||
-		unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES3))
-		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	
+	if ((pMechanism->mechanism == CKM_AES_CBC || pMechanism->mechanism == CKM_AES_CBC_PAD) &&
+		unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
+		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
+	if ((pMechanism->mechanism == CKM_DES3_CBC_PAD || pMechanism->mechanism == CKM_DES3_CBC || pMechanism->mechanism == CKM_DES3_ECB) &&
+		(unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES2 &&
+		 unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES3))
+		return CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
+
 	// Check if the unwrapping key can be used for unwrapping
 	if (unwrapKey->getBooleanValue(CKA_UNWRAP, false) == false)
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
@@ -7394,7 +7465,11 @@ CK_RV SoftHSM::C_UnwrapKey
 	};
 	CK_ULONG secretAttribsCount = 4;
 
-	// Add the additional
+	// Capture optional CKA_VALUE_LEN from the template (for compatibility)
+	CK_ULONG requestedValueLen = 0;
+	bool haveRequestedValueLen = false;
+
+	// Add the additional attributes, skipping read-only for unwrap and capturing CKA_VALUE_LEN
 	if (ulCount > (maxAttribs - secretAttribsCount))
 		return CKR_TEMPLATE_INCONSISTENT;
 	for (CK_ULONG i = 0; i < ulCount; ++i)
@@ -7405,6 +7480,14 @@ CK_RV SoftHSM::C_UnwrapKey
 			case CKA_TOKEN:
 			case CKA_PRIVATE:
 			case CKA_KEY_TYPE:
+				continue;
+			case CKA_VALUE_LEN:
+				// Accept a caller-provided length for compatibility, but do not set it here; we will verify after unwrap
+				if (pTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
+					return CKR_TEMPLATE_INCONSISTENT;
+				}
+				requestedValueLen = *(CK_ULONG *) pTemplate[i].pValue;
+				haveRequestedValueLen = true;
 				continue;
 			default:
 				secretAttribs[secretAttribsCount++] = pTemplate[i];
@@ -7478,6 +7561,12 @@ CK_RV SoftHSM::C_UnwrapKey
 			rv = CKR_UNWRAPPING_KEY_TYPE_INCONSISTENT;
 		if (rv != CKR_OK)
 			return rv;
+	}
+
+	// If provided, enforce CKA_VALUE_LEN only for secret keys
+	if (objClass == CKO_SECRET_KEY && haveRequestedValueLen && keydata.size() != requestedValueLen)
+	{
+		return CKR_TEMPLATE_INCONSISTENT;
 	}
 
 	// Create the secret object using C_CreateObject
@@ -12104,7 +12193,7 @@ CK_RV SoftHSM::deriveSymmetric
 				// attributes set to CK_TRUE
 				bool bNeverExtractable = baseKey->getBooleanValue(CKA_NEVER_EXTRACTABLE, false) &&
 										 otherKey->getBooleanValue(CKA_NEVER_EXTRACTABLE, false);
-				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE, bNeverExtractable);
+				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
 			}
 			else if (pMechanism->mechanism == CKM_CONCATENATE_BASE_AND_DATA ||
 				 pMechanism->mechanism == CKM_CONCATENATE_DATA_AND_BASE)
