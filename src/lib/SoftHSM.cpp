@@ -6538,7 +6538,7 @@ CK_RV SoftHSM::WrapMechRsaAesKw
 	ByteString wrapped_1; // buffer for the wrapped AES key;
 	ByteString wrapped_2; // buffer for the wrapped target key;
 	CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
-	CK_ULONG emphKeyLen = params->aes_key_bits / 8;
+	CK_ULONG emphKeyLen = params->ulAESKeyBits / 8;
 	CK_OBJECT_HANDLE hEmphKey = CK_INVALID_HANDLE;
 	CK_OBJECT_CLASS emphKeyClass = CKO_SECRET_KEY;
 	CK_KEY_TYPE emphKeyType = CKK_AES;
@@ -6600,7 +6600,7 @@ CK_RV SoftHSM::WrapMechRsaAesKw
 	emphKey->destroyObject();
 	hEmphKey = CK_INVALID_HANDLE;
 
-	CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
+	CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->pOAEPParams, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
 	// Wraps the AES emph key with the wrapping RSA key using CKM_RSA_PKCS_OAEP with parameters of OAEPParams.
 	rv = SoftHSM::WrapKeyAsym(&oaepMech, token, wrapKey, emphkeydata, wrapped_1);
 
@@ -7116,7 +7116,7 @@ CK_RV SoftHSM::UnwrapMechRsaAesKw
 	CK_ULONG wrappedLen2 = ulWrappedKeyLen - wrappedLen1;
 
 	ByteString wrapped_1(&wrapped[0], wrappedLen1); // the wrapped AES key
-	CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->oaep_params, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
+	CK_MECHANISM oaepMech = {CKM_RSA_PKCS_OAEP, params->pOAEPParams, sizeof(CK_RSA_PKCS_OAEP_PARAMS)};
 
 	// Un-wraps the temporary AES key from the first part with the private RSA key using CKM_RSA_PKCS_OAEP.
 	rv = UnwrapKeyAsym(&oaepMech, wrapped_1, token, unwrapKey, emphkeydata);
@@ -13219,32 +13219,32 @@ CK_RV SoftHSM::MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism)
 	}
 
 	CK_RSA_AES_KEY_WRAP_PARAMS_PTR params = (CK_RSA_AES_KEY_WRAP_PARAMS_PTR)pMechanism->pParameter;
-	if (params->aes_key_bits != 128 && params->aes_key_bits != 192 && params->aes_key_bits != 256)
+	if (params->ulAESKeyBits != 128 && params->ulAESKeyBits != 192 && params->ulAESKeyBits != 256)
 	{
 		ERROR_MSG("length of the temporary AES key in bits can be only 128, 192 or 256");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->oaep_params == NULL_PTR)
+	if (params->pOAEPParams == NULL_PTR)
 	{
-		ERROR_MSG("oaep_params must be of type CK_RSA_PKCS_OAEP_PARAMS");
+		ERROR_MSG("pOAEPParams must be of type CK_RSA_PKCS_OAEP_PARAMS");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->oaep_params->mgf < 1UL || params->oaep_params->mgf > 5UL)
+	if (params->pOAEPParams->mgf < 1UL || params->pOAEPParams->mgf > 5UL)
 	{
 		ERROR_MSG("mgf not supported");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->oaep_params->source != CKZ_DATA_SPECIFIED)
+	if (params->pOAEPParams->source != CKZ_DATA_SPECIFIED)
 	{
 		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->oaep_params->pSourceData != NULL)
+	if (params->pOAEPParams->pSourceData != NULL)
 	{
 		ERROR_MSG("pSourceData must be NULL");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->oaep_params->ulSourceDataLen != 0)
+	if (params->pOAEPParams->ulSourceDataLen != 0)
 	{
 		ERROR_MSG("ulSourceDataLen must be 0");
 		return CKR_ARGUMENTS_BAD;
