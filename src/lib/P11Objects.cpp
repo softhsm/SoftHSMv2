@@ -296,7 +296,6 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 	{
 		return CKR_GENERAL_ERROR;
 	}
-
 	return CKR_OK;
 }
 
@@ -931,6 +930,51 @@ bool P11EDPublicKeyObj::init(OSObject *inobject)
 }
 
 // Constructor
+P11SLHPublicKeyObj::P11SLHPublicKeyObj()
+{
+	initialized = false;
+}
+
+// Add attributes
+bool P11SLHPublicKeyObj::init(OSObject *inobject)
+{
+	if (initialized) return true;
+	if (inobject == NULL) return false;
+
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLHDSA) {
+		OSAttribute setKeyType((unsigned long)CKK_SLHDSA);
+		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
+	}
+
+	// Create parent
+	if (!P11PublicKeyObj::init(inobject)) return false;
+
+	// Create attributes
+	P11Attribute* attrSLHDSAParams = new P11AttrSLHDSAParams(osobject,P11Attribute::ck3);
+	P11Attribute* attrValue = new P11AttrValue(osobject,P11Attribute::ck1|P11Attribute::ck4|P11Attribute::ck6|P11Attribute::ck7);
+
+	// Initialize the attributes
+	if
+	(
+		!attrSLHDSAParams->init() ||
+		!attrValue->init()
+	)
+	{
+		ERROR_MSG("Could not initialize the attribute");
+		delete attrSLHDSAParams;
+		delete attrValue;
+		return false;
+	}
+
+	// Add them to the map
+	attributes[attrSLHDSAParams->getType()] = attrSLHDSAParams;
+	attributes[attrValue->getType()] = attrValue;
+
+	initialized = true;
+	return true;
+}
+
+// Constructor
 P11DHPublicKeyObj::P11DHPublicKeyObj()
 {
 	initialized = false;
@@ -1329,6 +1373,51 @@ bool P11EDPrivateKeyObj::init(OSObject *inobject)
 
 	// Add them to the map
 	attributes[attrEcParams->getType()] = attrEcParams;
+	attributes[attrValue->getType()] = attrValue;
+
+	initialized = true;
+	return true;
+}
+
+// Constructor
+P11SLHPrivateKeyObj::P11SLHPrivateKeyObj()
+{
+	initialized = false;
+}
+
+// Add attributes
+bool P11SLHPrivateKeyObj::init(OSObject *inobject)
+{
+	if (initialized) return true;
+	if (inobject == NULL) return false;
+
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLHDSA) {
+		OSAttribute setKeyType((unsigned long)CKK_SLHDSA);
+		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
+	}
+
+	// Create parent
+	if (!P11PrivateKeyObj::init(inobject)) return false;
+
+	// Create attributes
+	P11Attribute* attrSLHDSAParams = new P11AttrSLHDSAParams(osobject,P11Attribute::ck4|P11Attribute::ck6);
+	P11Attribute* attrValue = new P11AttrValue(osobject,P11Attribute::ck1|P11Attribute::ck4|P11Attribute::ck6|P11Attribute::ck7);
+
+	// Initialize the attributes
+	if
+	(
+		!attrSLHDSAParams->init() ||
+		!attrValue->init()
+	)
+	{
+		ERROR_MSG("Could not initialize the attribute");
+		delete attrSLHDSAParams;
+		delete attrValue;
+		return false;
+	}
+
+	// Add them to the map
+	attributes[attrSLHDSAParams->getType()] = attrSLHDSAParams;
 	attributes[attrValue->getType()] = attrValue;
 
 	initialized = true;

@@ -152,6 +152,22 @@ int crypto_import_key_pair
 #ifdef WITH_EDDSA
 	EVP_PKEY* eddsa = NULL;
 #endif
+#ifdef WITH_SLHDSA
+	EVP_PKEY* slhdsa = NULL;
+#endif
+
+
+	int result = 0;
+#ifdef WITH_SLHDSA
+	const char *name = EVP_PKEY_get0_type_name(pkey);
+	if (strncmp(name, "SLH-DSA", 7) == 0) {
+		EVP_PKEY_up_ref(pkey);
+		slhdsa = pkey;
+		result = crypto_save_slhdsa(hSession, label, objID, objIDLen, noPublicKey, slhdsa);
+		EVP_PKEY_free(slhdsa);
+		return result;
+	}
+#endif
 
 	switch (EVP_PKEY_type(EVP_PKEY_id(pkey)))
 	{
@@ -182,8 +198,6 @@ int crypto_import_key_pair
 			break;
 	}
 	EVP_PKEY_free(pkey);
-
-	int result = 0;
 
 	if (rsa)
 	{
@@ -1135,6 +1149,158 @@ void crypto_free_eddsa(eddsa_key_material_t* keyMat)
 	if (keyMat->bigK) free(keyMat->bigK);
 	if (keyMat->bigA) free(keyMat->bigA);
 	free(keyMat);
+}
+
+#endif
+
+#ifdef WITH_SLHDSA
+
+// Save the key data in PKCS#11
+int crypto_save_slhdsa
+(
+	CK_SESSION_HANDLE hSession,
+	char* label,
+	char* objID,
+	size_t objIDLen,
+	int noPublicKey,
+	EVP_PKEY* slhdsa
+)
+{
+	slhdsa_key_material_t* keyMat = crypto_malloc_slhdsa(slhdsa);
+	if (keyMat == NULL)
+	{
+		fprintf(stderr, "ERROR: Could not convert the key material to binary information.\n");
+		return 1;
+	}
+
+	CK_OBJECT_CLASS pubClass = CKO_PUBLIC_KEY, privClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE keyType = CKK_SLHDSA;
+	CK_BBOOL ckTrue = CK_TRUE, ckFalse = CK_FALSE, ckToken = CK_TRUE;
+	if (noPublicKey)
+	{
+		ckToken = CK_FALSE;
+	}
+	CK_ATTRIBUTE pubTemplate[] = {
+		{ CKA_CLASS,          &pubClass,         sizeof(pubClass) },
+		{ CKA_KEY_TYPE,       &keyType,          sizeof(keyType) },
+		{ CKA_LABEL,          label,             strlen(label) },
+		{ CKA_ID,             objID,             objIDLen },
+		{ CKA_TOKEN,          &ckToken,          sizeof(ckToken) },
+		{ CKA_VERIFY,         &ckTrue,           sizeof(ckTrue) },
+		{ CKA_ENCRYPT,        &ckFalse,          sizeof(ckFalse) },
+		{ CKA_WRAP,           &ckFalse,          sizeof(ckFalse) },
+		{ CKA_SLHDSA_PARAMS,  keyMat->derPublicKey,    keyMat->sizePublicKey },
+	};
+	CK_ATTRIBUTE privTemplate[] = {
+		{ CKA_CLASS,          &privClass,        sizeof(privClass) },
+		{ CKA_KEY_TYPE,       &keyType,          sizeof(keyType) },
+		{ CKA_LABEL,          label,             strlen(label) },
+		{ CKA_ID,             objID,             objIDLen },
+		{ CKA_SIGN,           &ckTrue,           sizeof(ckTrue) },
+		{ CKA_DECRYPT,        &ckFalse,          sizeof(ckFalse) },
+		{ CKA_UNWRAP,         &ckFalse,          sizeof(ckFalse) },
+		{ CKA_SENSITIVE,      &ckTrue,           sizeof(ckTrue) },
+		{ CKA_TOKEN,          &ckTrue,           sizeof(ckTrue) },
+		{ CKA_PRIVATE,        &ckTrue,           sizeof(ckTrue) },
+		{ CKA_EXTRACTABLE,    &ckFalse,          sizeof(ckFalse) },
+		{ CKA_SLHDSA_PARAMS,  keyMat->derPrivateKey,    keyMat->sizePrivateKey },
+	};
+
+	CK_OBJECT_HANDLE hKey1, hKey2;
+	CK_RV rv = p11->C_CreateObject(hSession, privTemplate, 12, &hKey1);
+	if (rv != CKR_OK)
+	{
+		fprintf(stderr, "ERROR: Could not save the private key in the token. "
+				"Maybe the algorithm is not supported.\n");
+		crypto_free_slhdsa(keyMat);
+		return 1;
+	}
+
+	rv = p11->C_CreateObject(hSession, pubTemplate, 9, &hKey2);
+	crypto_free_slhdsa(keyMat);
+
+	if (rv != CKR_OK)
+	{
+		p11->C_DestroyObject(hSession, hKey1);
+		fprintf(stderr, "ERROR: Could not save the public key in the token.\n");
+		return 1;
+	}
+
+	printf("The key pair has been imported.\n");
+
+	return 0;
+}
+
+// Convert the OpenSSL key to binary
+
+slhdsa_key_material_t* crypto_malloc_slhdsa(EVP_PKEY* pkey)
+{
+    if (pkey == NULL)
+        return NULL;
+
+    slhdsa_key_material_t* keyMat = (slhdsa_key_material_t*)calloc(1, sizeof(slhdsa_key_material_t));
+    if (keyMat == NULL)
+        return NULL;
+
+    unsigned char* buf = NULL;
+    int len = 0;
+
+    // DER encode public key
+    len = i2d_PUBKEY(pkey, NULL);
+    if (len <= 0) {
+        crypto_free_slhdsa(keyMat);
+        return NULL;
+    }
+    buf = (unsigned char*)OPENSSL_malloc(len);
+    if (!buf) {
+        crypto_free_slhdsa(keyMat);
+        return NULL;
+    }
+    unsigned char* p = buf;
+    if (i2d_PUBKEY(pkey, &p) <= 0) {
+        OPENSSL_free(buf);
+        crypto_free_slhdsa(keyMat);
+        return NULL;
+    }
+    keyMat->sizePublicKey = (unsigned long)len;
+    keyMat->derPublicKey = buf;
+
+    // DER encode private key
+    len = i2d_PrivateKey(pkey, NULL);
+    if (len <= 0) {
+        crypto_free_slhdsa(keyMat);
+        return NULL;
+    }
+    buf = (unsigned char*)OPENSSL_malloc(len);
+    if (!buf) {
+        crypto_free_slhdsa(keyMat);
+        return NULL;
+    }
+    p = buf;
+    if (i2d_PrivateKey(pkey, &p) <= 0) {
+        OPENSSL_free(buf);
+        crypto_free_slhdsa(keyMat);
+        return NULL;
+    }
+    keyMat->sizePrivateKey = (unsigned long)len;
+    keyMat->derPrivateKey = buf;
+
+    return keyMat;
+}
+
+// Free the memory of the key
+void crypto_free_slhdsa(slhdsa_key_material_t* keyMat)
+{
+    if (keyMat == NULL)
+        return;
+
+    if (keyMat->derPrivateKey)
+        OPENSSL_free(keyMat->derPrivateKey);
+
+    if (keyMat->derPublicKey)
+        OPENSSL_free(keyMat->derPublicKey);
+
+    free(keyMat);
 }
 
 #endif

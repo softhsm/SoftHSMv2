@@ -28,6 +28,16 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		[enable_eddsa="detect"]
 	)
 
+	# Add SLHDSA check (only for OpenSSL)
+
+	AC_ARG_ENABLE(slhdsa,
+		AS_HELP_STRING([--enable-slhdsa],
+			[Enable support for SLHDSA (default disabled, OpenSSL only)]
+		),
+		[enable_slhdsa="${enableval}"],
+		[enable_slhdsa="no"]
+	)
+
 	# Second check for the FIPS 140-2 mode
 
 	AC_ARG_ENABLE(fips,
@@ -98,6 +108,14 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			yes*-no*) AC_MSG_ERROR([OpenSSL library has no EDDSA support]);;
 			detect-yes-yes) enable_eddsa="yes";;
 			detect*-no*) enable_eddsa="no";;
+		esac
+
+		case "${enable_slhdsa}" in
+			yes|detect) ACX_OPENSSL_SLHDSA;;
+		esac
+		case "${enable_slhdsa}-${have_lib_openssl_slhdsa_support}" in
+			yes-no) AC_MSG_ERROR([OpenSSL library has no SLHDSA support]);;
+			detect-*) enable_slhdsa="${have_lib_openssl_slhdsa_support}";;
 		esac
 
 		case "${enable_gost}-${enable_fips}" in
@@ -178,6 +196,11 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			AC_MSG_ERROR([Botan does not support FIPS 140-2 mode])
 		fi
 
+		if test "x${enable_slhdsa}" = "xyes"; then
+    	AC_MSG_WARN([SLHDSA is not supported with Botan. Disabling.])
+    	enable_slhdsa="no"
+		fi
+
 		ACX_BOTAN_RFC5649
 		ACX_BOTAN_RAWPSS
 
@@ -231,6 +254,18 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 	fi
 	AM_CONDITIONAL([WITH_EDDSA], [test "x${enable_eddsa}" = "xyes"])
 
+	AC_MSG_CHECKING(for SLHDSA support)
+	if test "x${enable_slhdsa}" = "xyes"; then
+		AC_MSG_RESULT(yes)
+		AC_DEFINE_UNQUOTED(
+			[WITH_SLHDSA],
+			[],
+			[Compile with SLHDSA support]
+		)
+	else
+		AC_MSG_RESULT(no)
+	fi
+	AM_CONDITIONAL([WITH_SLHDSA], [test "x${enable_slhdsa}" = "xyes"])
 
 	AC_SUBST(CRYPTO_INCLUDES)
 	AC_SUBST(CRYPTO_LIBS)

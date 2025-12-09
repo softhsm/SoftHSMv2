@@ -25,54 +25,55 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ OSSLSLHPublicKey.h
 
- OpenSSL convenience functions
+ OpenSSL SLHDSA public key class
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#ifndef _SOFTHSM_V2_OSSLSLHPUBLICKEY_H
+#define _SOFTHSM_V2_OSSLSLHPUBLICKEY_H
 
 #include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#if defined(WITH_EDDSA)
-#include <openssl/objects.h>
-#endif
+#include "SLHPublicKey.h"
+#include <openssl/evp.h>
 
-namespace OSSL
+class OSSLSLHPublicKey : public SLHPublicKey
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
+public:
+	// Constructors
+	OSSLSLHPublicKey();
 
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
+	OSSLSLHPublicKey(const EVP_PKEY* inPKEY);
 
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
+	// Destructor
+	virtual ~OSSLSLHPublicKey();
 
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
+	// The type
+	static const char* type;
 
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
+	// Check if the key is of the given type
+	virtual bool isOfType(const char* inType);
 
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
+	// Get the base point order length
+	virtual unsigned long getOrderLength() const;
 
-#if defined(WITH_EDDSA)
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
+	// Setters for the SLHDSA public key components
+	virtual void setDerPublicKey(const ByteString& inPk);
 
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
-}
+	// Set from OpenSSL representation
+	virtual void setFromOSSL(const EVP_PKEY* inPKEY);
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+	// Retrieve the OpenSSL representation of the key
+	EVP_PKEY* getOSSLKey();
+
+private:
+	// The internal OpenSSL representation
+	const char* name;
+	EVP_PKEY* pkey;
+
+	// Create the OpenSSL representation of the key
+	void createOSSLKey();
+};
+
+#endif // !_SOFTHSM_V2_OSSLSLHPUBLICKEY_H
 

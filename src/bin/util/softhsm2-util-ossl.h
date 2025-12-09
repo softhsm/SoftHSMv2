@@ -38,7 +38,7 @@
 #ifdef WITH_ECC
 #include <openssl/ec.h>
 #endif
-#ifdef WITH_EDDSA
+#if defined(WITH_EDDSA) || defined (WITH_SLHDSA)
 #include <openssl/evp.h>
 #endif
 
@@ -142,6 +142,22 @@ typedef struct eddsa_key_material_t {
 } eddsa_key_material_t;
 #endif
 
+#ifdef WITH_SLHDSA
+typedef struct slhdsa_key_material_t {
+    CK_ULONG sizePrivateKey;
+    CK_ULONG sizePublicKey;
+    CK_VOID_PTR derPrivateKey;
+    CK_VOID_PTR derPublicKey;
+
+    slhdsa_key_material_t() {
+        sizePrivateKey = 0;
+        sizePublicKey = 0;
+        derPrivateKey = NULL_PTR;
+        derPublicKey = NULL_PTR;
+    }
+} slhdsa_key_material_t;
+#endif
+
 EVP_PKEY* crypto_read_file(char* filePath, char* filePIN);
 
 // RSA
@@ -166,6 +182,13 @@ void crypto_free_ecdsa(ecdsa_key_material_t* keyMat);
 int crypto_save_eddsa(CK_SESSION_HANDLE hSession, char* label, char* objID, size_t objIDLen, int noPublicKey, EVP_PKEY* eddsa);
 eddsa_key_material_t* crypto_malloc_eddsa(EVP_PKEY* eddsa);
 void crypto_free_eddsa(eddsa_key_material_t* keyMat);
+#endif
+
+#ifdef WITH_SLHDSA
+// SLHDSA
+int crypto_save_slhdsa(CK_SESSION_HANDLE hSession, char* label, char* objID, size_t objIDLen, int noPublicKey, EVP_PKEY* slhdsa);
+slhdsa_key_material_t* crypto_malloc_slhdsa(EVP_PKEY* slhdsa);
+void crypto_free_slhdsa(slhdsa_key_material_t* keyMat);
 #endif
 
 #endif // !_SOFTHSM_V2_SOFTHSM2_UTIL_OSSL_H

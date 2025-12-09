@@ -100,6 +100,7 @@ void fill_CKA_table(std::map<unsigned long, std::string> &t)
 	t[CKA_COPYABLE] = "CKA_COPYABLE";
 	t[CKA_DESTROYABLE] = "CKA_DESTROYABLE";
 	t[CKA_EC_PARAMS] = "CKA_EC_PARAMS";
+	t[CKA_SLHDSA_PARAMS] = "CKA_SLHDSA_PARAMS";
 	t[CKA_EC_POINT] = "CKA_EC_POINT";
 	t[CKA_SECONDARY_AUTH] = "CKA_SECONDARY_AUTH";
 	t[CKA_AUTH_PIN_FLAGS] = "CKA_AUTH_PIN_FLAGS";
@@ -478,6 +479,8 @@ void fill_CKM_table(std::map<unsigned long, std::string> &t)
 	t[CKM_RSA_PKCS_OAEP_TPM_1_1] = "CKM_RSA_PKCS_OAEP_TPM_1_1";
 	t[CKM_EC_EDWARDS_KEY_PAIR_GEN] = "CKM_EC_EDWARDS_KEY_PAIR_GEN";
 	t[CKM_EDDSA] = "CKM_EDDSA";
+	t[CKM_SLH_KEY_PAIR_GEN] = "CKM_SLH_KEY_PAIR_GEN";
+	t[CKM_SLHDSA] = "CKM_SLHDSA";
 }
 
 void fill_CKO_table(std::map<unsigned long, std::string> &t)
@@ -544,6 +547,7 @@ void fill_CKK_table(std::map<unsigned long, std::string> &t)
 	t[CKK_GOSTR3411] = "CKK_GOSTR3411";
 	t[CKK_GOST28147] = "CKK_GOST28147";
 	t[CKK_EC_EDWARDS] = "CKK_EC_EDWARDS";
+	t[CKK_SLHDSA] = "CKK_SLHDSA";
 }
 
 void fill_CKC_table(std::map<unsigned long, std::string> &t)

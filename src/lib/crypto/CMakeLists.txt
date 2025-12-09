@@ -20,10 +20,13 @@ set(SOURCES AESKey.cpp
             DSAPrivateKey.cpp
             DSAPublicKey.cpp
             ECParameters.cpp
+            SLHParameters.cpp
             ECPrivateKey.cpp
             ECPublicKey.cpp
             EDPrivateKey.cpp
             EDPublicKey.cpp
+            SLHPrivateKey.cpp
+            SLHPublicKey.cpp
             GOSTPrivateKey.cpp
             GOSTPublicKey.cpp
             HashAlgorithm.cpp
@@ -58,6 +61,10 @@ if(WITH_OPENSSL)
                         OSSLEDKeyPair.cpp
                         OSSLEDPrivateKey.cpp
                         OSSLEDPublicKey.cpp
+                        OSSLSLHDSA.cpp
+                        OSSLSLHKeyPair.cpp
+                        OSSLSLHPrivateKey.cpp
+                        OSSLSLHPublicKey.cpp
                         OSSLEVPCMacAlgorithm.cpp
                         OSSLEVPHashAlgorithm.cpp
                         OSSLEVPMacAlgorithm.cpp

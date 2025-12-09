@@ -408,6 +408,7 @@ typedef unsigned long ck_key_type_t;
 #define CKK_GOSTR3411		(0x31UL)
 #define CKK_GOST28147		(0x32UL)
 #define CKK_EC_EDWARDS		(0x40UL)
+#define CKK_SLHDSA		(0x80010037UL)
 #define CKK_VENDOR_DEFINED	((unsigned long) (1UL << 31))
 
 
@@ -485,6 +486,7 @@ typedef unsigned long ck_attribute_type_t;
 #define CKA_DESTROYABLE			(0x172UL)
 #define CKA_ECDSA_PARAMS		(0x180UL)
 #define CKA_EC_PARAMS			(0x180UL)
+#define CKA_SLHDSA_PARAMS			(0x80000030UL)
 #define CKA_EC_POINT			(0x181UL)
 #define CKA_SECONDARY_AUTH		(0x200UL)
 #define CKA_AUTH_PIN_FLAGS		(0x201UL)
@@ -892,6 +894,8 @@ typedef unsigned long ck_mechanism_type_t;
 /* From version 3.0 */
 #define CKM_EC_EDWARDS_KEY_PAIR_GEN	(0x1055UL)
 #define CKM_EDDSA			(0x1057UL)
+#define CKM_SLH_KEY_PAIR_GEN	(0x80010003UL)
+#define CKM_SLHDSA			(0x80010006UL)
 
 /* Attribute and other constants related to OTP */
 #define CK_OTP_FORMAT_DECIMAL		(0UL)

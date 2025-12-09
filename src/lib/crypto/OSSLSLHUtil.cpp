@@ -25,54 +25,48 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ OSSLSLHUtils.cpp
 
- OpenSSL convenience functions
+ OpenSSL SLHDSA Utils
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#include "OSSLSLHUtil.h"
+#include "log.h"
+#include <string.h>
 
-#include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#if defined(WITH_EDDSA)
-#include <openssl/objects.h>
-#endif
+namespace OSSLSLH {
 
-namespace OSSL
+unsigned long getSignatureSizeFromName(const char* name)
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
+    if (name == NULL){
+        ERROR_MSG("Could not determine the signature size, name is NULL");
+        return 0;
+    }
+    unsigned long name_len = strnlen(name, 100);
+    unsigned long signature_size = 0;
 
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
+    if (name_len < 4) {
+        ERROR_MSG("Could not determine the signature size, name size is smaller than 4");
+        return 0;
+    }
 
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
-
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
-
-#if defined(WITH_EDDSA)
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
-
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
+    if (strncmp(&name[name_len - 4], "128s", 4) == 0) {
+        signature_size = 7856;
+    } else if (strncmp(&name[name_len - 4], "128f", 4) == 0) {
+        signature_size = 17088;
+    } else if (strncmp(&name[name_len - 4], "192s", 4) == 0) {
+        signature_size = 16224;
+    } else if (strncmp(&name[name_len - 4], "192f", 4) == 0) {
+        signature_size = 35664;
+    } else if (strncmp(&name[name_len - 4], "256s", 4) == 0) {
+        signature_size = 29792;
+    } else if (strncmp(&name[name_len - 4], "256f", 4) == 0) {
+        signature_size = 49856;
+    } else{
+        ERROR_MSG("Could not determine the signature size, returned 0");
+        return 0;
+    }
+	return signature_size;
 }
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
-
+} // namespace OSSLSLH

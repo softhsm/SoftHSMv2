@@ -25,54 +25,63 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ SLHPrivateKey.cpp
 
- OpenSSL convenience functions
+ SLHDSA private key class
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
-
 #include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#if defined(WITH_EDDSA)
-#include <openssl/objects.h>
-#endif
+#include "log.h"
+#include "SLHPrivateKey.h"
+#include <string.h>
 
-namespace OSSL
+// Set the type
+/*static*/ const char* SLHPrivateKey::type = "Abstract SLHDSA private key";
+
+// Check if the key is of the given type
+bool SLHPrivateKey::isOfType(const char* inType)
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
-
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
-
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
-
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
-
-#if defined(WITH_EDDSA)
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
-
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
+	return !strcmp(type, inType);
 }
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+// Get the bit length
+unsigned long SLHPrivateKey::getBitLength() const
+{
+	return getDerPrivateKey().size() * 8;
+}
+
+// Get the output length
+unsigned long SLHPrivateKey::getOutputLength() const
+{
+	return getOrderLength();
+}
+
+void SLHPrivateKey::setDerPrivateKey(const ByteString& inSk)
+{
+	derPrivateKey = inSk;
+}
+
+const ByteString& SLHPrivateKey::getDerPrivateKey() const
+{
+	return derPrivateKey;
+}
+
+// Serialisation
+ByteString SLHPrivateKey::serialise() const
+{
+	return derPrivateKey.serialise();
+}
+
+bool SLHPrivateKey::deserialise(ByteString& serialised)
+{
+	ByteString dDerPrivateKey = ByteString::chainDeserialise(serialised);
+
+	if (dDerPrivateKey.size() == 0)
+	{
+		return false;
+	}
+
+	setDerPrivateKey(dDerPrivateKey);
+	return true;
+}
 
