@@ -2848,7 +2848,7 @@ _CK_DECLARE_FUNCTION (C_DecapsulateKey,
                        struct ck_attribute *templ,
                        unsigned long attribute_count,
                        unsigned char *ciphertext,
-                       unsigned long *ciphertext_len,
+                       unsigned long ciphertext_len,
                        ck_object_handle_t *key_ptr));
 _CK_DECLARE_FUNCTION (C_VerifySignatureInit,
                       (ck_session_handle_t session,
@@ -3053,6 +3053,7 @@ typedef unsigned char CK_BBOOL;
 typedef unsigned long int CK_ULONG;
 typedef long int CK_LONG;
 typedef CK_BYTE *CK_BYTE_PTR;
+typedef CK_FLAGS *CK_FLAGS_PTR;
 typedef CK_CHAR *CK_CHAR_PTR;
 typedef CK_UTF8CHAR *CK_UTF8CHAR_PTR;
 typedef CK_ULONG *CK_ULONG_PTR;
