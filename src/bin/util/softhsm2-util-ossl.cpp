@@ -156,6 +156,7 @@ int crypto_import_key_pair
 	switch (EVP_PKEY_type(EVP_PKEY_id(pkey)))
 	{
 		case EVP_PKEY_RSA:
+		case EVP_PKEY_RSA_PSS:
 			rsa = EVP_PKEY_get1_RSA(pkey);
 			break;
 		case EVP_PKEY_DSA:
