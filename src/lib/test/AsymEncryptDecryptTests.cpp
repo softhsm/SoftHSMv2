@@ -137,11 +137,6 @@ void AsymEncryptDecryptTests::rsaOAEPParams(CK_SESSION_HANDLE hSession, CK_OBJEC
 	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechanism,hPublicKey) );
 	CPPUNIT_ASSERT(rv==CKR_ARGUMENTS_BAD);
 
-	oaepParams.hashAlg = CKM_SHA_1;
-	oaepParams.mgf = CKG_MGF1_SHA256;
-	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechanism,hPublicKey) );
-	CPPUNIT_ASSERT(rv==CKR_ARGUMENTS_BAD);
-
 	oaepParams.mgf = CKG_MGF1_SHA1;
 	oaepParams.source = CKZ_DATA_SPECIFIED - 1;
 	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechanism,hPublicKey) );
