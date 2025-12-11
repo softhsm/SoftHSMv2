@@ -42,6 +42,18 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 
+// Helper to convert PKCS#11 hash mechanism to OpenSSL EVP_MD
+static const EVP_MD* getEVPMDFromCKM(CK_MECHANISM_TYPE hashAlg) {
+    switch (hashAlg) {
+        case CKM_SHA_1:   return EVP_sha1();
+        case CKM_SHA224:  return EVP_sha224();
+        case CKM_SHA256:  return EVP_sha256();
+        case CKM_SHA384:  return EVP_sha384();
+        case CKM_SHA512:  return EVP_sha512();
+        default:          return EVP_sha1(); // Fallback to SHA-1
+    }
+}
+
 // Constructor
 OSSLRSA::OSSLRSA()
 {
@@ -1206,7 +1218,7 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-		      ByteString& encryptedData, const AsymMech::Type padding)
+                     ByteString& encryptedData, const AsymMech::Type padding, const CK_RSA_PKCS_OAEP_PARAMS* oaepParams)
 {
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(OSSLRSAPublicKey::type))
@@ -1237,16 +1249,91 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	}
 	else if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
-		// The size of the input data cannot be more than the modulus
-		// length of the key - 41
-		if (data.size() > (size_t) (RSA_size(rsa) - 41))
-		{
-			ERROR_MSG("Too much data supplied for RSA OAEP encryption");
-
-			return false;
+	    // Use EVP API for OAEP to support configurable hash algorithms
+	    EVP_PKEY* pkey = EVP_PKEY_new();
+	    if (pkey == NULL) {
+	        ERROR_MSG("Failed to allocate EVP_PKEY");
+	        return false;
+	    }
+	    if (EVP_PKEY_set1_RSA(pkey, rsa) <= 0) {
+	        ERROR_MSG("Failed to set RSA key on EVP_PKEY");
+	        EVP_PKEY_free(pkey);
+	        return false;
+	    }
+	    
+	    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pkey, NULL);
+	    if (ctx == NULL) {
+	        ERROR_MSG("Failed to create EVP context for OAEP encryption");
+	        EVP_PKEY_free(pkey);
+	        return false;
+	    }
+	    
+	    if (EVP_PKEY_encrypt_init(ctx) <= 0) {
+	        ERROR_MSG("Failed to initialize EVP encryption");
+	        EVP_PKEY_CTX_free(ctx);
+	        EVP_PKEY_free(pkey);
+	        return false;
+	    }
+	    
+	    if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0) {
+	        ERROR_MSG("Failed to set OAEP padding");
+	        EVP_PKEY_CTX_free(ctx);
+	        EVP_PKEY_free(pkey);
+	        return false;
+	    }
+	    
+	    // Get hash algorithm from OAEP parameters
+            const EVP_MD* hashMD = EVP_sha1(); // Default to SHA-1
+            const EVP_MD* mgfMD = EVP_sha1();  // Default to SHA-1
+            
+            if (oaepParams != NULL) {
+                hashMD = getEVPMDFromCKM(oaepParams->hashAlg);
+		switch (oaepParams->mgf) {
+		    case CKG_MGF1_SHA1:   mgfMD = EVP_sha1();   break;
+		    case CKG_MGF1_SHA224: mgfMD = EVP_sha224(); break;
+		    case CKG_MGF1_SHA256: mgfMD = EVP_sha256(); break;
+		    case CKG_MGF1_SHA384: mgfMD = EVP_sha384(); break;
+		    case CKG_MGF1_SHA512: mgfMD = EVP_sha512(); break;
+		    default: /* keep default SHA-1 */           break;
 		}
-
-		osslPadding = RSA_PKCS1_OAEP_PADDING;
+            }
+            
+            if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hashMD) <= 0) {
+                ERROR_MSG("Failed to set OAEP hash algorithm");
+                EVP_PKEY_CTX_free(ctx);
+                EVP_PKEY_free(pkey);
+                return false;
+            }
+            
+	    if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgfMD) <= 0) {
+                ERROR_MSG("Failed to set MGF1 hash algorithm");
+                EVP_PKEY_CTX_free(ctx);
+                EVP_PKEY_free(pkey);
+                return false;
+            }
+	    
+	    // Perform encryption
+	    size_t outlen;
+	    if (EVP_PKEY_encrypt(ctx, NULL, &outlen, data.const_byte_str(), data.size()) <= 0) {
+	        ERROR_MSG("Failed to determine output length for OAEP encryption");
+	        EVP_PKEY_CTX_free(ctx);
+	        EVP_PKEY_free(pkey);
+	        return false;
+	    }
+	    
+	    encryptedData.resize(outlen);
+	    int encryptResult = EVP_PKEY_encrypt(ctx, &encryptedData[0], &outlen, data.const_byte_str(), data.size());
+	    
+	    EVP_PKEY_CTX_free(ctx);
+	    EVP_PKEY_free(pkey);
+	    
+	    if (encryptResult <= 0) {
+	        ERROR_MSG("RSA OAEP encryption failed (0x%08X)", ERR_get_error());
+	        return false;
+	    }
+	    
+	    encryptedData.resize(outlen);
+	    return true;
 	}
 	else if (padding == AsymMech::RSA)
 	{
@@ -1267,14 +1354,16 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 		return false;
 	}
 
-	// Perform the RSA operation
-	encryptedData.resize(RSA_size(rsa));
+	// Perform the RSA operation (for non-OAEP cases only)
+	if (padding != AsymMech::RSA_PKCS_OAEP) {
+		encryptedData.resize(RSA_size(rsa));
 
-	if (RSA_public_encrypt(data.size(), (unsigned char*) data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
-	{
-		ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+		if (RSA_public_encrypt(data.size(), (unsigned char*) data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
+		{
+			ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
 
-		return false;
+			return false;
+		}
 	}
 
 	return true;
@@ -1282,7 +1371,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 // Decryption functions
 bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-		      ByteString& data, const AsymMech::Type padding)
+                      ByteString& data, const AsymMech::Type padding, const CK_RSA_PKCS_OAEP_PARAMS* oaepParams)
 {
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(OSSLRSAPrivateKey::type))
@@ -1312,20 +1401,127 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			osslPadding = RSA_PKCS1_PADDING;
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
-			osslPadding = RSA_PKCS1_OAEP_PADDING;
-			break;
+		{
+		    // Use EVP API for OAEP to support configurable hash algorithms
+		    EVP_PKEY* pkey = EVP_PKEY_new();
+		    if (pkey == NULL) {
+		        ERROR_MSG("Failed to allocate EVP_PKEY");
+		        return false;
+		    }
+		    if (EVP_PKEY_set1_RSA(pkey, rsa) <= 0) {
+		        ERROR_MSG("Failed to set RSA key on EVP_PKEY");
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
+		
+		    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pkey, NULL);
+		    if (ctx == NULL) {
+		        ERROR_MSG("Failed to create EVP context for OAEP decryption");
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
+		
+		    if (EVP_PKEY_decrypt_init(ctx) <= 0) {
+		        ERROR_MSG("Failed to initialize EVP decryption");
+		        EVP_PKEY_CTX_free(ctx);
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
+		
+		    if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0) {
+		        ERROR_MSG("Failed to set OAEP padding");
+		        EVP_PKEY_CTX_free(ctx);
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
+		
+		    // Get hash algorithm from OAEP parameters
+		    const EVP_MD* hashMD = EVP_sha1(); // Default to SHA-1
+		    const EVP_MD* mgfMD = EVP_sha1();  // Default to SHA-1
+		    
+		    if (oaepParams != NULL) {
+		        hashMD = getEVPMDFromCKM(oaepParams->hashAlg);
+                switch (oaepParams->mgf) {
+                    case CKG_MGF1_SHA1:   mgfMD = EVP_sha1();   break;
+                    case CKG_MGF1_SHA224: mgfMD = EVP_sha224(); break;
+                    case CKG_MGF1_SHA256: mgfMD = EVP_sha256(); break;
+                    case CKG_MGF1_SHA384: mgfMD = EVP_sha384(); break;
+                    case CKG_MGF1_SHA512: mgfMD = EVP_sha512(); break;
+                    default: /* keep default SHA-1 */           break;
+                }
+		    }
+		    
+		    if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hashMD) <= 0) {
+		        ERROR_MSG("Failed to set OAEP hash algorithm");
+		        EVP_PKEY_CTX_free(ctx);
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
+		    
+		    if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgfMD) <= 0) {
+                        ERROR_MSG("Failed to set MGF1 hash algorithm");
+                        EVP_PKEY_CTX_free(ctx);
+                        EVP_PKEY_free(pkey);
+                        return false;
+                    }
+
+            // Optional: set OAEP label if provided
+            if (oaepParams != NULL &&
+                oaepParams->source == CKZ_DATA_SPECIFIED &&
+                oaepParams->pSourceData != NULL &&
+                oaepParams->ulSourceDataLen > 0) {
+                unsigned char* label = (unsigned char*) OPENSSL_malloc(oaepParams->ulSourceDataLen);
+                if (label == NULL) {
+                    ERROR_MSG("Failed to allocate memory for OAEP label");
+                    EVP_PKEY_CTX_free(ctx);
+                    EVP_PKEY_free(pkey);
+                    return false;
+                }
+                memcpy(label, oaepParams->pSourceData, oaepParams->ulSourceDataLen);
+                if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, label, (int)oaepParams->ulSourceDataLen) <= 0) {
+                    ERROR_MSG("Failed to set OAEP label");
+                    OPENSSL_free(label); // free on failure; ownership transfers on success
+                    EVP_PKEY_CTX_free(ctx);
+                    EVP_PKEY_free(pkey);
+                    return false;
+                }
+            }
+		
+		    // Perform decryption
+		    size_t outlen;
+		    if (EVP_PKEY_decrypt(ctx, NULL, &outlen, encryptedData.const_byte_str(), encryptedData.size()) <= 0) {
+		        ERROR_MSG("Failed to determine output length for OAEP decryption");
+		        EVP_PKEY_CTX_free(ctx);
+		        EVP_PKEY_free(pkey);
+		        return false;
+		    }
+		
+		    data.resize(outlen);
+		    int decryptResult = EVP_PKEY_decrypt(ctx, &data[0], &outlen, encryptedData.const_byte_str(), encryptedData.size());
+		
+		    EVP_PKEY_CTX_free(ctx);
+		    EVP_PKEY_free(pkey);
+		
+		    if (decryptResult <= 0) {
+		        ERROR_MSG("RSA OAEP decryption failed (0x%08X)", ERR_get_error());
+		        return false;
+		    }
+		
+		    data.resize(outlen);
+		    return true;
+		}
 		case AsymMech::RSA:
-			osslPadding = RSA_NO_PADDING;
-			break;
+		    osslPadding = RSA_NO_PADDING;
+		    break;
 		default:
-			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
-			return false;
-	}
-
-	// Perform the RSA operation
-	data.resize(RSA_size(rsa));
-
-	int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char*) encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
+		    ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+		    return false;
+		}
+		
+		// Perform the RSA operation (for non-OAEP cases)
+		data.resize(RSA_size(rsa));
+		
+		int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char*) encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
 
 	if (decSize == -1)
 	{
