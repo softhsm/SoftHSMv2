@@ -69,6 +69,23 @@ CK_RV P11Attribute::updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue,
 	return CKR_OK;
 }
 
+CK_RV P11Attribute::retrieveAttrByteString(Token *token, bool isPrivate, OSAttribute *attr, ByteString &value)
+{
+	if (isPrivate && attr->getByteStringValue().size() != 0)
+	{
+		if (!token->decrypt(attr->getByteStringValue(), value))
+		{
+			ERROR_MSG("Internal error: failed to decrypt private attribute value");
+			return CKR_GENERAL_ERROR;
+		}
+	}
+	else
+	{
+		value = attr->getByteStringValue();
+	}
+	return CKR_OK;
+}
+
 bool P11Attribute::isModifiable()
 {
 	// Get the CKA_MODIFIABLE attribute, when the attribute is
@@ -273,18 +290,13 @@ CK_RV P11Attribute::retrieve(Token *token, bool isPrivate, CK_VOID_PTR pValue, C
 		// Lower level attribute has to be variable sized.
 		if (attr.isByteStringAttribute())
 		{
-			if (isPrivate && attr.getByteStringValue().size() != 0)
+			ByteString value;
+			CK_RV res = retrieveAttrByteString(token, isPrivate, &attr, value);
+			if (res != CKR_OK)
 			{
-				ByteString value;
-				if (!token->decrypt(attr.getByteStringValue(),value))
-				{
-					ERROR_MSG("Internal error: failed to decrypt private attribute value");
-					return CKR_GENERAL_ERROR;
-				}
-				attrSize = value.size();
+				return res;
 			}
-			else
-				attrSize = attr.getByteStringValue().size();
+			attrSize = value.size();
 		}
 		else if (attr.isMechanismTypeSetAttribute())
 		{
@@ -332,22 +344,15 @@ CK_RV P11Attribute::retrieve(Token *token, bool isPrivate, CK_VOID_PTR pValue, C
 		}
 		else if (attr.isByteStringAttribute())
 		{
-			if (isPrivate && attr.getByteStringValue().size() != 0)
+			ByteString value;
+			CK_RV res = retrieveAttrByteString(token, isPrivate, &attr, value);
+			if (res != CKR_OK)
 			{
-				ByteString value;
-				if (!token->decrypt(attr.getByteStringValue(),value))
-				{
-					ERROR_MSG("Internal error: failed to decrypt private attribute value");
-					return CKR_GENERAL_ERROR;
-				}
-				if (value.size() !=  0) {
-					const unsigned char* attrPtr = value.const_byte_str();
-					memcpy(pValue,attrPtr,attrSize);
-				}
+				return res;
 			}
-			else if (attr.getByteStringValue().size() != 0)
-			{
-				const unsigned char* attrPtr = attr.getByteStringValue().const_byte_str();
+
+			if (value.size() !=  0) {
+				const unsigned char* attrPtr = value.const_byte_str();
 				memcpy(pValue,attrPtr,attrSize);
 			}
 		}
@@ -493,6 +498,12 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 	}
 
 	return CKR_ATTRIBUTE_READ_ONLY;
+}
+
+CK_RV P11NonPrivateAttribute::retrieveAttrByteString(Token* /*token*/, bool /*isPrivate*/, OSAttribute *attr, ByteString &value)
+{
+	value = attr->getByteStringValue();
+	return CKR_OK;
 }
 
 /*****************************************
