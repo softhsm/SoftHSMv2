@@ -72,6 +72,10 @@ namespace OSSL
 	// Convert a ByteString to an OpenSSL NID
 	int byteString2oid(const ByteString& byteString);
 #endif
+
+#ifdef WITH_ML_DSA
+	const char* mldsaParameterSet2Name(unsigned long parameterSet);
+#endif
 }
 
 #endif // !_SOFTHSM_V2_OSSLUTIL_H
