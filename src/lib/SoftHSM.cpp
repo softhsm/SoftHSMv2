@@ -2512,6 +2512,64 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	{
 		return CKR_MECHANISM_INVALID;
         }
+	// set mechanism parameters
+    void *parameters = NULL;
+	size_t paramLen = 0;
+	RSA_PKCS_OAEP_PARAMS oaep_param;
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		CK_RSA_PKCS_OAEP_PARAMS* par1 = (CK_RSA_PKCS_OAEP_PARAMS*) pMechanism->pParameter;
+		switch (par1->hashAlg)
+		{
+			case CKM_SHA_1:
+				oaep_param.hashAlg = HashAlgo::SHA1;
+				break;
+			case CKM_SHA224:
+				oaep_param.hashAlg = HashAlgo::SHA224;
+				break;
+			case CKM_SHA256:
+				oaep_param.hashAlg = HashAlgo::SHA256;
+				break;	
+			case CKM_SHA384:
+				oaep_param.hashAlg = HashAlgo::SHA384;
+				break;	
+			case CKM_SHA512:
+				oaep_param.hashAlg = HashAlgo::SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		switch (par1->mgf)
+		{
+			case CKG_MGF1_SHA1:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA1;
+				break;
+			case CKG_MGF1_SHA224:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA224;
+				break;
+			case CKG_MGF1_SHA256:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA256;
+				break;	
+			case CKG_MGF1_SHA384:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA384;
+				break;	
+			case CKG_MGF1_SHA512:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		// need copy parameters to session context
+		// label source data will be copyed to end of parameter block
+		paramLen = sizeof(RSA_PKCS_OAEP_PARAMS) +  par1->ulSourceDataLen;
+		parameters = malloc(paramLen);
+		if (parameters == NULL)
+		  return CKR_HOST_MEMORY;
+		oaep_param.sourceData = (char*)parameters + sizeof(RSA_PKCS_OAEP_PARAMS);
+		oaep_param.sourceDataLen = par1->ulSourceDataLen;
+		memcpy(parameters,&oaep_param,sizeof(RSA_PKCS_OAEP_PARAMS));
+		memcpy(oaep_param.sourceData,par1->pSourceData,par1->ulSourceDataLen);
+	}	
 
 	session->setOpType(SESSION_OP_ENCRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
@@ -2519,7 +2577,11 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
-
+	if (parameters != NULL)
+	{
+		session->setParameters(parameters, paramLen);
+		free(parameters);
+	}
 	return CKR_OK;
 }
 
@@ -2616,6 +2678,8 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
 	PublicKey* publicKey = session->getPublicKey();
+	size_t paramLen = 0;
+	void* parameters = session->getParameters(paramLen);
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || publicKey == NULL)
 	{
 		session->resetOp();
@@ -2649,8 +2713,8 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 
 	data += ByteString(pData, ulDataLen);
 
-	// Encrypt the data
-	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism))
+		// Encrypt the data
+	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism, parameters, paramLen))
 	{
 		session->resetOp();
 		return CKR_GENERAL_ERROR;
@@ -3265,6 +3329,64 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	{
 		session->setReAuthentication(true);
 	}
+    // set mechanism parameters
+    void *parameters = NULL;
+	size_t paramLen = 0;
+	RSA_PKCS_OAEP_PARAMS oaep_param;
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		CK_RSA_PKCS_OAEP_PARAMS* par1 = (CK_RSA_PKCS_OAEP_PARAMS*) pMechanism->pParameter;
+		switch (par1->hashAlg)
+		{
+			case CKM_SHA_1:
+				oaep_param.hashAlg = HashAlgo::SHA1;
+				break;
+			case CKM_SHA224:
+				oaep_param.hashAlg = HashAlgo::SHA224;
+				break;
+			case CKM_SHA256:
+				oaep_param.hashAlg = HashAlgo::SHA256;
+				break;	
+			case CKM_SHA384:
+				oaep_param.hashAlg = HashAlgo::SHA384;
+				break;	
+			case CKM_SHA512:
+				oaep_param.hashAlg = HashAlgo::SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		switch (par1->mgf)
+		{
+			case CKG_MGF1_SHA1:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA1;
+				break;
+			case CKG_MGF1_SHA224:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA224;
+				break;
+			case CKG_MGF1_SHA256:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA256;
+				break;	
+			case CKG_MGF1_SHA384:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA384;
+				break;	
+			case CKG_MGF1_SHA512:
+				oaep_param.mgf = AsymRSAMGF::MGF1_SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		// need copy parameters to session context
+		// label source data will be copyed to end of parameter block
+		paramLen = sizeof(RSA_PKCS_OAEP_PARAMS) +  par1->ulSourceDataLen;
+		parameters = malloc(paramLen);
+		if (parameters == NULL)
+		  return CKR_HOST_MEMORY;
+		oaep_param.sourceData = (char*)parameters + sizeof(RSA_PKCS_OAEP_PARAMS);
+		oaep_param.sourceDataLen = par1->ulSourceDataLen;
+		memcpy(parameters,&oaep_param,sizeof(RSA_PKCS_OAEP_PARAMS));
+		memcpy(oaep_param.sourceData,par1->pSourceData,par1->ulSourceDataLen);
+	}	
 
 	session->setOpType(SESSION_OP_DECRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
@@ -3272,7 +3394,11 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPrivateKey(privateKey);
-
+	if (parameters != NULL)
+	{
+		session->setParameters(parameters,paramLen);
+		free(parameters);
+	}
 	return CKR_OK;
 }
 
@@ -3361,6 +3487,8 @@ static CK_RV AsymDecrypt(Session* session, CK_BYTE_PTR pEncryptedData, CK_ULONG 
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
 	PrivateKey* privateKey = session->getPrivateKey();
+	size_t paramLen = 0;
+	void* parameters = session->getParameters(paramLen);
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || privateKey == NULL)
 	{
 		session->resetOp();
@@ -3394,7 +3522,7 @@ static CK_RV AsymDecrypt(Session* session, CK_BYTE_PTR pEncryptedData, CK_ULONG 
 	ByteString data;
 
 	// Decrypt the data
-	if (!asymCrypto->decrypt(privateKey,encryptedData,data,mechanism))
+	if (!asymCrypto->decrypt(privateKey,encryptedData,data,mechanism,parameters,paramLen))
 	{
 		session->resetOp();
 		return CKR_ENCRYPTED_DATA_INVALID;
@@ -6450,7 +6578,64 @@ CK_RV SoftHSM::WrapKeyAsym
 	const size_t bb = 8;
 	AsymAlgo::Type algo = AsymAlgo::Unknown;
 	AsymMech::Type mech = AsymMech::Unknown;
+	void *parameters = NULL;
+	size_t paramLen = 0;
+	size_t hashLen = 0;
 
+	RSA_PKCS_OAEP_PARAMS oaep_parameters;
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		CK_RSA_PKCS_OAEP_PARAMS* par1 = (CK_RSA_PKCS_OAEP_PARAMS*) pMechanism->pParameter;
+		switch (par1->hashAlg)
+		{
+			case CKM_SHA_1:
+				oaep_parameters.hashAlg = HashAlgo::SHA1;
+				hashLen = 20;
+				break;
+			case CKM_SHA224:
+				oaep_parameters.hashAlg = HashAlgo::SHA224;
+				hashLen = 28;
+				break;
+			case CKM_SHA256:
+				oaep_parameters.hashAlg = HashAlgo::SHA256;
+				hashLen = 32;
+				break;	
+			case CKM_SHA384:
+				oaep_parameters.hashAlg = HashAlgo::SHA384;
+				hashLen = 48;
+				break;	
+			case CKM_SHA512:
+				oaep_parameters.hashAlg = HashAlgo::SHA512;
+				hashLen = 64;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		switch (par1->mgf)
+		{
+			case CKG_MGF1_SHA1:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA1;
+				break;
+			case CKG_MGF1_SHA224:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA224;
+				break;
+			case CKG_MGF1_SHA256:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA256;
+				break;	
+			case CKG_MGF1_SHA384:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA384;
+				break;	
+			case CKG_MGF1_SHA512:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		oaep_parameters.sourceData = par1->pSourceData;
+		oaep_parameters.sourceDataLen = par1->ulSourceDataLen;
+		parameters = &oaep_parameters;
+		paramLen = sizeof(RSA_PKCS_OAEP_PARAMS);
+	}
 	CK_ULONG modulus_length;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -6479,7 +6664,7 @@ CK_RV SoftHSM::WrapKeyAsym
 			mech = AsymMech::RSA_PKCS_OAEP;
 			// SHA-1 is the only supported option
 			// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
-			if (keydata.size() > modulus_length - 2 - 2 * 160 / 8)
+			if (keydata.size() > modulus_length - 2 - (2 * hashLen))
 				return CKR_KEY_SIZE_RANGE;
 			break;
 
@@ -6511,8 +6696,9 @@ CK_RV SoftHSM::WrapKeyAsym
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
+
 	// Wrap the key
-	if (!cipher->wrapKey(publicKey, keydata, wrapped, mech))
+	if (!cipher->wrapKey(publicKey, keydata, wrapped, mech,parameters,paramLen))
 	{
 		cipher->recyclePublicKey(publicKey);
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
@@ -7038,6 +7224,7 @@ CK_RV SoftHSM::UnwrapKeyAsym
 	// Get the symmetric algorithm matching the mechanism
 	AsymAlgo::Type algo = AsymAlgo::Unknown;
 	AsymMech::Type mode = AsymMech::Unknown;
+
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
 			algo = AsymAlgo::RSA;
@@ -7077,8 +7264,59 @@ CK_RV SoftHSM::UnwrapKeyAsym
 			return CKR_MECHANISM_INVALID;
 	}
 
+	void *parameters = NULL;
+	size_t paramLen = 0;
+	RSA_PKCS_OAEP_PARAMS oaep_parameters;
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		CK_RSA_PKCS_OAEP_PARAMS* par1 = (CK_RSA_PKCS_OAEP_PARAMS*) pMechanism->pParameter;
+		switch (par1->hashAlg)
+		{
+			case CKM_SHA_1:
+				oaep_parameters.hashAlg = HashAlgo::SHA1;
+				break;
+			case CKM_SHA224:
+				oaep_parameters.hashAlg = HashAlgo::SHA224;
+				break;
+			case CKM_SHA256:
+				oaep_parameters.hashAlg = HashAlgo::SHA256;
+				break;	
+			case CKM_SHA384:
+				oaep_parameters.hashAlg = HashAlgo::SHA384;
+				break;	
+			case CKM_SHA512:
+				oaep_parameters.hashAlg = HashAlgo::SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		switch (par1->mgf)
+		{
+			case CKG_MGF1_SHA1:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA1;
+				break;
+			case CKG_MGF1_SHA224:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA224;
+				break;
+			case CKG_MGF1_SHA256:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA256;
+				break;	
+			case CKG_MGF1_SHA384:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA384;
+				break;	
+			case CKG_MGF1_SHA512:
+				oaep_parameters.mgf = AsymRSAMGF::MGF1_SHA512;
+				break;
+			default:
+			    return CKR_ARGUMENTS_BAD;
+		}
+		oaep_parameters.sourceData = par1->pSourceData;
+		oaep_parameters.sourceDataLen = par1->ulSourceDataLen;
+		parameters = &oaep_parameters;
+		paramLen = sizeof(RSA_PKCS_OAEP_PARAMS);
+	}
 	// Unwrap the key
-	if (!cipher->unwrapKey(unwrappingkey, wrapped, keydata, mode))
+	if (!cipher->unwrapKey(unwrappingkey, wrapped, keydata, mode, parameters, paramLen ))
 		rv = CKR_GENERAL_ERROR;
 	cipher->recyclePrivateKey(unwrappingkey);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
@@ -13175,31 +13413,16 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 		ERROR_MSG("pParameter must be of type CK_RSA_PKCS_OAEP_PARAMS");
 		return CKR_ARGUMENTS_BAD;
 	}
-
 	CK_RSA_PKCS_OAEP_PARAMS_PTR params = (CK_RSA_PKCS_OAEP_PARAMS_PTR)pMechanism->pParameter;
-	if (params->hashAlg != CKM_SHA_1)
-	{
-		ERROR_MSG("hashAlg must be CKM_SHA_1");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->mgf != CKG_MGF1_SHA1)
-	{
-		ERROR_MSG("mgf must be CKG_MGF1_SHA1");
-		return CKR_ARGUMENTS_BAD;
-	}
+	
 	if (params->source != CKZ_DATA_SPECIFIED)
 	{
 		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->pSourceData != NULL)
+	if ((params-> pSourceData == NULL)&&(params->ulSourceDataLen != 0))
 	{
-		ERROR_MSG("pSourceData must be NULL");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->ulSourceDataLen != 0)
-	{
-		ERROR_MSG("ulSourceDataLen must be 0");
+		ERROR_MSG("pSourceData is NULL");
 		return CKR_ARGUMENTS_BAD;
 	}
 	return CKR_OK;
@@ -13241,7 +13464,12 @@ CK_RV SoftHSM::MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism)
 		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->pOAEPParams->pSourceData != NULL)
+	if ((params-> pOAEPParams->pSourceData == NULL)&&(params->pOAEPParams->ulSourceDataLen != 0))
+	{
+		ERROR_MSG("pSourceData is NULL");
+		return CKR_ARGUMENTS_BAD;
+	}
+	/*if (params->pOAEPParams->pSourceData != NULL)
 	{
 		ERROR_MSG("pSourceData must be NULL");
 		return CKR_ARGUMENTS_BAD;
@@ -13250,7 +13478,7 @@ CK_RV SoftHSM::MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism)
 	{
 		ERROR_MSG("ulSourceDataLen must be 0");
 		return CKR_ARGUMENTS_BAD;
-	}
+	}*/
 
 	return CKR_OK;
 }
