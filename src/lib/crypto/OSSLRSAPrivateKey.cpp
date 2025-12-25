@@ -37,7 +37,9 @@
 #include "OSSLUtil.h"
 #include <openssl/bn.h>
 #include <openssl/x509.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/param_build.h>
+#endif
 #ifdef WITH_FIPS
 #include <openssl/fips.h>
 #endif
@@ -94,41 +96,49 @@ void OSSLRSAPrivateKey::setFromOSSL(const EVP_PKEY *inRSA)
 	{
 		ByteString inP = OSSL::bn2ByteString(bn_p);
 		setP(inP);
+		BN_free(bn_p);
 	}
 	if (bn_q)
 	{
 		ByteString inQ = OSSL::bn2ByteString(bn_q);
 		setQ(inQ);
+		BN_free(bn_q);
 	}
 	if (bn_dmp1)
 	{
 		ByteString inDP1 = OSSL::bn2ByteString(bn_dmp1);
 		setDP1(inDP1);
+		BN_free(bn_dmp1);
 	}
 	if (bn_dmq1)
 	{
 		ByteString inDQ1 = OSSL::bn2ByteString(bn_dmq1);
 		setDQ1(inDQ1);
+		BN_free(bn_dmq1);
 	}
 	if (bn_iqmp)
 	{
 		ByteString inPQ = OSSL::bn2ByteString(bn_iqmp);
 		setPQ(inPQ);
+		BN_free(bn_iqmp);
 	}
 	if (bn_n)
 	{
 		ByteString inN = OSSL::bn2ByteString(bn_n);
 		setN(inN);
+		BN_free(bn_n);
 	}
 	if (bn_e)
 	{
 		ByteString inE = OSSL::bn2ByteString(bn_e);
 		setE(inE);
+		BN_free(bn_e);
 	}
 	if (bn_d)
 	{
 		ByteString inD = OSSL::bn2ByteString(bn_d);
 		setD(inD);
+		BN_free(bn_d);
 	}
 }
 
@@ -288,15 +298,76 @@ void OSSLRSAPrivateKey::createOSSLKey()
 	if (rsa != NULL)
 		return;
 
-	rsa = EVP_PKEY_new();
-	if (rsa == NULL)
+	BIGNUM *bn_p = OSSL::byteString2bn(p);
+	BIGNUM *bn_q = OSSL::byteString2bn(q);
+	BIGNUM *bn_dmp1 = OSSL::byteString2bn(dp1);
+	BIGNUM *bn_dmq1 = OSSL::byteString2bn(dq1);
+	BIGNUM *bn_iqmp = OSSL::byteString2bn(pq);
+	BIGNUM *bn_n = OSSL::byteString2bn(n);
+	BIGNUM *bn_d = OSSL::byteString2bn(d);
+	BIGNUM *bn_e = OSSL::byteString2bn(e);
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	OSSL_PARAM_BLD *param_bld = OSSL_PARAM_BLD_new();
+    bool bBuildErr = false;
+	if ((param_bld == NULL) ||
+	    (bn_n == NULL) ||
+		(bn_e == NULL) ||
+		(bn_d == NULL) ||
+		(OSSL_PARAM_BLD_push_BN(param_bld, "n", bn_n) <= 0) ||
+		(OSSL_PARAM_BLD_push_BN(param_bld, "e", bn_e) <= 0) ||
+		(OSSL_PARAM_BLD_push_BN(param_bld, "d", bn_d) <= 0))
 	{
-		ERROR_MSG("Could not create RSA object");
+		bBuildErr = true;
+	}
+	if ((!bBuildErr)&&(bn_p != NULL))
+		bBuildErr |= (OSSL_PARAM_BLD_push_BN(param_bld, "rsa-factor1", bn_p) <= 0);
+	if ((!bBuildErr)&&(bn_q != NULL))
+		bBuildErr |= (OSSL_PARAM_BLD_push_BN(param_bld, "rsa-factor2", bn_q) <= 0);
+	if ((!bBuildErr)&&(bn_dmp1 != NULL))
+		bBuildErr |= (OSSL_PARAM_BLD_push_BN(param_bld, "rsa-exponent1", bn_dmp1) <= 0);
+	if ((!bBuildErr)&&(bn_dmq1 != NULL))
+		bBuildErr |= (OSSL_PARAM_BLD_push_BN(param_bld, "rsa-exponent2", bn_dmq1) <= 0);
+	if ((!bBuildErr)&&(bn_iqmp != NULL))
+		bBuildErr |= (OSSL_PARAM_BLD_push_BN(param_bld, "rsa-coefficient1", bn_iqmp) <= 0);
+
+	OSSL_PARAM *params = OSSL_PARAM_BLD_to_param(param_bld);
+	OSSL_PARAM_BLD_free(param_bld);
+	BN_free(bn_n);
+	BN_free(bn_e);
+	BN_free(bn_d);
+    BN_free(bn_p);
+	BN_free(bn_q);
+	BN_free(bn_dmp1);
+	BN_free(bn_dmq1);
+	BN_free(bn_iqmp);
+	if ((bBuildErr)||(params == NULL))
+	{
+		ERROR_MSG("Could not build RSA key parameters");
 		return;
 	}
-	// Use the OpenSSL implementation and not any engine
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
+	if (ctx == NULL)
+	{
+		ERROR_MSG("Could not create RSA key creation context");
+		OSSL_PARAM_free(params);
+		return;
+	}
+	if ((EVP_PKEY_fromdata_init(ctx) <= 0) ||
+		(EVP_PKEY_fromdata(ctx, &rsa, EVP_PKEY_KEYPAIR, params) <= 0))
+	{
+		ERROR_MSG("Could not create RSA key object");
+		OSSL_PARAM_free(params);
+		EVP_PKEY_CTX_free(ctx);
+		rsa = NULL;
+		return;
+	}
+	OSSL_PARAM_free(params);
+	EVP_PKEY_CTX_free(ctx);	
 
+#else
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+// Use the OpenSSL implementation and not any engine
 #ifdef WITH_FIPS
 	if (FIPS_mode())
 		RSA_set_method(rsa, FIPS_rsa_pkcs1_ssleay());
@@ -309,76 +380,8 @@ void OSSLRSAPrivateKey::createOSSLKey()
 #else
 	// RSA_set_method(rsa, RSA_PKCS1_OpenSSL());
 #endif
-
-	BIGNUM *bn_p = OSSL::byteString2bn(p);
-	BIGNUM *bn_q = OSSL::byteString2bn(q);
-	BIGNUM *bn_dmp1 = OSSL::byteString2bn(dp1);
-	BIGNUM *bn_dmq1 = OSSL::byteString2bn(dq1);
-	BIGNUM *bn_iqmp = OSSL::byteString2bn(pq);
-	BIGNUM *bn_n = OSSL::byteString2bn(n);
-	BIGNUM *bn_d = OSSL::byteString2bn(d);
-	BIGNUM *bn_e = OSSL::byteString2bn(e);
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	OSSL_PARAM_BLD *param_bld = OSSL_PARAM_BLD_new();
-
-	if ((param_bld == NULL) ||
-	    (bn_n == NULL) ||
-		(bn_e == NULL) ||
-		(bn_d == NULL) ||
-		(OSSL_PARAM_BLD_push_BN(param_bld, "n", bn_n) <= 0) ||
-		(OSSL_PARAM_BLD_push_BN(param_bld, "e", bn_e) <= 0) ||
-		(OSSL_PARAM_BLD_push_BN(param_bld, "d", bn_d) <= 0))
-	{
-		OSSL_PARAM_BLD_free(param_bld);
-		ERROR_MSG("Could not build RSA key parameters");
-		EVP_PKEY_free(rsa);
-		rsa = NULL;
-		return;
-	}
-	if (bn_p != NULL)
-		OSSL_PARAM_BLD_push_BN(param_bld, "rsa-factor1", bn_p);
-	if (bn_q != NULL)
-		OSSL_PARAM_BLD_push_BN(param_bld, "rsa-factor2", bn_q);
-	if (bn_dmp1 != NULL)
-		OSSL_PARAM_BLD_push_BN(param_bld, "rsa-exponent1", bn_dmp1);
-	if (bn_dmq1 != NULL)
-		OSSL_PARAM_BLD_push_BN(param_bld, "rsa-exponent2", bn_dmq1);
-	if (bn_iqmp != NULL)
-		OSSL_PARAM_BLD_push_BN(param_bld, "rsa-coefficient1", bn_iqmp);
-
-	OSSL_PARAM *params = OSSL_PARAM_BLD_to_param(param_bld);
-	OSSL_PARAM_BLD_free(param_bld);
-	if (params == NULL)
-	{
-		ERROR_MSG("Could not build RSA key parameters");
-		EVP_PKEY_free(rsa);
-		rsa = NULL;
-		return;
-	}
-	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
-	if (ctx == NULL)
-	{
-		ERROR_MSG("Could not create RSA key creation context");
-		OSSL_PARAM_free(params);
-		EVP_PKEY_free(rsa);
-		rsa = NULL;
-		return;
-	}
-	if ((EVP_PKEY_fromdata_init(ctx) <= 0) ||
-		(EVP_PKEY_fromdata(ctx, &rsa, EVP_PKEY_KEYPAIR, params) <= 0))
-	{
-		ERROR_MSG("Could not create RSA key object");
-		OSSL_PARAM_free(params);
-		EVP_PKEY_CTX_free(ctx);
-		EVP_PKEY_free(rsa);
-		rsa = NULL;
-		return;
-	}
-	OSSL_PARAM_free(params);
-	EVP_PKEY_CTX_free(ctx);
-#endif
 	// RSA_set0_factors(rsa, bn_p, bn_q);
 	// RSA_set0_crt_params(rsa, bn_dmp1, bn_dmq1, bn_iqmp);
-	// RSA_set0_key(rsa, bn_n, bn_e, bn_d);
+	// RSA_set0_key(rsa, bn_n, bn_e, bn_d);	
+#endif	
 }

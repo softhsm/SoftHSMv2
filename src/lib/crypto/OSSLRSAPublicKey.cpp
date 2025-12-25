@@ -37,7 +37,9 @@
 #include "OSSLUtil.h"
 #include <string.h>
 #include <openssl/bn.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/param_build.h>
+#endif
 #ifdef WITH_FIPS
 #include <openssl/fips.h>
 #endif
@@ -131,28 +133,6 @@ void OSSLRSAPublicKey::createOSSLKey()
 	if (rsa != NULL)
 		return;
 
-	rsa = EVP_PKEY_new();
-	if (rsa == NULL)
-	{
-		ERROR_MSG("Could not create RSA object");
-		return;
-	}
-
-	// Use the OpenSSL implementation and not any engine
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-
-#ifdef WITH_FIPS
-	if (FIPS_mode())
-		RSA_set_method(rsa, FIPS_rsa_pkcs1_ssleay());
-	else
-		RSA_set_method(rsa, RSA_PKCS1_SSLeay());
-#else
-	RSA_set_method(rsa, RSA_PKCS1_SSLeay());
-#endif
-
-#else
-	// RSA_set_method(rsa, RSA_PKCS1_OpenSSL());
-#endif
 
 	BIGNUM* bn_n = OSSL::byteString2bn(n);
 	BIGNUM* bn_e = OSSL::byteString2bn(e);
@@ -167,21 +147,21 @@ void OSSLRSAPublicKey::createOSSLKey()
 	(OSSL_PARAM_BLD_push_BN(param_bld,"e",bn_e) <= 0 ))
 	{
 		OSSL_PARAM_BLD_free(param_bld);
-		ERROR_MSG("Could not build RSA key parameters");
-		EVP_PKEY_free(rsa);
-		rsa = NULL;
+		BN_free(bn_n);
+		BN_free(bn_e);
+		ERROR_MSG("Could not build RSA public key parameters");
 		return;
 	}
 	OSSL_PARAM *params = OSSL_PARAM_BLD_to_param(param_bld);
 	OSSL_PARAM_BLD_free(param_bld);
+	BN_free(bn_n);
+	BN_free(bn_e);
 
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
 	if (ctx == NULL)
 	{
-		ERROR_MSG("Could not create RSA creation context");
+		ERROR_MSG("Could not create RSA public key creation context");
 		OSSL_PARAM_free(params);
-		EVP_PKEY_free(rsa);
-		rsa = NULL;
 		return;
 	}
 	if ((EVP_PKEY_fromdata_init(ctx) <= 0) ||
@@ -190,11 +170,26 @@ void OSSLRSAPublicKey::createOSSLKey()
 		ERROR_MSG("Could not create public RSA key object");
 		OSSL_PARAM_free(params);
 		EVP_PKEY_CTX_free(ctx);
-		EVP_PKEY_free(rsa);
 		rsa = NULL;
 		return;
 	}
     OSSL_PARAM_free(params);
 	EVP_PKEY_CTX_free(ctx);
+	
+#else
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+// Use the OpenSSL implementation and not any engine
+#ifdef WITH_FIPS
+	if (FIPS_mode())
+		RSA_set_method(rsa, FIPS_rsa_pkcs1_ssleay());
+	else
+		RSA_set_method(rsa, RSA_PKCS1_SSLeay());
+#else
+	RSA_set_method(rsa, RSA_PKCS1_SSLeay());
+#endif
+
+#else
+	RSA_set_method(rsa, RSA_PKCS1_OpenSSL());
+#endif
 #endif
 }

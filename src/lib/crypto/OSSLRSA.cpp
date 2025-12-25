@@ -1436,7 +1436,7 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	{
 		if ((param == NULL)||(paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
 		{
-			ERROR_MSG("Invalid RSA enryption OAEP parameter supplied");
+			ERROR_MSG("Invalid RSA encryption OAEP parameter supplied");
 			return false;
 		}
 		oaepParam = (RSA_PKCS_OAEP_PARAMS *)param;
@@ -1487,8 +1487,8 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 			return false;
 		}
 		// The size of the input data cannot be more than the modulus
-		// length of the key - 41
-		if (data.size() > (size_t)(EVP_PKEY_size(rsa) - (2 * hashLen + 1))) // -41
+		// length of the key - (2 * hashLen + 1)
+		if (data.size() > (size_t)(EVP_PKEY_size(rsa) - (2 * hashLen + 1))) 
 		{
 			ERROR_MSG("Too much data supplied for RSA OAEP encryption");
 
@@ -1521,14 +1521,14 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(rsa, NULL);
 	if (ctx == NULL)
 	{
-		ERROR_MSG("An error occurred while creating RSA signature context");
+		ERROR_MSG("An error occurred while creating RSA encryption context");
 		return false;
 	}
 	if ((EVP_PKEY_encrypt_init(ctx) <= 0) ||
 		(EVP_PKEY_CTX_set_rsa_padding(ctx, osslPadding) <= 0))
 	{
 		EVP_PKEY_CTX_free(ctx);
-		ERROR_MSG("RSA encrypt failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("RSA encrypt set padding failed (0x%08X)", ERR_get_error());
 		return false;
 	}
 	if (osslPadding == RSA_PKCS1_OAEP_PADDING)
@@ -1538,11 +1538,18 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 			labelData = OPENSSL_memdup(oaepParam->sourceData,oaepParam->sourceDataLen);
 
 		if ((EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0) ||
-			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0) ||
-			(EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0))
+			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
 		{
+			OPENSSL_free(labelData);
 			EVP_PKEY_CTX_free(ctx);
-			ERROR_MSG("RSA encrypt set oaep parameters failed (0x%08X)", ERR_get_error());
+			ERROR_MSG("Set OAEP parameters for RSA encryption failed (0x%08X)", ERR_get_error());
+			return false;
+		}
+		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0)
+		{
+			OPENSSL_free(labelData);
+			EVP_PKEY_CTX_free(ctx);
+			ERROR_MSG("Set OAEP label for RSA decryption failed (0x%08X)", ERR_get_error());
 			return false;
 		}
 	}
@@ -1555,12 +1562,6 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	}
 	EVP_PKEY_CTX_free(ctx);
 
-	/*if (RSA_public_encrypt(data.size(), (unsigned char *)data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
-	{
-		ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
-
-		return false;
-	} */
 	encryptedData.resize(encLen);
 	return true;
 }
@@ -1663,14 +1664,14 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(rsa, NULL);
 	if (ctx == NULL)
 	{
-		ERROR_MSG("An error occurred while creating RSA signature context");
+		ERROR_MSG("An error occurred while creating RSA decryption context");
 		return false;
 	}
 	if ((EVP_PKEY_decrypt_init(ctx) <= 0) ||
 		(EVP_PKEY_CTX_set_rsa_padding(ctx, osslPadding) <= 0))
 	{
 		EVP_PKEY_CTX_free(ctx);
-		ERROR_MSG("RSA encrypt failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("Set padding parameter for RSA decryption failed (0x%08X)", ERR_get_error());
 		return false;
 	}
 	if (osslPadding == RSA_PKCS1_OAEP_PADDING)
@@ -1679,11 +1680,18 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 		if (oaepParam->sourceDataLen != 0)
 			labelData = OPENSSL_memdup(oaepParam->sourceData,oaepParam->sourceDataLen);
 		if ((EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0) ||
-			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0) ||
-			(EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0))
+			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
 		{
+		    OPENSSL_free(labelData);
 			EVP_PKEY_CTX_free(ctx);
-			ERROR_MSG("RSA verify set mgf1 failed (0x%08X)", ERR_get_error());
+			ERROR_MSG("Set OAEP parameters for RSA decryption failed (0x%08X)", ERR_get_error());
+			return false;
+		}
+		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0)
+		{
+		    OPENSSL_free(labelData);
+			EVP_PKEY_CTX_free(ctx);
+			ERROR_MSG("Set OAEP label for RSA decryption failed (0x%08X)", ERR_get_error());
 			return false;
 		}
 	}
@@ -1695,15 +1703,6 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 		return false;
 	}
 	EVP_PKEY_CTX_free(ctx);
-
-	/*int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char *)encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
-
-	if (decSize == -1)
-	{
-		ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
-
-		return false;
-	} */
 
 	data.resize(decSize);
 
@@ -1753,14 +1752,7 @@ bool OSSLRSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameter
 	}
 
 	// Generate the key-pair
-	EVP_PKEY *rsa = EVP_PKEY_new();
-	if (rsa == NULL)
-	{
-		ERROR_MSG("Failed to instantiate OpenSSL RSA object");
-
-		return false;
-	}
-
+	EVP_PKEY *rsa = NULL; 
 	BIGNUM *bn_e = OSSL::byteString2bn(params->getE());
 	// Check if the key was successfully generated
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
@@ -1768,7 +1760,6 @@ bool OSSLRSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameter
 	{
 		ERROR_MSG("Failed to create RSA key creation context");
 		BN_free(bn_e);
-		EVP_PKEY_free(rsa);
 		return false;
 	}
 	if ((EVP_PKEY_keygen_init(ctx) <= 0) ||
@@ -1779,7 +1770,6 @@ bool OSSLRSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameter
 		ERROR_MSG("RSA key generation failed (0x%08X)", ERR_get_error());
 		BN_free(bn_e);
 		EVP_PKEY_CTX_free(ctx);
-		EVP_PKEY_free(rsa);
 		return false;
 	}
 

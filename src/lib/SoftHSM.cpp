@@ -2510,8 +2510,8 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	}
 	else
 	{
-		return CKR_MECHANISM_INVALID;
-        }
+	   return CKR_MECHANISM_INVALID;
+    }
 	// set mechanism parameters
     void *parameters = NULL;
 	size_t paramLen = 0;
@@ -2537,6 +2537,8 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				oaep_param.hashAlg = HashAlgo::SHA512;
 				break;
 			default:
+				asymCrypto->recyclePublicKey(publicKey);
+				CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
 			    return CKR_ARGUMENTS_BAD;
 		}
 		switch (par1->mgf)
@@ -2557,6 +2559,8 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				oaep_param.mgf = AsymRSAMGF::MGF1_SHA512;
 				break;
 			default:
+			    asymCrypto->recyclePublicKey(publicKey);
+				CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
 			    return CKR_ARGUMENTS_BAD;
 		}
 		// need copy parameters to session context
@@ -2564,7 +2568,11 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 		paramLen = sizeof(RSA_PKCS_OAEP_PARAMS) +  par1->ulSourceDataLen;
 		parameters = malloc(paramLen);
 		if (parameters == NULL)
-		  return CKR_HOST_MEMORY;
+		{
+			asymCrypto->recyclePublicKey(publicKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+		    return CKR_HOST_MEMORY;
+		}
 		oaep_param.sourceData = (char*)parameters + sizeof(RSA_PKCS_OAEP_PARAMS);
 		oaep_param.sourceDataLen = par1->ulSourceDataLen;
 		memcpy(parameters,&oaep_param,sizeof(RSA_PKCS_OAEP_PARAMS));
@@ -3274,22 +3282,9 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 		case CKM_RSA_PKCS_OAEP:
 			if (keyType != CKK_RSA)
 				return CKR_KEY_TYPE_INCONSISTENT;
-			if (pMechanism->pParameter == NULL_PTR ||
-			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_OAEP_PARAMS))
-			{
-				DEBUG_MSG("pParameter must be of type CK_RSA_PKCS_OAEP_PARAMS");
-				return CKR_ARGUMENTS_BAD;
-			}
-			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA_1)
-			{
-				DEBUG_MSG("hashAlg must be CKM_SHA_1");
-				return CKR_ARGUMENTS_BAD;
-			}
-			if (CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA1)
-			{
-				DEBUG_MSG("mgf must be CKG_MGF1_SHA1");
-				return CKR_ARGUMENTS_BAD;
-			}
+			rv = MechParamCheckRSAPKCSOAEP(pMechanism);
+			if (rv != CKR_OK)
+				return rv;	
 
 			mechanism = AsymMech::RSA_PKCS_OAEP;
 			isRSA = true;
@@ -3354,6 +3349,8 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				oaep_param.hashAlg = HashAlgo::SHA512;
 				break;
 			default:
+			    asymCrypto->recyclePrivateKey(privateKey);
+				CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
 			    return CKR_ARGUMENTS_BAD;
 		}
 		switch (par1->mgf)
@@ -3374,6 +3371,8 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				oaep_param.mgf = AsymRSAMGF::MGF1_SHA512;
 				break;
 			default:
+			    asymCrypto->recyclePrivateKey(privateKey);
+				CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
 			    return CKR_ARGUMENTS_BAD;
 		}
 		// need copy parameters to session context
@@ -3381,7 +3380,11 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 		paramLen = sizeof(RSA_PKCS_OAEP_PARAMS) +  par1->ulSourceDataLen;
 		parameters = malloc(paramLen);
 		if (parameters == NULL)
-		  return CKR_HOST_MEMORY;
+		{		  
+			asymCrypto->recyclePrivateKey(privateKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+		    return CKR_HOST_MEMORY;
+		}
 		oaep_param.sourceData = (char*)parameters + sizeof(RSA_PKCS_OAEP_PARAMS);
 		oaep_param.sourceDataLen = par1->ulSourceDataLen;
 		memcpy(parameters,&oaep_param,sizeof(RSA_PKCS_OAEP_PARAMS));
