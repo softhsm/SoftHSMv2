@@ -233,7 +233,7 @@ bool OSSLRSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 			(EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, sParamLen) <= 0))
 		{
 			EVP_PKEY_CTX_free(ctx);
-			ERROR_MSG("An error occurred while performing the RSA-PSS signature");
+			ERROR_MSG("An error occurred while set the RSA-PSS signature parameters");
 			return false;
 		}
 
@@ -817,10 +817,11 @@ bool OSSLRSA::verify(PublicKey *publicKey, const ByteString &originalData,
 		if ((EVP_PKEY_verify_init(ctx) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PSS_PADDING) <= 0) ||
 			(EVP_PKEY_CTX_set_signature_md(ctx, hash) <= 0) ||
-			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
+			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0) ||
+			(EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, sParamLen) <= 0))
 		{
 			EVP_PKEY_CTX_free(ctx);
-			ERROR_MSG("RSA sign verify failed (0x%08X)", ERR_get_error());
+			ERROR_MSG("RSA verify set PSS parameters failed (0x%08X)", ERR_get_error());
 			return false;
 		}
 		int status = EVP_PKEY_verify(ctx, signature.const_byte_str(), signature.size(),
@@ -1222,18 +1223,18 @@ bool OSSLRSA::verifyFinal(const ByteString &signature)
 		(EVP_PKEY_CTX_set_signature_md(ctx, hash) <= 0))
 	{
 		EVP_PKEY_CTX_free(ctx);
-		ERROR_MSG("RSA sign verify failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("RSA verify set parameters failed (0x%08X)", ERR_get_error());
 		return false;
 	}
 	if (rsaPadding == RSA_PKCS1_PSS_PADDING)
 	{
 		if ((EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0) ||
-		   (EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, sLen) <= 0))
-			{
-				EVP_PKEY_CTX_free(ctx);
-				ERROR_MSG("RSA verify set mgf1 failed (0x%08X)", ERR_get_error());
-				return false;
-			}
+			(EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, sLen) <= 0))
+		{
+			EVP_PKEY_CTX_free(ctx);
+			ERROR_MSG("RSA verify set PSS parameters failed (0x%08X)", ERR_get_error());
+			return false;
+		}
 	}
 	int status = EVP_PKEY_verify(ctx, signature.const_byte_str(), signature.size(), digest.const_byte_str(), digest.size());
 	if (status < 0)
