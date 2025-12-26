@@ -201,11 +201,11 @@ void OSSLRSAPublicKey::createOSSLKey()
 // Use the OpenSSL implementation and not any engine
 #ifdef WITH_FIPS
 	if (FIPS_mode())
-		RSA_set_method(rsa, FIPS_rsa_pkcs1_ssleay());
+		RSA_set_method(rsa1, FIPS_rsa_pkcs1_ssleay());
 	else
-		RSA_set_method(rsa, RSA_PKCS1_SSLeay());
+		RSA_set_method(rsa1, RSA_PKCS1_SSLeay());
 #else
-	RSA_set_method(rsa, RSA_PKCS1_SSLeay());
+	RSA_set_method(rsa1, RSA_PKCS1_SSLeay());
 #endif
 
 #else
