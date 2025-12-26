@@ -39,6 +39,8 @@
 #include <openssl/bn.h>
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/param_build.h>
+#else
+#include <openssl/rsa.h>
 #endif
 #ifdef WITH_FIPS
 #include <openssl/fips.h>
@@ -75,24 +77,36 @@ bool OSSLRSAPublicKey::isOfType(const char *inType)
 // Set from OpenSSL representation
 void OSSLRSAPublicKey::setFromOSSL(const EVP_PKEY *inRSA)
 {
-	BIGNUM *bn_n = NULL;
-	BIGNUM *bn_e = NULL;
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    BIGNUM *bn_n = NULL;
+	BIGNUM *bn_e = NULL;
 	EVP_PKEY_get_bn_param(inRSA, "n", &bn_n);
 	EVP_PKEY_get_bn_param(inRSA, "e", &bn_e);
-#endif
 	if (bn_n)
 	{
-		ByteString inN = OSSL::bn2ByteString(bn_n);
-		setN(inN);
+		setN(OSSL::bn2ByteString(bn_n));
 		BN_free(bn_n);
 	}
 	if (bn_e)
 	{
-		ByteString inE = OSSL::bn2ByteString(bn_e);
-		setE(inE);
+		setE(OSSL::bn2ByteString(bn_e));
 		BN_free(bn_e);
 	}
+#else
+    const BIGNUM *bn_n = NULL;
+	const BIGNUM *bn_e = NULL;
+    const RSA *inRSA1 = EVP_PKEY_get0_RSA(const_cast<EVP_PKEY*>(inRSA));
+	RSA_get0_key(inRSA1, &bn_n, &bn_e, NULL);
+    if (bn_n)
+	{
+		setN(OSSL::bn2ByteString(bn_n));
+	}
+	if (bn_e)
+	{
+		setE(OSSL::bn2ByteString(bn_e));
+	}
+#endif
+	
 }
 
 // Setters for the RSA public key components
@@ -177,6 +191,12 @@ void OSSLRSAPublicKey::createOSSLKey()
 	EVP_PKEY_CTX_free(ctx);
 	
 #else
+    RSA *rsa1 = RSA_new();
+	if (rsa1 == NULL)
+    {
+		ERROR_MSG("Could not build RSA object");
+		return;
+    }
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 // Use the OpenSSL implementation and not any engine
 #ifdef WITH_FIPS
@@ -189,7 +209,23 @@ void OSSLRSAPublicKey::createOSSLKey()
 #endif
 
 #else
-	RSA_set_method(rsa, RSA_PKCS1_OpenSSL());
+	RSA_set_method(rsa1, RSA_PKCS1_OpenSSL());
 #endif
+	RSA_set0_key(rsa1, bn_n, bn_e, NULL);
+	rsa = EVP_PKEY_new();
+	if (rsa == NULL)
+	{
+		ERROR_MSG("Could not build RSA PKEY");
+		RSA_free(rsa1);
+		return;
+    }
+	if (EVP_PKEY_assign_RSA(rsa,rsa1) <= 0)
+	{
+		ERROR_MSG("Could not assign RSA PKEY");
+		RSA_free(rsa1);
+		EVP_PKEY_free(rsa);
+		rsa = NULL;
+		return;
+	}
 #endif
 }

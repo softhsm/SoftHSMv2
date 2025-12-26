@@ -1500,7 +1500,7 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	else if (padding == AsymMech::RSA)
 	{
 		// The size of the input data should be exactly equal to the modulus length
-		if (data.size() != (size_t)EVP_PKEY_get_size(rsa))
+		if (data.size() != (size_t)EVP_PKEY_size(rsa))
 		{
 			ERROR_MSG("Incorrect amount of input data supplied for raw RSA encryption");
 
@@ -1516,7 +1516,7 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	}
 
 	// Perform the RSA operation
-	size_t encLen = EVP_PKEY_get_size(rsa);
+	size_t encLen = EVP_PKEY_size(rsa);
 
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(rsa, NULL);
 	if (ctx == NULL)
@@ -1583,7 +1583,7 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 	const RSA_PKCS_OAEP_PARAMS *oaepParam = NULL;
 
 	// Check the input size
-	if (encryptedData.size() != (size_t)EVP_PKEY_get_size(rsa))
+	if (encryptedData.size() != (size_t)EVP_PKEY_size(rsa))
 	{
 		ERROR_MSG("Invalid amount of input data supplied for RSA decryption");
 
@@ -1659,7 +1659,7 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 	}
 
 	// Perform the RSA operation
-	size_t decSize = EVP_PKEY_get_size(rsa);
+	size_t decSize = EVP_PKEY_size(rsa);
 
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(rsa, NULL);
 	if (ctx == NULL)
@@ -1764,25 +1764,31 @@ bool OSSLRSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameter
 	}
 	if ((EVP_PKEY_keygen_init(ctx) <= 0) ||
 		(EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, params->getBitLength()) <= 0) ||
-		(EVP_PKEY_CTX_set1_rsa_keygen_pubexp(ctx, bn_e) <= 0) ||
-		(EVP_PKEY_keygen(ctx, &rsa) <= 0))
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+		(EVP_PKEY_CTX_set1_rsa_keygen_pubexp(ctx, bn_e) <= 0))
+#else
+		(EVP_PKEY_CTX_set_rsa_keygen_pubexp(ctx, bn_e) <= 0))
+#endif		
+	{
+		ERROR_MSG("Failed  to set RSA key generation parameters (0x%08X)", ERR_get_error());
+		EVP_PKEY_CTX_free(ctx);
+		BN_free(bn_e);
+		return false;
+	}
+	if	(EVP_PKEY_keygen(ctx, &rsa) <= 0)
 	{
 		ERROR_MSG("RSA key generation failed (0x%08X)", ERR_get_error());
-		BN_free(bn_e);
 		EVP_PKEY_CTX_free(ctx);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L	
+		BN_free(bn_e);
+#endif
 		return false;
 	}
 
-	/*if (!RSA_generate_key_ex(rsa, params->getBitLength(), bn_e, NULL))
-	{
-		ERROR_MSG("RSA key generation failed (0x%08X)", ERR_get_error());
-		BN_free(bn_e);
-		EVP_PKEY_free(rsa);
-
-		return false;
-	}*/
-	BN_free(bn_e);
 	EVP_PKEY_CTX_free(ctx);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L	
+	BN_free(bn_e);
+#endif	
 	// Create an asymmetric key-pair object to return
 	OSSLRSAKeyPair *kp = new OSSLRSAKeyPair();
 
