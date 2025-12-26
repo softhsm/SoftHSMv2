@@ -105,7 +105,7 @@ bool OSSLRSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 			ERROR_MSG("An error occurred while creating sign context");
 			return false;
 		}
-		
+
 		if ((EVP_PKEY_sign_init(ctx) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING) <= 0))
 		{
@@ -113,7 +113,7 @@ bool OSSLRSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 			ERROR_MSG("An error occurred while set PKCS #1 signature parameters");
 			return false;
 		}
-		
+
 		signature.resize(sigLen);
 		if (EVP_PKEY_sign(ctx, signature.byte_str(), &sigLen, (unsigned char *)dataToSign.const_byte_str(), dataToSign.size()) <= 0)
 		{
@@ -236,7 +236,7 @@ bool OSSLRSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 			ERROR_MSG("An error occurred while performing the RSA-PSS signature");
 			return false;
 		}
-		
+
 		signature.resize(sigLen);
 		if (EVP_PKEY_sign(ctx, &signature[0], &sigLen, dataToSign.const_byte_str(), dataToSign.size()) <= 0)
 		{
@@ -654,7 +654,7 @@ bool OSSLRSA::signFinal(ByteString &signature)
 	}
 	if (rsaPadding == RSA_PKCS1_PSS_PADDING)
 	{
-		if ((EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0) || 
+		if ((EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, sLen) <= 0))
 		{
 			EVP_PKEY_CTX_free(ctx);
@@ -721,7 +721,7 @@ bool OSSLRSA::verify(PublicKey *publicKey, const ByteString &originalData,
 			return false;
 		}
 		EVP_PKEY_CTX_free(ctx);
-		return (status == 1);		
+		return (status == 1);
 	}
 	else if (mechanism == AsymMech::RSA_PKCS_PSS)
 	{
@@ -1227,12 +1227,13 @@ bool OSSLRSA::verifyFinal(const ByteString &signature)
 	}
 	if (rsaPadding == RSA_PKCS1_PSS_PADDING)
 	{
-		if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0)
-		{
-			EVP_PKEY_CTX_free(ctx);
-			ERROR_MSG("RSA verify set mgf1 failed (0x%08X)", ERR_get_error());
-			return false;
-		}
+		if ((EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0) ||
+		   (EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, sLen) <= 0))
+			{
+				EVP_PKEY_CTX_free(ctx);
+				ERROR_MSG("RSA verify set mgf1 failed (0x%08X)", ERR_get_error());
+				return false;
+			}
 	}
 	int status = EVP_PKEY_verify(ctx, signature.const_byte_str(), signature.size(), digest.const_byte_str(), digest.size());
 	if (status < 0)
@@ -1281,7 +1282,7 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	}
 	else if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
-		if ((param == NULL)||(paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
+		if ((param == NULL) || (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
 		{
 			ERROR_MSG("Invalid RSA encryption OAEP parameter supplied");
 			return false;
@@ -1335,7 +1336,7 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 		}
 		// The size of the input data cannot be more than the modulus
 		// length of the key - (2 * hashLen + 1)
-		if (data.size() > (size_t)(EVP_PKEY_size(rsa) - (2 * hashLen + 1))) 
+		if (data.size() > (size_t)(EVP_PKEY_size(rsa) - (2 * hashLen + 1)))
 		{
 			ERROR_MSG("Too much data supplied for RSA OAEP encryption");
 
@@ -1380,9 +1381,9 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 	}
 	if (osslPadding == RSA_PKCS1_OAEP_PADDING)
 	{
-		void *labelData=NULL;
+		void *labelData = NULL;
 		if (oaepParam->sourceDataLen != 0)
-			labelData = OPENSSL_memdup(oaepParam->sourceData,oaepParam->sourceDataLen);
+			labelData = OPENSSL_memdup(oaepParam->sourceData, oaepParam->sourceDataLen);
 
 		if ((EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
@@ -1448,7 +1449,7 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 	else if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
 		osslPadding = RSA_PKCS1_OAEP_PADDING;
-		if ((param == NULL)||(paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
+		if ((param == NULL) || (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
 		{
 			ERROR_MSG("Invalid RSA decryption OAEP parameter supplied");
 			return false;
@@ -1523,20 +1524,20 @@ bool OSSLRSA::decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
 	}
 	if (osslPadding == RSA_PKCS1_OAEP_PADDING)
 	{
-		void *labelData=NULL;
+		void *labelData = NULL;
 		if (oaepParam->sourceDataLen != 0)
-			labelData = OPENSSL_memdup(oaepParam->sourceData,oaepParam->sourceDataLen);
+			labelData = OPENSSL_memdup(oaepParam->sourceData, oaepParam->sourceDataLen);
 		if ((EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
 		{
-		    OPENSSL_free(labelData);
+			OPENSSL_free(labelData);
 			EVP_PKEY_CTX_free(ctx);
 			ERROR_MSG("Set OAEP parameters for RSA decryption failed (0x%08X)", ERR_get_error());
 			return false;
 		}
 		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0)
 		{
-		    OPENSSL_free(labelData);
+			OPENSSL_free(labelData);
 			EVP_PKEY_CTX_free(ctx);
 			ERROR_MSG("Set OAEP label for RSA decryption failed (0x%08X)", ERR_get_error());
 			return false;
@@ -1599,7 +1600,7 @@ bool OSSLRSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameter
 	}
 
 	// Generate the key-pair
-	EVP_PKEY *rsa = NULL; 
+	EVP_PKEY *rsa = NULL;
 	BIGNUM *bn_e = OSSL::byteString2bn(params->getE());
 	// Check if the key was successfully generated
 	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
@@ -1615,27 +1616,27 @@ bool OSSLRSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameter
 		(EVP_PKEY_CTX_set1_rsa_keygen_pubexp(ctx, bn_e) <= 0))
 #else
 		(EVP_PKEY_CTX_set_rsa_keygen_pubexp(ctx, bn_e) <= 0))
-#endif		
+#endif
 	{
 		ERROR_MSG("Failed  to set RSA key generation parameters (0x%08X)", ERR_get_error());
 		EVP_PKEY_CTX_free(ctx);
 		BN_free(bn_e);
 		return false;
 	}
-	if	(EVP_PKEY_keygen(ctx, &rsa) <= 0)
+	if (EVP_PKEY_keygen(ctx, &rsa) <= 0)
 	{
 		ERROR_MSG("RSA key generation failed (0x%08X)", ERR_get_error());
 		EVP_PKEY_CTX_free(ctx);
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L	
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
 		BN_free(bn_e);
 #endif
 		return false;
 	}
 
 	EVP_PKEY_CTX_free(ctx);
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L	
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	BN_free(bn_e);
-#endif	
+#endif
 	// Create an asymmetric key-pair object to return
 	OSSLRSAKeyPair *kp = new OSSLRSAKeyPair();
 
