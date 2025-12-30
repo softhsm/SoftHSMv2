@@ -744,7 +744,8 @@ bool BotanRSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-		       ByteString& encryptedData, const AsymMech::Type padding)
+		       ByteString& encryptedData, const AsymMech::Type padding,
+			   const void* param, const size_t paramLen)
 {
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(BotanRSAPublicKey::type))
@@ -762,7 +763,7 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			eme = "PKCS1v15";
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
+		    // eme will be set later
 			break;
 		case AsymMech::RSA:
 			eme = "Raw";
@@ -775,14 +776,19 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 	BotanRSAPublicKey* pk = (BotanRSAPublicKey*) publicKey;
 	Botan::RSA_PublicKey* botanKey = pk->getBotanKey();
-
+	
 	if (!botanKey)
 	{
 		ERROR_MSG("Could not get the Botan public key");
 
 		return false;
 	}
-
+	if (padding == AsymMech::RSA_PKCS_OAEP)
+	{
+		eme = getCipherOaep(publicKey->getBitLength(), data.size(), param, paramLen);
+		if (eme.empty())
+			return false;
+	}
 	Botan::PK_Encryptor_EME* encryptor = NULL;
 	try
 	{
@@ -792,7 +798,6 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	catch (...)
 	{
 		ERROR_MSG("Could not create the encryptor token");
-
 		return false;
 	}
 
@@ -823,7 +828,8 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 // Decryption functions
 bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-		       ByteString& data, const AsymMech::Type padding)
+		       ByteString& data, const AsymMech::Type padding,
+			   const void* param, const size_t paramLen)
 {
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(BotanRSAPrivateKey::type))
@@ -841,7 +847,7 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			eme = "PKCS1v15";
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
+			// eme will be set later
 			break;
 		case AsymMech::RSA:
 			eme = "Raw";
@@ -860,6 +866,13 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		ERROR_MSG("Could not get the Botan private key");
 
 		return false;
+	}
+
+	if (padding == AsymMech::RSA_PKCS_OAEP)
+	{
+		eme = getCipherOaep(privateKey->getBitLength(), 0, param, paramLen);
+		if (eme.empty())
+			return false;
 	}
 
 	Botan::PK_Decryptor_EME* decryptor = NULL;
@@ -1163,3 +1176,79 @@ std::string BotanRSA::getCipherRawPss(size_t bitLength, size_t dataSize, const v
 	return request.str();
 }
 #endif
+
+std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const void* param, const size_t paramLen)
+{
+	if (param == NULL || paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+	{
+		ERROR_MSG("Invalid parameters");
+		return "";
+	}
+	const RSA_PKCS_OAEP_PARAMS *oaepParam = (RSA_PKCS_OAEP_PARAMS*)param;
+	std::string hashStr = "";
+	std::string mgfStr = "";
+	size_t hashLen = 0;
+	switch (oaepParam->hashAlg)
+	{
+		case HashAlgo::SHA1:
+			hashStr = "SHA-160";
+			hashLen = 20;
+			break;
+		case HashAlgo::SHA224:
+			hashStr = "SHA-224";
+			hashLen = 28;
+			break;
+		case HashAlgo::SHA256:
+			hashStr = "SHA-256";
+			hashLen = 32;
+			break;
+		case HashAlgo::SHA384:
+			hashStr = "SHA-384";
+			hashLen = 48;
+			break;
+		case HashAlgo::SHA512:
+			hashStr = "SHA-512";
+			hashLen = 64;
+			break;
+		default:
+			ERROR_MSG("Invalid hash parameter");
+			return "";
+	}
+	switch (oaepParam->mgf)
+	{
+		case AsymRSAMGF::MGF1_SHA1:
+			mgfStr = "SHA-160";
+			break;
+		case AsymRSAMGF::MGF1_SHA224:
+			mgfStr = "SHA-224";
+			break;
+		case AsymRSAMGF::MGF1_SHA256:
+			mgfStr = "SHA-256";
+			break;
+		case AsymRSAMGF::MGF1_SHA384:
+			mgfStr = "SHA-384";
+			break;
+		case AsymRSAMGF::MGF1_SHA512:
+			mgfStr = "SHA-512";
+			break;
+		default:
+			ERROR_MSG("Invalid mgf parameter");
+			return "";
+	}
+	// The size of the input data cannot be more than the modulus
+	// length of the key - (2 * hashLen + 1)
+	if (dataSize > (size_t)(bitLength/8 - (2 * hashLen + 1)))
+	{
+		ERROR_MSG("Too much data supplied for RSA OAEP encryption");
+		return "";
+	}
+
+	std::ostringstream request;
+	request << "OAEP(" << hashStr << ",MGF1(" << mgfStr << ")";
+	if (oaepParam->sourceDataLen != 0)
+	{
+		request <<"," << std::string((const char*)oaepParam->sourceData,oaepParam->sourceDataLen);
+	}
+	request << ")";
+	return request.str();
+}
