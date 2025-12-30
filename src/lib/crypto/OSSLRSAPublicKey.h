@@ -35,7 +35,7 @@
 
 #include "config.h"
 #include "RSAPublicKey.h"
-#include <openssl/rsa.h>
+#include <openssl/evp.h>
 
 class OSSLRSAPublicKey : public RSAPublicKey
 {
@@ -43,7 +43,7 @@ public:
 	// Constructors
 	OSSLRSAPublicKey();
 
-	OSSLRSAPublicKey(const RSA* inRSA);
+	OSSLRSAPublicKey(const EVP_PKEY* inRSA);
 
 	// Destructor
 	virtual ~OSSLRSAPublicKey();
@@ -59,14 +59,14 @@ public:
 	virtual void setE(const ByteString& inE);
 
 	// Set from OpenSSL representation
-	virtual void setFromOSSL(const RSA* inRSA);
+	virtual void setFromOSSL(const EVP_PKEY* inRSA);
 
 	// Retrieve the OpenSSL representation of the key
-	RSA* getOSSLKey();
+	EVP_PKEY* getOSSLKey();
 
 private:
 	// The internal OpenSSL representation
-	RSA* rsa;
+	EVP_PKEY* rsa;
 
 	// Create the OpenSSL representation of the key
 	void createOSSLKey();
