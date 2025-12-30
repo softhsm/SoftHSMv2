@@ -1245,7 +1245,7 @@ std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const voi
 
 	std::ostringstream request;
 	request << "OAEP(" << hashStr << ",MGF1(" << mgfStr << ")";
-	if (oaepParam->sourceDataLen != 0)
+	if ((oaepParam->sourceData != NULL)&&(oaepParam->sourceDataLen != 0))
 	{
 		request <<"," << std::string((const char*)oaepParam->sourceData,oaepParam->sourceDataLen);
 	}
