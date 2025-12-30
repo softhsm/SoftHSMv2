@@ -1236,8 +1236,8 @@ std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const voi
 			return "";
 	}
 	// The size of the input data cannot be more than the modulus
-	// length of the key - (2 * hashLen + 1)
-	if (dataSize > (size_t)(bitLength/8 - (2 * hashLen + 1)))
+	// length of the key - 2 * hashLen - 2
+	if (dataSize + (2 *hashLen + 2) > bitLength/8) 
 	{
 		ERROR_MSG("Too much data supplied for RSA OAEP encryption");
 		return "";

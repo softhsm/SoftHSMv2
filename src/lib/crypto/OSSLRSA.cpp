@@ -1336,8 +1336,8 @@ bool OSSLRSA::encrypt(PublicKey *publicKey, const ByteString &data,
 			return false;
 		}
 		// The size of the input data cannot be more than the modulus
-		// length of the key - (2 * hashLen + 1)
-		if (data.size() > (size_t)(EVP_PKEY_size(rsa) - (2 * hashLen + 1)))
+		// length of the key - 2 * hashLen - 2
+		if (data.size() + (2 * hashLen + 2) > (size_t)(EVP_PKEY_size(rsa)))
 		{
 			ERROR_MSG("Too much data supplied for RSA OAEP encryption");
 
