@@ -601,7 +601,9 @@ void RSATests::testEncryptDecrypt()
 {
 	AsymmetricKeyPair* kp;
 	RSAParameters p;
-
+	char TestLabel[] = "THIS IS A GOOD DAY";
+	char InvalidLabel[] = "ALWAYS BAD";
+	
 	// Public exponents to test
 	std::vector<ByteString> exponents;
 	exponents.push_back("010001");
@@ -614,13 +616,23 @@ void RSATests::testEncryptDecrypt()
 	keySizes.push_back(1024);
 	keySizes.push_back(1280);
 	keySizes.push_back(2048);
-	//keySizes.push_back(4096);
+	keySizes.push_back(4096);
 
 	// Paddings to test
 	std::vector<AsymMech::Type> paddings;
 	paddings.push_back(AsymMech::RSA_PKCS);
-	paddings.push_back(AsymMech::RSA_PKCS_OAEP);
+	//paddings.push_back(AsymMech::RSA_PKCS_OAEP);
 	paddings.push_back(AsymMech::RSA);
+
+	//OAEP parameters for test
+	std::vector<RSA_PKCS_OAEP_PARAMS> oaep_parameters;
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA1, NULL,0});
+	oaep_parameters.push_back({HashAlgo::SHA256,AsymRSAMGF::MGF1_SHA256, NULL,0});
+	oaep_parameters.push_back({HashAlgo::SHA384,AsymRSAMGF::MGF1_SHA384, NULL,0});
+	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA512, NULL,0});
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256, NULL,0});
+	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA224, TestLabel ,strlen(TestLabel)});
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256, TestLabel ,strlen(TestLabel)});
 
 	for (std::vector<ByteString>::iterator e = exponents.begin(); e != exponents.end(); e++)
 	{
@@ -638,15 +650,14 @@ void RSATests::testEncryptDecrypt()
 			{
 				// Generate some test data to encrypt based on the selected padding
 				ByteString testData;
+				void *parameters = NULL;
+				size_t paramLen = 0;
 
 				if (*pad == AsymMech::RSA_PKCS)
 				{
 					CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 12));
 				}
-				else if (*pad == AsymMech::RSA_PKCS_OAEP)
-				{
-					CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 42));
-				}
+				
 				else if (*pad == AsymMech::RSA)
 				{
 					CPPUNIT_ASSERT(rng->generateRandom(testData, *k >> 3));
@@ -659,9 +670,7 @@ void RSATests::testEncryptDecrypt()
 
 				// Encrypt the data
 				ByteString encryptedData;
-
-				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, *pad));
-
+				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, *pad, parameters, paramLen));
 				// The encrypted data length should equal the modulus length
 				CPPUNIT_ASSERT(encryptedData.size() == (*k >> 3));
 				CPPUNIT_ASSERT(encryptedData != testData);
@@ -669,10 +678,66 @@ void RSATests::testEncryptDecrypt()
 				// Now decrypt the data
 				ByteString decryptedData;
 
-				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, *pad));
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, *pad, parameters, paramLen));
 
 				// Check that the data was properly decrypted
 				CPPUNIT_ASSERT(decryptedData == testData);
+			}
+			// OAEP encryption test
+			for (std::vector<RSA_PKCS_OAEP_PARAMS>::iterator par = oaep_parameters.begin(); par != oaep_parameters.end(); par++)
+			{
+				// Generate some test data to encrypt based on the selected padding
+				ByteString testData;
+			
+				void *parameters = &(par->hashAlg);
+				size_t paramLen = sizeof(RSA_PKCS_OAEP_PARAMS);
+				size_t hashLen = 0;
+				switch (par->hashAlg)
+				{
+					case HashAlgo::SHA1:
+						hashLen = 20;
+						break;
+					case HashAlgo::SHA224:
+						hashLen = 28;
+						break;	
+					case HashAlgo::SHA256:
+						hashLen = 32;
+						break;
+					case HashAlgo::SHA384:
+						hashLen = 48;
+						break;	
+					case HashAlgo::SHA512:
+						hashLen = 64;
+						break;	
+					default:
+					    CPPUNIT_ASSERT(true == false);		
+				}
+				if ((*k >> 3) <= (hashLen*2)+2)
+				   continue; //skip test - hash too long for key size
+	            CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 2 - hashLen*2));
+				// Encrypt the data
+				ByteString encryptedData;
+				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, AsymMech::RSA_PKCS_OAEP, parameters, paramLen));
+				// The encrypted data length should equal the modulus length
+				CPPUNIT_ASSERT(encryptedData.size() == (*k >> 3));
+				CPPUNIT_ASSERT(encryptedData != testData);
+
+				// Now decrypt the data
+				ByteString decryptedData;
+
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, AsymMech::RSA_PKCS_OAEP, parameters, paramLen));
+
+				// Check that the data was properly decrypted
+				CPPUNIT_ASSERT(decryptedData == testData);
+
+				// Now decrypt the data with invalid label
+				ByteString decryptedData1;
+				RSA_PKCS_OAEP_PARAMS param1;
+				param1.hashAlg = par->hashAlg;
+				param1.mgf = par->mgf;
+				param1.sourceData = InvalidLabel;
+				param1.sourceDataLen = strlen(InvalidLabel);
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData1, AsymMech::RSA_PKCS_OAEP, &param1, paramLen) == false);
 			}
 
 			rsa->recycleKeyPair(kp);
