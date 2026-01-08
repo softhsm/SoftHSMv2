@@ -179,7 +179,8 @@ bool OSToken::setSOPIN(const ByteString& soPINBlob)
 // Get the SO PIN
 bool OSToken::getSOPIN(ByteString& soPINBlob)
 {
-	if (!valid || !tokenObject->isValid())
+	// this is done so rarely so will not impact the performance to refresh.
+	if (!valid || !tokenObject->isValid(true))
 	{
 		return false;
 	}
@@ -223,7 +224,8 @@ bool OSToken::setUserPIN(ByteString userPINBlob)
 // Get the user PIN
 bool OSToken::getUserPIN(ByteString& userPINBlob)
 {
-	if (!valid || !tokenObject->isValid())
+	// this is done so rarely so will not impact the performance to refresh.
+	if (!valid || !tokenObject->isValid(true))
 	{
 		return false;
 	}
@@ -243,7 +245,8 @@ bool OSToken::getUserPIN(ByteString& userPINBlob)
 // Retrieve the token label
 bool OSToken::getTokenLabel(ByteString& label)
 {
-	if (!valid || !tokenObject->isValid())
+	// this is done so rarely so will not impact the performance to refresh.
+	if (!valid || !tokenObject->isValid(true))
 	{
 		return false;
 	}
@@ -263,7 +266,8 @@ bool OSToken::getTokenLabel(ByteString& label)
 // Retrieve the token serial
 bool OSToken::getTokenSerial(ByteString& serial)
 {
-	if (!valid || !tokenObject->isValid())
+	// this is done so rarely so will not impact the performance to refresh.
+	if (!valid || !tokenObject->isValid(true))
 	{
 		return false;
 	}
@@ -283,7 +287,8 @@ bool OSToken::getTokenSerial(ByteString& serial)
 // Get the token flags
 bool OSToken::getTokenFlags(CK_ULONG& flags)
 {
-	if (!valid || !tokenObject->isValid())
+	// this is done so rarely so will not impact the performance to refresh.
+	if (!valid || !tokenObject->isValid(true))
 	{
 		return false;
 	}

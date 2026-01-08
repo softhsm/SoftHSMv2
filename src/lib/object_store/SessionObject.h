@@ -73,7 +73,8 @@ public:
 	virtual bool deleteAttribute(CK_ATTRIBUTE_TYPE type);
 
 	// The validity state of the object
-	virtual bool isValid();
+	// doRefresh has no meaning since this is a session object.
+	virtual bool isValid(bool doRefresh=true);
 
 	bool hasSlotID(CK_SLOT_ID inSlotID);
 
