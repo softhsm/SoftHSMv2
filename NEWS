@@ -1,5 +1,50 @@
 NEWS for SoftHSM -- History of user visible changes
 
+SoftHSM 2.7.0 - 2026-01-12
+
+* Various other build, docs, CI and test fixes and improvements
+# Issue #671: Added allowed mechanism check to AsymEncryptInit and extend
+  RSA-OAEP check
+# Issue #816: Add support to import RSA PSS in softhsm2-util
+# Issue #604: Updated pkcs11 header to version 3.2.0
+# Issue #794: Added RSA_AES_KEY_WRAP support
+# Issue #683: Added support for ECDSA with hashing
+# Issue #781: Added --disable-openssl-engines configure option to disable
+  OpenSSL engines
+# Issue #612: Added support to import certificate to softhsm2-util
+# Issue #690: Replaced CKR_GENERAL_ERROR with CKR_ENCRYPTED_DATA_INVALID
+  or CKR_ENCRYPTED_DATA_LEN_RANGE upon decryption failure
+# Issue #733: Added GitHub Actions CI
+# Issue #611: Added --show-config parameter to softhsm2-util
+* Issue #644: Refactored CMake for Windows (amendment in #717)
+* Issue #717: Enabled DB backend for Windows
+* Issue #600: Implemented CKM_XXX_CBC_PAD wrapping and unwrapping mechanisms
+* Issue #591: Enforced attributes becoming read-only once set to CK_TRUE on
+  CKA_WRAP_WITH_TRUSTED and CKA_SENSITIVE
+* Issue #571: Added misc derivations
+* Issue #577: Reduced the level of the log message when SoftHSM is already
+  initialized
+  (issue #573)
+* Issue #560: Added "objectstore.umask" configuration option for file/directory
+  creation
+
+Bugfixes:
+
+# Issue #648: Fixed C_GetMechanismInfo to fail on non-allowed mechanisms
+# Issue #643: Fixed growing memory in C_DecryptUpdate
+# Issue #681: Fixed refresh of OSToken by passing isToken=true to
+  Generation::create()
+# Issue #677: Fixed memory leak in SoftHSM::UnwrapKeySym.
+# Issue #674: Fixed broken if statement in UnwrapKey
+# Issue #664: Fixed crash in AES GCM without additional authenticated data
+# Issue #646: Fixed "Transaction in database is already active." bug
+* Issue #592: Fixed issue #585 by resetting en/decrypt op on input validation
+* Issue #578: Added flushig files before unlocking
+* Issue #576: Fixed race condition between C_FindObjects and object creation
+* Issue #522: Fixed advertised min and max mechanism sizes according to final
+  PKCS#11 3.0 specification.
+* Issue #548: Fixed engines clean up after OpenSSL has already shut down
+
 SoftHSM 2.6.1 - 2020-04-29
 
 * Issue #542: Support Ed448/X448 for OpenSSL
