@@ -79,6 +79,8 @@
 
 /* Function definitions */
 bool setLogLevel(const std::string &loglevel);
+bool setLogFile(const std::string &logFilePath);
+void closeLogFile();
 void softHSMLog(const int loglevel, const char* functionName, const char* fileName, const int lineNo, const char* format, ...);
 
 #endif /* !_SOFTHSM_V2_LOG_H */

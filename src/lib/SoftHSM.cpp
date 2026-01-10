@@ -574,10 +574,17 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 		return CKR_GENERAL_ERROR;
 	}
 
+	// Configure log file (empty string = use syslog)
+	if (!setLogFile(Configuration::i()->getString("log.file", "")))
+	{
+		WARNING_MSG("Could not open log file, using syslog");
+	}
+
 	// Configure object store storage backend used by all tokens.
 	if (!ObjectStoreToken::selectBackend(Configuration::i()->getString("objectstore.backend", DEFAULT_OBJECTSTORE_BACKEND)))
 	{
 		ERROR_MSG("Could not set the storage backend");
+		closeLogFile();
 		return CKR_GENERAL_ERROR;
 	}
 
@@ -589,6 +596,7 @@ CK_RV SoftHSM::C_Initialize(CK_VOID_PTR pInitArgs)
 	if (!objectStore->isValid())
 	{
 		WARNING_MSG("Could not load the object store");
+		closeLogFile();
 		delete objectStore;
 		objectStore = NULL;
 		delete sessionObjectStore;
@@ -636,6 +644,9 @@ CK_RV SoftHSM::C_Finalize(CK_VOID_PTR pReserved)
 	sessionObjectStore = NULL;
 	CryptoFactory::reset();
 	SecureMemoryRegistry::reset();
+
+	// Close log file if open
+	closeLogFile();
 
 	isInitialised = false;
 
