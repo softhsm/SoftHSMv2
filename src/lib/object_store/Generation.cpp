@@ -88,6 +88,13 @@ bool Generation::sync(File &objectFile)
 // Check if the target was updated
 bool Generation::wasUpdated()
 {
+
+	// Check if path file exists before anything
+	if (!File::exists(path))
+	{
+		return true;
+	}
+
 	if (isToken)
 	{
 		MutexLocker lock(genMutex);
