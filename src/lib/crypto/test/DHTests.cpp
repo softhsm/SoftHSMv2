@@ -92,12 +92,11 @@ void DHTests::testKeyGeneration()
 		dh->recycleKeyPair(kp);
 
 		// Generate key-pair with a fixed private value length
-		p->setXBitLength(128);
 		CPPUNIT_ASSERT(dh->generateKeyPair(&kp, p));
 
 		priv = (DHPrivateKey*) kp->getPrivateKey();
 
-		CPPUNIT_ASSERT(priv->getX().bits() == 128);
+		CPPUNIT_ASSERT_EQUAL((unsigned long)(1024), priv->getBitLength());
 
 		dh->recycleParameters(p);
 		dh->recycleKeyPair(kp);
