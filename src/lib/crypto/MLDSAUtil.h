@@ -24,6 +24,8 @@ public:
 	static CK_RV getMLDSAPublicKey(MLDSAPublicKey* publicKey, Token* token, OSObject* key);
 
 	static bool setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate);
+
+	static CK_RV copyMLDSAContext(const CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext, SIGN_ADDITIONAL_CONTEXT** additionalContext);
 };
 
 #endif // WITH_ML_DSA

@@ -352,41 +352,6 @@ void Session::setParameters(void* inParam, size_t inParamLen)
 		paramLen = 0;
 	}
 
-	// For ML-DSA, deep-copy struct + context bytes into one buffer and fix the pointer
-	// Suggested by CodeRabbit to avoid memory leak
-    if (mechanism == AsymMech::MLDSA && inParamLen == sizeof(SIGN_ADDITIONAL_CONTEXT)) {
-        const SIGN_ADDITIONAL_CONTEXT* additionalContext = static_cast<const SIGN_ADDITIONAL_CONTEXT*>(inParam);
-        const size_t ctxLen = additionalContext->contextLength;
-		if (ctxLen > 0 && additionalContext->contextAsChar == NULL) {
-            // Invalid input; leave parameters unset
-            return;
-        }
-
-        // total = struct + optional context bytes
-        const size_t total = sizeof(SIGN_ADDITIONAL_CONTEXT) + ctxLen;
-        unsigned char* buf = static_cast<unsigned char*>(malloc(total));
-        if (!buf) {
-            // Out of memory; leave parameters unset
-            return;
-        }
-
-        // Copy the struct first
-        memcpy(buf, additionalContext, sizeof(SIGN_ADDITIONAL_CONTEXT));
-        auto* stored = reinterpret_cast<SIGN_ADDITIONAL_CONTEXT*>(buf);
-
-        // Copy context bytes (if present) and repoint inside the stored struct
-        if (ctxLen) {
-            unsigned char* payload = buf + sizeof(SIGN_ADDITIONAL_CONTEXT);
-            memcpy(payload, additionalContext->contextAsChar, ctxLen);
-            stored->contextAsChar = payload;
-        } else {
-            stored->contextAsChar = NULL;
-        }
-        param  = buf;
-        paramLen = sizeof(SIGN_ADDITIONAL_CONTEXT);
-        return;
-    }
-
 	param = malloc(inParamLen);
 	if (param != NULL)
 	{

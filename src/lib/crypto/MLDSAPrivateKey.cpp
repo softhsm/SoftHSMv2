@@ -16,6 +16,10 @@
 // Check if the key is of the given type
 bool MLDSAPrivateKey::isOfType(const char* inType)
 {
+	if (inType == NULL)
+	{
+		 return false;
+	}
 	return !strcmp(type, inType);
 }
 

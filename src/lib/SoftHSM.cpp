@@ -4201,7 +4201,8 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 #endif
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
-	SIGN_ADDITIONAL_CONTEXT additionalContext = {};
+	// RAII guard to ensure no leak on early returns; null after setParameters().
+	MLDSAAdditionalContextGuard mldsaCtxGuard;
 #endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -4474,46 +4475,20 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			mechanism = AsymMech::MLDSA;
 			bAllowMultiPartOp = false;
 			isMLDSA = true;
-			if (pMechanism->pParameter != NULL_PTR) {
+			if (pMechanism->pParameter != NULL_PTR)
+			{
 				if (pMechanism->ulParameterLen != sizeof(CK_SIGN_ADDITIONAL_CONTEXT))
 				{
 					ERROR_MSG("Invalid parameters");
 					return CKR_ARGUMENTS_BAD;
 				}
 				const CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (const CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-				if (ckSignAdditionalContext->ulContextLen > 255)
+				int copyResult = MLDSAUtil::copyMLDSAContext(ckSignAdditionalContext, &mldsaCtxGuard.ptr);
+				if (copyResult != CKR_OK)
 				{
-					ERROR_MSG("ML-DSA: Invalid parameters, context length > 255");
-					return CKR_ARGUMENTS_BAD;
+					return copyResult;
 				}
-				
-				// Always initialize context fields
-				additionalContext.contextAsChar = NULL;
-				additionalContext.contextLength = 0;
-				if (ckSignAdditionalContext->ulContextLen > 0)
-				{
-					if (ckSignAdditionalContext->pContext == NULL)
-					{
-						ERROR_MSG("ML-DSA: Invalid parameters, pContext is NULL");
-						return CKR_ARGUMENTS_BAD;
-					}
-					additionalContext.contextAsChar = (unsigned char*) ckSignAdditionalContext->pContext;
-					additionalContext.contextLength = ckSignAdditionalContext->ulContextLen;
-				}
-				switch (ckSignAdditionalContext->hedgeVariant) {
-					case CKH_HEDGE_REQUIRED:
-						additionalContext.hedgeType = Hedge::HEDGE_REQUIRED;
-						break;
-					case CKH_DETERMINISTIC_REQUIRED:
-						additionalContext.hedgeType = Hedge::DETERMINISTIC_REQUIRED;
-						break;
-					case CKH_HEDGE_PREFERRED:
-					// Per PKCS11v3.2 section 6.67.5
-					// "If no parameter is supplied the hedgeVariant will be CKH_HEDGE_PREFERRED"
-					default:
-						additionalContext.hedgeType = Hedge::HEDGE_PREFERRED;
-				}
-				param = &additionalContext;
+				param = mldsaCtxGuard.ptr;
 				paramLen = sizeof(SIGN_ADDITIONAL_CONTEXT);
 			}
 			break;
@@ -4667,6 +4642,14 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
 	session->setParameters(param, paramLen);
+	// parameters are deep-copied by Session; release our transient allocation.
+#ifdef WITH_ML_DSA
+	if (isMLDSA)
+	{
+		mldsaCtxGuard.ptr = NULL;
+	}
+#endif
+
 	session->setAllowMultiPartOp(bAllowMultiPartOp);
 	session->setAllowSinglePartOp(true);
 	session->setPrivateKey(privateKey);
@@ -5278,7 +5261,8 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 #endif
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
-	SIGN_ADDITIONAL_CONTEXT additionalContext = {};
+	// RAII guard to ensure no leak on early returns; null after setParameters().
+	MLDSAAdditionalContextGuard mldsaCtxGuard;
 #endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -5549,48 +5533,20 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			mechanism = AsymMech::MLDSA;
 			bAllowMultiPartOp = false;
 			isMLDSA = true;
-			if (pMechanism->pParameter != NULL_PTR) {
+			if (pMechanism->pParameter != NULL_PTR)
+			{
 				if(pMechanism->ulParameterLen != sizeof(CK_SIGN_ADDITIONAL_CONTEXT))
 				{
 					ERROR_MSG("Invalid parameters");
 					return CKR_ARGUMENTS_BAD;
 				}
-				else
-				{
-					const CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (const CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-					if (ckSignAdditionalContext->ulContextLen > 255) {
-						ERROR_MSG("ML-DSA: Invalid parameters, context length > 255");
-						return CKR_ARGUMENTS_BAD;
-					}
-					// Always initialize context fields
-					additionalContext.contextAsChar = NULL;
-					additionalContext.contextLength = 0;
-					if (ckSignAdditionalContext->ulContextLen > 0) {
-						if (ckSignAdditionalContext->pContext == NULL)
-						{
-							ERROR_MSG("ML-DSA: Invalid parameters, pContext is NULL");
-							return CKR_ARGUMENTS_BAD;
-						}
-						additionalContext.contextAsChar = (unsigned char*) ckSignAdditionalContext->pContext;
-						additionalContext.contextLength = ckSignAdditionalContext->ulContextLen;
-					}
-
-					switch (ckSignAdditionalContext->hedgeVariant) {
-						case CKH_HEDGE_REQUIRED:
-							additionalContext.hedgeType = Hedge::HEDGE_REQUIRED;
-							break;
-						case CKH_DETERMINISTIC_REQUIRED:
-							additionalContext.hedgeType = Hedge::DETERMINISTIC_REQUIRED;
-							break;
-						// Per PKCS11v3.2 section 6.67.5
-						// "If no parameter is supplied the hedgeVariant will be CKH_HEDGE_PREFERRED"
-						case CKH_HEDGE_PREFERRED:
-						default:
-							additionalContext.hedgeType = Hedge::HEDGE_PREFERRED;
-					}
-					param = &additionalContext;
-					paramLen = sizeof(SIGN_ADDITIONAL_CONTEXT);
+				const CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (const CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
+				int copyResult = MLDSAUtil::copyMLDSAContext(ckSignAdditionalContext, &mldsaCtxGuard.ptr);
+				if (copyResult != CKR_OK) {
+					return copyResult;
 				}
+				param = mldsaCtxGuard.ptr;
+				paramLen = sizeof(SIGN_ADDITIONAL_CONTEXT);
 			}
 			break;
 #endif
@@ -5737,6 +5693,14 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
 	session->setParameters(param, paramLen);
+	// parameters are deep-copied by Session; release our transient allocation.
+#ifdef WITH_ML_DSA
+	if (isMLDSA)
+	{
+		mldsaCtxGuard.ptr = NULL;
+	}
+#endif
+
 	session->setAllowMultiPartOp(bAllowMultiPartOp);
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
