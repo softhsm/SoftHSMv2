@@ -2228,6 +2228,38 @@ bool P11AttrEcPoint::setDefault()
 }
 
 /*****************************************
+ * CKA_PARAMETER_SET
+ *****************************************/
+
+// Set default value
+bool P11AttrParameterSet::setDefault()
+{
+	OSAttribute attr((unsigned long)0);
+	return osobject->setAttribute(type, attr);
+}
+
+// Update the value if allowed
+CK_RV P11AttrParameterSet::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op)
+{
+	// Attribute specific checks
+	if (op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE)
+	{
+		return CKR_ATTRIBUTE_READ_ONLY;
+	}
+
+	if (ulValueLen != sizeof(CK_ULONG))
+	{
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+
+	// Store data
+
+	osobject->setAttribute(type, *(CK_ULONG*)pValue);
+
+	return CKR_OK;
+}
+
+/*****************************************
  * CKA_GOSTR3410_PARAMS
  *****************************************/
 
@@ -2521,5 +2553,44 @@ CK_RV P11AttrAllowedMechanisms::updateAttr(Token* /*token*/, bool /*isPrivate*/,
 
 	// Store data
 	osobject->setAttribute(type, OSAttribute(data));
+	return CKR_OK;
+}
+
+/*****************************************
+ * CKA_SEED
+ *****************************************/
+
+// Set default value
+bool P11AttrSeed::setDefault()
+{
+	OSAttribute attr(ByteString(""));
+	return osobject->setAttribute(type, attr);
+}
+
+// Update the value if allowed
+CK_RV P11AttrSeed::updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int /*op*/)
+{
+	ByteString plaintext((unsigned char*)pValue, ulValueLen);
+	ByteString value;
+
+	// Encrypt
+
+	if (isPrivate)
+	{
+		if (!token->encrypt(plaintext, value))
+			return CKR_GENERAL_ERROR;
+	}
+	else
+		value = plaintext;
+
+	// Attribute specific checks
+
+	if (value.size() < ulValueLen)
+		return CKR_GENERAL_ERROR;
+
+	// Store data
+
+	osobject->setAttribute(type, value);
+
 	return CKR_OK;
 }

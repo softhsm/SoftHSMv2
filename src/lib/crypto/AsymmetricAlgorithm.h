@@ -33,6 +33,7 @@
 #ifndef _SOFTHSM_V2_ASYMMETRICALGORITHM_H
 #define _SOFTHSM_V2_ASYMMETRICALGORITHM_H
 
+#include <vector>
 #include "config.h"
 #include "AsymmetricKeyPair.h"
 #include "AsymmetricParameters.h"
@@ -53,7 +54,8 @@ struct AsymAlgo
 		ECDH,
 		ECDSA,
 		GOST,
-		EDDSA
+		EDDSA,
+		MLDSA
         };
 };
 
@@ -92,7 +94,8 @@ struct AsymMech
 		ECDSA_SHA512,
 		GOST,
 		GOST_GOST,
-		EDDSA
+		EDDSA,
+		MLDSA
 	};
 };
 
@@ -114,6 +117,38 @@ struct RSA_PKCS_PSS_PARAMS
 	HashAlgo::Type hashAlg;
 	AsymRSAMGF::Type mgf;
 	size_t sLen;
+};
+
+struct Hedge
+{
+	enum Type
+	{
+		HEDGE_PREFERRED,
+		HEDGE_REQUIRED,
+		DETERMINISTIC_REQUIRED
+	};
+};
+
+struct SIGN_ADDITIONAL_CONTEXT
+{
+	Hedge::Type hedgeType;
+	std::vector<unsigned char> contextData;
+
+	SIGN_ADDITIONAL_CONTEXT(): 
+		hedgeType(Hedge::Type::HEDGE_PREFERRED),
+		contextData(){}
+	SIGN_ADDITIONAL_CONTEXT(Hedge::Type hedgeType): 
+		hedgeType(hedgeType),
+		contextData(){}
+	SIGN_ADDITIONAL_CONTEXT(Hedge::Type hedgeType, const unsigned char* contextAsChar, size_t contextLength): 
+		hedgeType(hedgeType),
+		contextData(contextAsChar, contextAsChar + contextLength){}
+};
+
+struct MLDSAAdditionalContextGuard {
+		SIGN_ADDITIONAL_CONTEXT* ptr;
+		MLDSAAdditionalContextGuard() : ptr(NULL) {}
+		~MLDSAAdditionalContextGuard() { if (ptr) delete ptr; }
 };
 
 class AsymmetricAlgorithm
