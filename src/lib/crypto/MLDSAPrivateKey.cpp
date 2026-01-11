@@ -16,6 +16,10 @@
 // Check if the key is of the given type
 bool MLDSAPrivateKey::isOfType(const char* inType)
 {
+	if (inType == NULL)
+	{
+		 return false;
+	}
 	return !strcmp(type, inType);
 }
 
@@ -84,8 +88,7 @@ bool MLDSAPrivateKey::deserialise(ByteString& serialised)
 	ByteString deserializedSeed = ByteString::chainDeserialise(serialised);
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
 
-	if ((deserializedSeed.size() == 0) ||
-	    (deserializedValue.size() == 0))
+	if ((deserializedSeed.size() == 0) || (deserializedValue.size() == 0))
 	{
 		return false;
 	}

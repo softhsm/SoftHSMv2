@@ -33,6 +33,9 @@
 #ifndef _SOFTHSM_V2_ASYMMETRICALGORITHM_H
 #define _SOFTHSM_V2_ASYMMETRICALGORITHM_H
 
+#include <new>
+#include <cstdlib>
+#include <cstring>
 #include "config.h"
 #include "AsymmetricKeyPair.h"
 #include "AsymmetricParameters.h"
@@ -130,26 +133,7 @@ struct Hedge
 
 struct SIGN_ADDITIONAL_CONTEXT
 {
-	Hedge::Type hedgeType;
-	const unsigned char* contextAsChar;
-	size_t contextLength;
-
-	// Prevent shallow copies (Session::setParameters handles deep-copy)
-	SIGN_ADDITIONAL_CONTEXT(const SIGN_ADDITIONAL_CONTEXT&) = delete;
-	SIGN_ADDITIONAL_CONTEXT& operator=(const SIGN_ADDITIONAL_CONTEXT&) = delete;
-
-	SIGN_ADDITIONAL_CONTEXT(): 
-		hedgeType(Hedge::Type::HEDGE_PREFERRED),
-		contextAsChar(NULL),
-		contextLength(0){}
-	SIGN_ADDITIONAL_CONTEXT(Hedge::Type hedgeType): 
-		hedgeType(hedgeType),
-		contextAsChar(NULL),
-		contextLength(0){}
-	SIGN_ADDITIONAL_CONTEXT(Hedge::Type hedgeType, const unsigned char* contextAsChar, size_t contextLength): 
-		hedgeType(hedgeType),
-		contextAsChar(contextAsChar),
-		contextLength(contextLength){}
+    Hedge::Type hedgeType;
 };
 
 class AsymmetricAlgorithm
@@ -162,13 +146,13 @@ public:
 	virtual ~AsymmetricAlgorithm() { }
 
 	// Signing functions
-	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
+	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const void* additionalContext = NULL, const size_t additionalContextLen = 0);
 	virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
 	virtual bool signUpdate(const ByteString& dataToSign);
 	virtual bool signFinal(ByteString& signature);
 
 	// Verification functions
-	virtual bool verify(PublicKey* publicKey, const ByteString& originalData, const ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
+	virtual bool verify(PublicKey* publicKey, const ByteString& originalData, const ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const void* additionalContext = NULL, const size_t additionalContextLen = 0);
 	virtual bool verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
 	virtual bool verifyUpdate(const ByteString& originalData);
 	virtual bool verifyFinal(const ByteString& signature);

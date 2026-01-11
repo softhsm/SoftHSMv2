@@ -67,7 +67,8 @@ OSSLRSA::~OSSLRSA()
 // Signing functions
 bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 		   ByteString& signature, const AsymMech::Type mechanism,
-		   const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+		   const void* param /* = NULL */, const size_t paramLen /* = 0 */, 
+		   const void* /* additionalContext = NULL*/, const size_t /* additionalContextLen = 0 */)
 {
 	if (mechanism == AsymMech::RSA_PKCS)
 	{
@@ -675,7 +676,8 @@ bool OSSLRSA::signFinal(ByteString& signature)
 // Verification functions
 bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 		     const ByteString& signature, const AsymMech::Type mechanism,
-		     const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+		     const void* param /* = NULL */, const size_t paramLen /* = 0 */, 
+		   const void* /* additionalContext = NULL*/, const size_t /* additionalContextLen = 0 */)
 {
 	if (mechanism == AsymMech::RSA_PKCS)
 	{

@@ -49,7 +49,7 @@
 	// Get the CKA_PRIVATE attribute, when the attribute is not present use default false
 	bool isKeyPrivate = key->getBooleanValue(CKA_PRIVATE, false);
 
-	// EC Public Key Attributes
+	// ML-DSA Public Key Attributes
 	ByteString value;
 	if (isKeyPrivate)
 	{
@@ -72,7 +72,9 @@
 {
 	AsymmetricAlgorithm* mldsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLDSA);
 	if (mldsa == NULL)
+	{
 		return false;
+	}
 	PrivateKey* priv = mldsa->newPrivateKey();
 	if (priv == NULL)
 	{
@@ -86,13 +88,28 @@
 		return false;
 	}
 	// ML-DSA Private Key Attributes
-	ByteString parameterSet;
 	ByteString seed;
 	ByteString value;
 	if (isPrivate)
 	{
-		token->encrypt(((MLDSAPrivateKey*)priv)->getSeed(), seed);
-		token->encrypt(((MLDSAPrivateKey*)priv)->getValue(), value);
+		if (token == NULL)
+		{
+			mldsa->recyclePrivateKey(priv);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
+			return false;
+		}
+		if (!token->encrypt(((MLDSAPrivateKey*)priv)->getSeed(), seed))
+		{
+			mldsa->recyclePrivateKey(priv);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
+			return false;
+		}
+		if (!token->encrypt(((MLDSAPrivateKey*)priv)->getValue(), value))
+		{
+			mldsa->recyclePrivateKey(priv);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
+			return false;
+		}
 	}
 	else
 	{
@@ -108,6 +125,36 @@
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
 
 	return bOK;
+}
+
+/*static*/ CK_RV MLDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, SIGN_ADDITIONAL_CONTEXT* signAdditionalContext)
+{
+
+	if (signAdditionalContext == NULL) {
+		ERROR_MSG("Invalid parameters, signAdditionalContext is NULL");
+		return CKR_ARGUMENTS_BAD;
+	}
+
+	Hedge::Type hedgeType = Hedge::HEDGE_PREFERRED;
+
+	switch (inHedgeType) {
+		case CKH_HEDGE_REQUIRED:
+			hedgeType = Hedge::HEDGE_REQUIRED;
+			break;
+		case CKH_DETERMINISTIC_REQUIRED:
+			hedgeType = Hedge::DETERMINISTIC_REQUIRED;
+			break;
+		case CKH_HEDGE_PREFERRED:
+		// Per PKCS11v3.2 section 6.67.5
+		// "If no parameter is supplied the hedgeVariant will be CKH_HEDGE_PREFERRED"
+			hedgeType = Hedge::HEDGE_PREFERRED;
+			break;
+		default:
+			ERROR_MSG("ML-DSA: Invalid parameters, unknown hedgeVariant");
+			return CKR_ARGUMENTS_BAD;
+	}
+	signAdditionalContext->hedgeType = hedgeType;
+	return CKR_OK;
 }
 
 #endif

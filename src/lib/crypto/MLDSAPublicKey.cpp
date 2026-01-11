@@ -24,7 +24,7 @@ unsigned long MLDSAPublicKey::getBitLength() const
 	return getValue().bits();
 }
 
-// Get the bit length
+// Get the parameter set length
 unsigned long MLDSAPublicKey::getParameterSet() const
 {
 	switch(value.size()) {
@@ -38,7 +38,7 @@ unsigned long MLDSAPublicKey::getParameterSet() const
 	return 0UL;
 }
 
-// Get the signatureLength length
+// Get the signature length
 unsigned long MLDSAPublicKey::getOutputLength() const
 {
 	switch(value.size()) {

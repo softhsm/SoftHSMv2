@@ -7,8 +7,6 @@
 #ifndef _SOFTHSM_V2_MLDSAPARAMETERS_H
 #define _SOFTHSM_V2_MLDSAPARAMETERS_H
 
-#include <tuple>
-#include <stdexcept>
 #include "config.h"
 #include "ByteString.h"
 #include "AsymmetricParameters.h"
@@ -66,7 +64,7 @@ public:
 
 
 private:
-	unsigned long parameterSet;
+	unsigned long parameterSet = 0;
 
 };
 

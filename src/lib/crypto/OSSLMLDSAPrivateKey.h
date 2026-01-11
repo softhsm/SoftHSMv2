@@ -65,5 +65,5 @@ private:
 };
 
 #endif // WITH_ML_DSA
-#endif // !_SOFTHSM_V2_OSSLECPRIVATEKEY_H
+#endif // !_SOFTHSM_V2_OSSLMLDSAPRIVATEKEY_H
 

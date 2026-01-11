@@ -880,7 +880,7 @@ void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
 	CK_OBJECT_HANDLE hPrk = CK_INVALID_HANDLE;
 
     CK_BYTE data[] = "context-context-context";
-    CK_ULONG dataSize = (CK_ULONG)(sizeof(data) - 1); // exclude trailing NUL
+    CK_ULONG dataSize = (CK_ULONG)(sizeof(data) - 1); // exclude trailing NULL
 
 	CK_SIGN_ADDITIONAL_CONTEXT params[] = {
 		{ CKH_HEDGE_PREFERRED,  NULL,   0  },

@@ -26,7 +26,8 @@ int OSSLMLDSA::OSSL_DETERMINISTIC = 1;
 // Signing functions
 bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 					 ByteString &signature, const AsymMech::Type mechanism,
-					 const void * param /* = NULL*/, const size_t paramLen /* = 0 */)
+					 const void * param /* = NULL*/, const size_t paramLen /* = 0 */,
+					 const void* additionalContext /*  = NULL */, const size_t additionalContextLen /*  = 0 */)
 {
 	if (mechanism != AsymMech::MLDSA)
 	{
@@ -60,16 +61,9 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	}
 
 	// Perform the signature operation
-	size_t len = pk->getOutputLength();
-	if (len == 0)
-	{
-		ERROR_MSG("Could not get the signature length");
-		return false;
-	}
-	signature.resize(len);
-	memset(&signature[0], 0, len);
+	size_t len = 0;
 
-	if (param != NULL && paramLen != sizeof(SIGN_ADDITIONAL_CONTEXT))
+	if (param != NULL && paramLen < sizeof(SIGN_ADDITIONAL_CONTEXT))
 	{
 		ERROR_MSG("Invalid parameters supplied");
 
@@ -77,20 +71,20 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	}
 
 	OSSL_PARAM params[4], *p = params;
-	SIGN_ADDITIONAL_CONTEXT* additionalContext = (SIGN_ADDITIONAL_CONTEXT*) param;
-	if (additionalContext != NULL) {
-		Hedge::Type type = additionalContext->hedgeType;
-		size_t contextSize = additionalContext->contextLength;
+	SIGN_ADDITIONAL_CONTEXT* additionalContextHedge = (SIGN_ADDITIONAL_CONTEXT*) param;
+	if (additionalContextHedge != NULL) {
+		Hedge::Type type = additionalContextHedge->hedgeType;
+		size_t contextSize = additionalContextLen;
 		if (contextSize > 0) {
+			if (additionalContext == NULL) {
+				ERROR_MSG("Invalid parameters, context pointer is NULL");
+				return false;
+			}
 			if (contextSize > 255) {
 				ERROR_MSG("Invalid parameters, context length > 255");
 				return false;
 			}
-			if (additionalContext->contextAsChar == NULL) {
-				ERROR_MSG("Invalid parameters, context pointer is NULL");
-				return false;
-			}
-			const unsigned char* contextAsChars = additionalContext->contextAsChar;
+			const unsigned char* contextAsChars = (const unsigned char*) additionalContext;
 			*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, (unsigned char*)contextAsChars, contextSize);
 		}
 		switch (type) {
@@ -122,7 +116,7 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 
 	EVP_SIGNATURE *sig_alg = EVP_SIGNATURE_fetch(NULL, name, NULL);
 	if (sig_alg == NULL) {
-		ERROR_MSG("ML-DSA EVP_SIGNATURE_fetch failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA EVP_SIGNATURE_fetch failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
@@ -135,21 +129,21 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 		initRv = EVP_PKEY_sign_message_init(sctx, sig_alg, NULL);
 	}
 	if (!initRv) {
-		ERROR_MSG("ML-DSA sign_message_init failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA sign_message_init failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
     /* Calculate the required size for the signature by passing a NULL buffer. */
     if (EVP_PKEY_sign(sctx, NULL, &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0) {
-		ERROR_MSG("ML-DSA sign size query failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA sign size query failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
 	signature.resize(len);
     if (EVP_PKEY_sign(sctx, &signature[0], &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0) {
-		ERROR_MSG("ML-DSA sign failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA sign failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;
@@ -186,7 +180,8 @@ bool OSSLMLDSA::signFinal(ByteString & /*signature*/)
 // Verification functions
 bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 					   const ByteString &signature, const AsymMech::Type mechanism,
-					   const void * param /* = NULL */, const size_t paramLen /* = 0 */)
+					   const void * param /* = NULL */, const size_t paramLen /* = 0 */,
+					   const void* additionalContext /*  = NULL */, const size_t additionalContextLen /*  = 0 */)
 {
 	if (mechanism != AsymMech::MLDSA)
 	{
@@ -231,7 +226,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 		return false;
 	}
 
-	if (param != NULL && paramLen != sizeof(SIGN_ADDITIONAL_CONTEXT))
+	if (param != NULL && paramLen < sizeof(SIGN_ADDITIONAL_CONTEXT))
 	{
 		ERROR_MSG("Invalid parameters supplied");
 
@@ -239,20 +234,20 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	}
 
 	OSSL_PARAM params[4], *p = params;
-	SIGN_ADDITIONAL_CONTEXT* additionalContext = (SIGN_ADDITIONAL_CONTEXT*) param;
-	if (additionalContext != NULL) {
-		Hedge::Type type = additionalContext->hedgeType;
-		size_t contextSize = additionalContext->contextLength;
+	SIGN_ADDITIONAL_CONTEXT* signAdditionalContext = (SIGN_ADDITIONAL_CONTEXT*) param;
+	if (signAdditionalContext != NULL) {
+		Hedge::Type type = signAdditionalContext->hedgeType;
+		size_t contextSize = additionalContextLen;
 		if (contextSize > 0) {
+			if (additionalContext == NULL) {
+				ERROR_MSG("Invalid parameters, context pointer is NULL");
+				return false;
+			}
 			if (contextSize > 255) {
 				ERROR_MSG("Invalid parameters, context length > 255");
 				return false;
 			}
-			if (additionalContext->contextAsChar == NULL) {
-                ERROR_MSG("Invalid parameters, context pointer is NULL");
-                return false;
-            }
-			const unsigned char* contextAsChars = additionalContext->contextAsChar;
+			const unsigned char* contextAsChars = (const unsigned char*) additionalContext;
 			*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, (unsigned char*)contextAsChars, contextSize);
 		}
 		switch (type) {
@@ -271,7 +266,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 
 	vctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
 	if (vctx == NULL) {
-		ERROR_MSG("ML-DSA EVP_PKEY_CTX_new_from_pkey failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA EVP_PKEY_CTX_new_from_pkey failed (0x%08lX)", ERR_get_error());
 		return false;
 	}
 
@@ -287,7 +282,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 
 	sig_alg = EVP_SIGNATURE_fetch(NULL, name, NULL);
 	if (sig_alg == NULL) {
-		ERROR_MSG("ML-DSA EVP_SIGNATURE_fetch failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA EVP_SIGNATURE_fetch failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(vctx);
 		return false;
 	}
@@ -302,7 +297,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	}
 
 	if (!initRv) {
-		ERROR_MSG("ML-DSA verify init failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA verify init failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(vctx);
 		EVP_SIGNATURE_free(sig_alg);
 		return false;
@@ -315,7 +310,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	{
         if (verifyRV != 0) 
 		{
-            ERROR_MSG("ML-DSA verify error (0x%08X)", ERR_get_error());
+            ERROR_MSG("ML-DSA verify error (0x%08lX)", ERR_get_error());
         }
         return false;
 	}
@@ -410,29 +405,26 @@ bool OSSLMLDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParamet
 	EVP_PKEY *pkey = NULL;
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
 	if (ctx == NULL) {
-		ERROR_MSG("ML-DSA keygen context failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA keygen context failed (0x%08lX)", ERR_get_error());
 		return false;
 	}
 	int initRV = EVP_PKEY_keygen_init(ctx);
 	if (initRV <= 0) {
-		ERROR_MSG("ML-DSA keygen init failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA keygen init failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(ctx);
 		return false;
 	}
 
 	int keygenRV = EVP_PKEY_generate(ctx, &pkey);
 	if (keygenRV <= 0) {
-		ERROR_MSG("ML-DSA keygen failed (0x%08X)", ERR_get_error());
+		ERROR_MSG("ML-DSA keygen failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(ctx);
 		return false;
 	}
 	// Create an asymmetric key-pair object to return
 	OSSLMLDSAKeyPair *kp = new OSSLMLDSAKeyPair();
 
-	// bump refcount for each wrapper
-	EVP_PKEY_up_ref(pkey);
 	((OSSLMLDSAPrivateKey*)kp->getPrivateKey())->setFromOSSL(pkey);
-	EVP_PKEY_up_ref(pkey);
 	((OSSLMLDSAPublicKey*) kp->getPublicKey())->setFromOSSL(pkey);
 
 	*ppKeyPair = kp;

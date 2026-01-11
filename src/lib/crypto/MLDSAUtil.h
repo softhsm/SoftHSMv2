@@ -24,6 +24,9 @@ public:
 	static CK_RV getMLDSAPublicKey(MLDSAPublicKey* publicKey, Token* token, OSObject* key);
 
 	static bool setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate);
+
+	static CK_RV setHedge(CK_HEDGE_TYPE inHedgeType, SIGN_ADDITIONAL_CONTEXT* signAdditionalContext);
+
 };
 
 #endif // WITH_ML_DSA
