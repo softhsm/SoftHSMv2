@@ -29,7 +29,7 @@
 
  Implements logging functions. This file is based on the concepts from
  SoftHSM v1 but extends the logging functions with support for a variable
- argument list as defined in stdarg (3).
+ argument list as defined in stdarg (3) and logging to file.
  *****************************************************************************/
 
 #include "config.h"
@@ -38,9 +38,19 @@
 #include <stdio.h>
 #include <sstream>
 #include <vector>
+#include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include "log.h"
+#include "MutexFactory.h"
 
 int softLogLevel = LOG_DEBUG;
+static FILE* logFile = nullptr;
+static Mutex* logMutex = nullptr;
 
 bool setLogLevel(const std::string &loglevel)
 {
@@ -67,6 +77,95 @@ bool setLogLevel(const std::string &loglevel)
 	}
 
 	return true;
+}
+
+bool setLogFile(const std::string &logFilePath)
+{
+	// Quick return without creating mutex for default configuration
+	if (logFilePath.empty() && logFile == nullptr)
+	{
+		return true;
+	}
+
+	if (logMutex == nullptr)
+	{
+		// Create mutex for later access
+		logMutex = MutexFactory::i()->getMutex();
+	}
+
+	if (logFile != nullptr)
+	{
+		fclose(logFile);
+		logFile = nullptr;
+	}
+
+	if (logFilePath.empty())
+	{
+		return true;
+	}
+
+	// This function needs to be called in init so it does not need locking
+	logFile = fopen(logFilePath.c_str(), "a");
+	if (logFile == nullptr)
+	{
+		syslog(LOG_ERR, "Failed to open log file: %s, using syslog only", logFilePath.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+void closeLogFile()
+{
+	if (logFile != nullptr)
+	{
+		fclose(logFile);
+		logFile = nullptr;
+	}
+
+	if (logMutex != nullptr)
+	{
+		MutexFactory::i()->recycleMutex(logMutex);
+		logMutex = nullptr;
+	}
+}
+
+static const char* getLevelString(int loglevel)
+{
+	switch(loglevel)
+	{
+		case LOG_ERR: return "ERROR";
+		case LOG_WARNING: return "WARNING";
+		case LOG_INFO: return "INFO";
+		case LOG_DEBUG: return "DEBUG";
+		default: return "UNKNOWN";
+	}
+}
+
+static void writeLogToFile(const int loglevel, const char* prependText, const char* msgText)
+{
+	MutexLocker lock(logMutex);
+
+#ifdef _WIN32
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	fprintf(logFile, "%04d-%02d-%02d %02d:%02d:%02d.%03d [%d] %s: %s%s\n",
+		st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,
+		_getpid(), getLevelString(loglevel), prependText, msgText);
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	struct tm timeinfo;
+	localtime_r(&ts.tv_sec, &timeinfo);
+
+	char basetime[32];
+	strftime(basetime, sizeof(basetime), "%Y-%m-%d %H:%M:%S", &timeinfo);
+	fprintf(logFile, "%s.%03ld [%d] %s: %s%s\n",
+		basetime, ts.tv_nsec / 1000000,
+		(int)getpid(), getLevelString(loglevel), prependText, msgText);
+#endif
+
+	fflush(logFile);
 }
 
 void softHSMLog(const int loglevel, const char* functionName, const char* fileName, const int lineNo, const char* format, ...)
@@ -98,12 +197,22 @@ void softHSMLog(const int loglevel, const char* functionName, const char* fileNa
 	vsnprintf(&logMessage[0], 4096, format, args);
 	va_end(args);
 
-	// And log it
-	syslog(loglevel, "%s%s", prepend.str().c_str(), &logMessage[0]);
+	const char* msgText = &logMessage[0];
+	std::string prependStr = prepend.str();
+	const char* prependText = prependStr.c_str();
+
+	// Log to file if configured, otherwise use syslog
+	if (logFile != nullptr)
+	{
+		writeLogToFile(loglevel, prependText, msgText);
+	}
+	else
+	{
+		syslog(loglevel, "%s%s", prependText, msgText);
+	}
 
 #ifdef DEBUG_LOG_STDERR
-	fprintf(stderr, "%s%s\n", prepend.str().c_str(), &logMessage[0]);
+	fprintf(stderr, "%s%s\n", prependText, msgText);
 	fflush(stderr);
-#endif // DEBUG_LOG_STDERR
+#endif
 }
-
