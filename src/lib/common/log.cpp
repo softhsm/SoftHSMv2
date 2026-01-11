@@ -39,6 +39,12 @@
 #include <sstream>
 #include <vector>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include "log.h"
 #include "MutexFactory.h"
 
@@ -140,18 +146,25 @@ static void writeLogToFile(const int loglevel, const char* prependText, const ch
 {
 	MutexLocker lock(logMutex);
 
-	time_t now = time(nullptr);
-	struct tm timeinfo;
-	char timeStr[64];
-
 #ifdef _WIN32
-	localtime_s(&timeinfo, &now);
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	fprintf(logFile, "%04d-%02d-%02d %02d:%02d:%02d.%03d [%d] %s: %s%s\n",
+		st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,
+		_getpid(), getLevelString(loglevel), prependText, msgText);
 #else
-	localtime_r(&now, &timeinfo);
-#endif
-	strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	struct tm timeinfo;
+	localtime_r(&ts.tv_sec, &timeinfo);
 
-	fprintf(logFile, "%s %s: %s%s\n", timeStr, getLevelString(loglevel), prependText, msgText);
+	char basetime[32];
+	strftime(basetime, sizeof(basetime), "%Y-%m-%d %H:%M:%S", &timeinfo);
+	fprintf(logFile, "%s.%03ld [%d] %s: %s%s\n",
+		basetime, ts.tv_nsec / 1000000,
+		(int)getpid(), getLevelString(loglevel), prependText, msgText);
+#endif
+
 	fflush(logFile);
 }
 
