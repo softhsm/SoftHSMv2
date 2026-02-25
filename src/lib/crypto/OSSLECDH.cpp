@@ -94,7 +94,8 @@ bool OSSLECDH::verifyFinal(const ByteString& /*signature*/)
 
 // Encryption functions
 bool OSSLECDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-		       ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/)
+		       ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/,
+			   const void* /*param*/, const size_t /*paramLen*/)
 {
 	ERROR_MSG("ECDH does not support encryption");
 
@@ -103,7 +104,8 @@ bool OSSLECDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool OSSLECDH::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-		       ByteString& /*data*/, const AsymMech::Type /*padding*/)
+		       ByteString& /*data*/, const AsymMech::Type /*padding*/,
+			   const void* /*param*/, const size_t /*paramLen*/)
 {
 	ERROR_MSG("ECDH does not support decryption");
 
