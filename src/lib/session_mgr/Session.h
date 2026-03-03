@@ -106,9 +106,6 @@ public:
 	void setParameters(void* inParam, size_t inParamLen);
 	void* getParameters(size_t& inParamLen);
 
-	void setAdditionalContext(void* inAdditionalContext, size_t inAdditionalContextLen);
-	void* getAdditionalContext(size_t& inAdditionalContextLen);
-
 	void setReAuthentication(bool inReAuthentication);
 	bool getReAuthentication();
 
@@ -165,6 +162,7 @@ private:
 	AsymMech::Type mechanism;
 	void* param;
 	size_t paramLen;
+	ByteString* additionalContext;
 	bool reAuthentication;
 	bool allowMultiPartOp;
 	bool allowSinglePartOp;
@@ -174,8 +172,6 @@ private:
 	// Symmetric Crypto
 	SymmetricKey* symmetricKey;
 	
-	void* additionalContext;
-	size_t additionalContextLen;
 };
 
 #endif // !_SOFTHSM_V2_SESSION_H

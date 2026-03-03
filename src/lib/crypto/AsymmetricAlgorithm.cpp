@@ -47,8 +47,7 @@ AsymmetricAlgorithm::AsymmetricAlgorithm()
 // Signing functions
 bool AsymmetricAlgorithm::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 			       ByteString& signature, const AsymMech::Type mechanism,
-			       const void* param /* = NULL */, const size_t paramLen /* = 0 */, 
-				   const void* /* additionalContext = NULL */, const size_t /* additionalContextLen = 0 */)
+			       const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
 	// Compose from multi-part operations
 	return (signInit(privateKey, mechanism, param, paramLen) && signUpdate(dataToSign) && signFinal(signature));
@@ -96,8 +95,7 @@ bool AsymmetricAlgorithm::signFinal(ByteString& /*signature*/)
 // Verification functions
 bool AsymmetricAlgorithm::verify(PublicKey* publicKey, const ByteString& originalData,
 				 const ByteString& signature, const AsymMech::Type mechanism,
-				 const void* param /* = NULL */, const size_t paramLen /* = 0 */, 
-				 const void* /* additionalContext  = NULL */, const size_t /* additionalContextLen  = 0 */)
+				 const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
 	// Compose from multi-part operations
 	return (verifyInit(publicKey, mechanism, param, paramLen) && verifyUpdate(originalData) && verifyFinal(signature));

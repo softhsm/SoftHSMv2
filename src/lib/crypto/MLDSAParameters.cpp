@@ -7,6 +7,7 @@
 #include "config.h"
 #include "log.h"
 #include "MLDSAParameters.h"
+#include "OSSLUtil.h"
 #include <string.h>
 
 // The type
@@ -41,6 +42,12 @@ bool MLDSAParameters::deserialise(ByteString& serialised)
 
 	if (serialised.size() == 0)
 	{
+		return false;
+	}
+
+	unsigned long parameter = serialised.long_val();
+	const char* name = OSSL::mldsaParameterSet2Name(parameter);
+	if (name == NULL) {
 		return false;
 	}
 

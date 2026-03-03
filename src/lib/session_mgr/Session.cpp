@@ -59,7 +59,6 @@ Session::Session(Slot* inSlot, bool inIsReadWrite, CK_VOID_PTR inPApplication, C
 	param = NULL;
 	paramLen = 0;
 	additionalContext = NULL;
-	additionalContextLen = 0;
 }
 
 // Constructor
@@ -88,7 +87,6 @@ Session::Session()
 	param = NULL;
 	paramLen = 0;
 	additionalContext = NULL;
-	additionalContextLen = 0;
 }
 
 // Destructor
@@ -196,9 +194,8 @@ void Session::resetOp()
 	}
 
 	if (additionalContext != NULL) {
-		free(additionalContext);
+		delete additionalContext;
 		additionalContext = NULL;
-		additionalContextLen = 0;
 	}
 
 	if (digestOp != NULL)
@@ -368,36 +365,29 @@ void Session::setParameters(void* inParam, size_t inParamLen)
 		memcpy(param, inParam, inParamLen);
 		paramLen = inParamLen;
 	}
+
+	if (additionalContext != NULL) {
+		delete additionalContext;
+		additionalContext = NULL;
+	}
+
+	if (mechanism == AsymMech::MLDSA && inParamLen >= sizeof(SIGN_ADDITIONAL_CONTEXT) && (operation == SESSION_OP_SIGN || operation == SESSION_OP_VERIFY)) {
+		SIGN_ADDITIONAL_CONTEXT* inSignParam = (SIGN_ADDITIONAL_CONTEXT*) inParam;
+		if (inSignParam->additionalContext != NULL) {
+			ByteString* bs = inSignParam->additionalContext;
+			additionalContext = new ByteString(bs->byte_str(), bs->size());
+		}
+	}
 }
 
 void* Session::getParameters(size_t& inParamLen)
 {
 	inParamLen = paramLen;
+	if (mechanism == AsymMech::MLDSA && paramLen >= sizeof(SIGN_ADDITIONAL_CONTEXT) && (operation == SESSION_OP_SIGN || operation == SESSION_OP_VERIFY)) {
+		SIGN_ADDITIONAL_CONTEXT* signParam = (SIGN_ADDITIONAL_CONTEXT*) param;
+		signParam->additionalContext = additionalContext;
+	}
 	return param;
-}
-
-void Session::setAdditionalContext(void* inAdditionalContext, size_t inAdditionalContextLen)
-{
-	if (inAdditionalContext == NULL || inAdditionalContextLen == 0) return;
-
-	if (additionalContext != NULL)
-	{
-		free(additionalContext);
-		additionalContextLen = 0;
-	}
-
-	additionalContext = malloc(inAdditionalContextLen);
-	if (additionalContext != NULL)
-	{
-		memcpy(additionalContext, inAdditionalContext, inAdditionalContextLen);
-		additionalContextLen = inAdditionalContextLen;
-	}
-}
-
-void* Session::getAdditionalContext(size_t& inAdditionalContextLen)
-{
-	inAdditionalContextLen = additionalContextLen;
-	return additionalContext;
 }
 
 void Session::setReAuthentication(bool inReAuthentication)

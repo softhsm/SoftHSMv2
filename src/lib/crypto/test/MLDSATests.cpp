@@ -209,7 +209,8 @@ void MLDSATests::testSigningTestVector()
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		NULL
 	};
 
 	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
@@ -235,12 +236,14 @@ void MLDSATests::testSigningTestVectorEmptyContext()
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	std::string contextStr = std::string("");
+	ByteString* contextBS = new ByteString ((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextBS
 	};
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -261,13 +264,14 @@ void MLDSATests::testSigningTestVectorNonEmptyContext()
 	
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
-	ByteString contextStr = ByteString("436f6e74657874");
+	ByteString* contextStr = new ByteString("436f6e74657874");
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextStr
 	};
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.byte_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -288,13 +292,14 @@ void MLDSATests::testSigningTestVectorLongestContext()
 	
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
-	ByteString contextStr = ByteString("414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
+	ByteString* contextStr = new ByteString("414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextStr
 	};
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.byte_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -314,13 +319,14 @@ void MLDSATests::testSigningTestVectorContextTooLong()
 	
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
-	ByteString contextStr = ByteString("41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
+	ByteString* contextStr = new ByteString("41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextStr
 	};
 
-	CPPUNIT_ASSERT(!mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.byte_str(), contextStr.size()));
+	CPPUNIT_ASSERT(!mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 	mldsa->recyclePrivateKey(dPriv);
 }
 
@@ -339,7 +345,8 @@ void MLDSATests::testVerifyingTestVector()
 	CPPUNIT_ASSERT(dPub->getValue().size() != 0);
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		NULL
 	};
 
 	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
@@ -361,12 +368,14 @@ void MLDSATests::testVerifyingTestVectorEmptyContext()
 	CPPUNIT_ASSERT(dPub->getValue().size() != 0);
 
 	std::string contextStr = std::string("");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextBS
 	};
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -384,13 +393,14 @@ void MLDSATests::testVerifyingTestVectorNonEmptyContext()
 	dPub->setValue(pk);
 	CPPUNIT_ASSERT(dPub->getValue().size() != 0);
 
-	ByteString contextStr = ByteString("436f6e74657874");
+	ByteString* contextStr = new ByteString("436f6e74657874");
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextStr
 	};
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.byte_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -408,13 +418,14 @@ void MLDSATests::testVerifyingTestVectorLongestContext()
 	dPub->setValue(pk);
 	CPPUNIT_ASSERT(dPub->getValue().size() != 0);
 
-	ByteString contextStr = ByteString("414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
+	ByteString* contextStr = new ByteString("414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextStr
 	};
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.byte_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -432,13 +443,14 @@ void MLDSATests::testVerifyingTestVectorContextTooLong()
 	dPub->setValue(pk);
 	CPPUNIT_ASSERT(dPub->getValue().size() != 0);
 
-	ByteString contextStr = ByteString("41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
+	ByteString* contextStr = new ByteString("41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextStr
 	};
 
-	CPPUNIT_ASSERT(!mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.byte_str(), contextStr.size()));
+	CPPUNIT_ASSERT(!mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -464,7 +476,8 @@ void MLDSATests::testSigningVerifyingHedgePreferred()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::HEDGE_PREFERRED
+		Hedge::Type::HEDGE_PREFERRED,
+		NULL
 	};
 
 	// Sign the data
@@ -498,17 +511,19 @@ void MLDSATests::testSigningVerifyingHedgePreferredWithContext()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_PREFERRED");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::HEDGE_PREFERRED
+		Hedge::Type::HEDGE_PREFERRED,
+		contextBS
 	};
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -534,14 +549,16 @@ void MLDSATests::testSigningVerifyingHedgePreferredWithContextTooLong()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERRED");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::HEDGE_PREFERRED
+		Hedge::Type::HEDGE_PREFERRED,
+		contextBS
 	};
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT_EQUAL(false, mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT_EQUAL(false, mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -567,7 +584,8 @@ void MLDSATests::testSigningVerifyingHedgeRequired()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::HEDGE_REQUIRED
+		Hedge::Type::HEDGE_REQUIRED,
+		NULL
 	};
 
 	// Sign the data
@@ -601,17 +619,19 @@ void MLDSATests::testSigningVerifyingHedgeRequiredWithContext()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_REQUIRED");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::HEDGE_REQUIRED
+		Hedge::Type::HEDGE_REQUIRED,
+		contextBS
 	};
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -637,14 +657,16 @@ void MLDSATests::testSigningVerifyingHedgeRequiredWithContextTooLong()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIRED");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::HEDGE_REQUIRED
+		Hedge::Type::HEDGE_REQUIRED,
+		contextBS
 	};
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -670,7 +692,8 @@ void MLDSATests::testSigningVerifyingDeterministic()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		NULL
 	};
 
 	// Sign the data
@@ -704,17 +727,19 @@ void MLDSATests::testSigningVerifyingDeterministicWithContext()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("DETERMINISTIC_REQUIRED");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextBS
 	};
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -740,14 +765,16 @@ void MLDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("DETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIRED");
+	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
 
 	SIGN_ADDITIONAL_CONTEXT context = {
-		Hedge::Type::DETERMINISTIC_REQUIRED
+		Hedge::Type::DETERMINISTIC_REQUIRED,
+		contextBS
 	};
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context), contextStr.c_str(), contextStr.size()));
+	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context, sizeof(context)));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);

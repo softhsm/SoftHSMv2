@@ -77,7 +77,7 @@ void OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 	rv = EVP_PKEY_get_octet_string_param(inMLDSAKEY, OSSL_PKEY_PARAM_PRIV_KEY,
 									priv, sizeof(priv), &priv_len);
 	if(!rv) {
-		ERROR_MSG("Could not get private key private, rv: %d", rv);
+		ERROR_MSG("Could not get private key, rv: %d", rv);
 		return;
 	}
 

@@ -70,6 +70,11 @@
 
 /*static*/ bool MLDSAUtil::setMLDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate)
 {
+	if (key == NULL)
+	{
+		return false;
+	}
+
 	AsymmetricAlgorithm* mldsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLDSA);
 	if (mldsa == NULL)
 	{
@@ -127,11 +132,11 @@
 	return bOK;
 }
 
-/*static*/ CK_RV MLDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, SIGN_ADDITIONAL_CONTEXT* signAdditionalContext)
+/*static*/ CK_RV MLDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType)
 {
 
-	if (signAdditionalContext == NULL) {
-		ERROR_MSG("Invalid parameters, signAdditionalContext is NULL");
+	if (outHedgeType == NULL) {
+		ERROR_MSG("Invalid parameters, outHedgeType is NULL");
 		return CKR_ARGUMENTS_BAD;
 	}
 
@@ -153,7 +158,7 @@
 			ERROR_MSG("ML-DSA: Invalid parameters, unknown hedgeVariant");
 			return CKR_ARGUMENTS_BAD;
 	}
-	signAdditionalContext->hedgeType = hedgeType;
+	*outHedgeType = hedgeType;
 	return CKR_OK;
 }
 

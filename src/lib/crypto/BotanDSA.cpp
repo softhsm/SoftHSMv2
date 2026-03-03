@@ -61,8 +61,7 @@ BotanDSA::~BotanDSA()
 // Signing functions
 bool BotanDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 		    ByteString& signature, const AsymMech::Type mechanism,
-		    const void* param /* = NULL */, const size_t paramLen /* = 0 */, 
-			const void* /* additionalContext = NULL*/, const size_t /* additionalContextLen = 0 */)
+		    const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
 	std::string emsa;
 
@@ -279,8 +278,7 @@ bool BotanDSA::signFinal(ByteString& signature)
 // Verification functions
 bool BotanDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 		      const ByteString& signature, const AsymMech::Type mechanism,
-		      const void* param /* = NULL */, const size_t paramLen /* = 0 */, 
-		      const void* /* additionalContext = NULL*/, const size_t /* additionalContextLen = 0 */)
+		      const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
 	std::string emsa;
 

@@ -4195,8 +4195,6 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
 	SIGN_ADDITIONAL_CONTEXT mldsaParam;
-	void* additionalContext = NULL;
-	size_t additionalContextLen = 0;
 #endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -4485,13 +4483,20 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 					return CKR_ARGUMENTS_BAD;
 				}
 				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-				CK_RV rv = MLDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &mldsaParam);
+				CK_RV rv = MLDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &mldsaParam.hedgeType);
 				if (rv != CKR_OK) {
 					ERROR_MSG("Invalid parameters");
 					return CKR_ARGUMENTS_BAD;
 				}
-				additionalContext = ckSignAdditionalContext->pContext;
-				additionalContextLen = ckSignAdditionalContext->ulContextLen;
+				if (ckSignAdditionalContext->ulContextLen > 0) {
+					if (ckSignAdditionalContext->pContext == NULL_PTR) {
+						ERROR_MSG("Invalid parameters");
+						return CKR_ARGUMENTS_BAD;
+					}
+					mldsaParam.additionalContext = new ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
+				} else {
+					mldsaParam.additionalContext = NULL;
+				}
 				param = &mldsaParam;
 				paramLen = sizeof(mldsaParam);
 			}
@@ -4646,9 +4651,6 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
 	session->setParameters(param, paramLen);
-#ifdef WITH_ML_DSA
-	session->setAdditionalContext(additionalContext, additionalContextLen);
-#endif
 	session->setAllowMultiPartOp(bAllowMultiPartOp);
 	session->setAllowSinglePartOp(true);
 	session->setPrivateKey(privateKey);
@@ -4730,8 +4732,6 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 	PrivateKey* privateKey = session->getPrivateKey();
 	size_t paramLen;
 	void* param = session->getParameters(paramLen);
-	size_t additionalContextLen;
-	void* additionalContext = session->getAdditionalContext(additionalContextLen);
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || privateKey == NULL)
 	{
 		session->resetOp();
@@ -4781,7 +4781,7 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 			return CKR_GENERAL_ERROR;
 		}
 	}
-	else if (!asymCrypto->sign(privateKey,data,signature,mechanism,param,paramLen,additionalContext,additionalContextLen))
+	else if (!asymCrypto->sign(privateKey,data,signature,mechanism,param,paramLen))
 	{
 		session->resetOp();
 		return CKR_GENERAL_ERROR;
@@ -5263,8 +5263,6 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
 	SIGN_ADDITIONAL_CONTEXT mldsaParam;
-	void* additionalContext = NULL;
-	size_t additionalContextLen = 0;
 #endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -5551,13 +5549,16 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					return CKR_ARGUMENTS_BAD;
 				}
 				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-				CK_RV rv = MLDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &mldsaParam);
+				CK_RV rv = MLDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &mldsaParam.hedgeType);
 				if (rv != CKR_OK) {
 					ERROR_MSG("Invalid parameters");
 					return CKR_ARGUMENTS_BAD;
 				}
-				additionalContext = ckSignAdditionalContext->pContext;
-				additionalContextLen = ckSignAdditionalContext->ulContextLen;
+				if (ckSignAdditionalContext->ulContextLen > 0) {
+					mldsaParam.additionalContext = new ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
+				} else {
+					mldsaParam.additionalContext = NULL;
+				}
 				param = &mldsaParam;
 				paramLen = sizeof(mldsaParam);
 			}
@@ -5706,9 +5707,6 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
 	session->setParameters(param, paramLen);
-#ifdef WITH_ML_DSA
-	session->setAdditionalContext(additionalContext, additionalContextLen);
-#endif
 	session->setAllowMultiPartOp(bAllowMultiPartOp);
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
@@ -5778,8 +5776,6 @@ static CK_RV AsymVerify(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen,
 	PublicKey* publicKey = session->getPublicKey();
 	size_t paramLen;
 	void* param = session->getParameters(paramLen);
-	size_t additionalContextLen;
-	void* additionalContext = session->getAdditionalContext(additionalContextLen);
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || publicKey == NULL)
 	{
 		session->resetOp();
@@ -5819,7 +5815,7 @@ static CK_RV AsymVerify(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen,
 			return CKR_SIGNATURE_INVALID;
 		}
 	}
-	else if (!asymCrypto->verify(publicKey,data,signature,mechanism,param,paramLen,additionalContext,additionalContextLen))
+	else if (!asymCrypto->verify(publicKey,data,signature,mechanism,param,paramLen))
 	{
 		session->resetOp();
 		return CKR_SIGNATURE_INVALID;
@@ -10175,6 +10171,10 @@ CK_RV SoftHSM::generateMLDSA
 			case CKA_PARAMETER_SET:
 				if (pPublicKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
                     INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
+                    return CKR_ATTRIBUTE_VALUE_INVALID;
+                }
+				if (pPublicKeyTemplate[i].pValue == NULL) {
+                    INFO_MSG("CKA_PARAMETER_SET must have a value");
                     return CKR_ATTRIBUTE_VALUE_INVALID;
                 }
                 paramSet = *(CK_ULONG*)pPublicKeyTemplate[i].pValue;

@@ -26,8 +26,7 @@ int OSSLMLDSA::OSSL_DETERMINISTIC = 1;
 // Signing functions
 bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 					 ByteString &signature, const AsymMech::Type mechanism,
-					 const void * param /* = NULL*/, const size_t paramLen /* = 0 */,
-					 const void* additionalContext /*  = NULL */, const size_t additionalContextLen /*  = 0 */)
+					 const void * param /* = NULL*/, const size_t paramLen /* = 0 */)
 {
 	if (mechanism != AsymMech::MLDSA)
 	{
@@ -63,7 +62,8 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	// Perform the signature operation
 	size_t len = 0;
 
-	if (param != NULL && paramLen < sizeof(SIGN_ADDITIONAL_CONTEXT))
+	if ((param == NULL && paramLen != 0) ||
+	    (param != NULL && paramLen < sizeof(SIGN_ADDITIONAL_CONTEXT)))
 	{
 		ERROR_MSG("Invalid parameters supplied");
 
@@ -71,26 +71,26 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	}
 
 	OSSL_PARAM params[4], *p = params;
-	SIGN_ADDITIONAL_CONTEXT* additionalContextHedge = (SIGN_ADDITIONAL_CONTEXT*) param;
-	if (additionalContextHedge != NULL) {
-		Hedge::Type type = additionalContextHedge->hedgeType;
-		size_t contextSize = additionalContextLen;
-		if (contextSize > 0) {
-			if (additionalContext == NULL) {
-				ERROR_MSG("Invalid parameters, context pointer is NULL");
-				return false;
+	SIGN_ADDITIONAL_CONTEXT* signAdditionalContext = (SIGN_ADDITIONAL_CONTEXT*) param;
+	ByteString* context;
+	if (signAdditionalContext != NULL) {
+		Hedge::Type type = signAdditionalContext->hedgeType;
+		if (signAdditionalContext->additionalContext != NULL) {
+			context = signAdditionalContext->additionalContext;
+			size_t contextSize = context->size();
+			if (contextSize > 0) {
+				if (contextSize > 255) {
+					ERROR_MSG("Invalid parameters, context length > 255");
+					return false;
+				}
+				*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, context->byte_str(), contextSize);
 			}
-			if (contextSize > 255) {
-				ERROR_MSG("Invalid parameters, context length > 255");
-				return false;
-			}
-			const unsigned char* contextAsChars = (const unsigned char*) additionalContext;
-			*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, (unsigned char*)contextAsChars, contextSize);
 		}
 		switch (type) {
 			case Hedge::Type::DETERMINISTIC_REQUIRED:
 				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &OSSL_DETERMINISTIC);
 				break;
+			case Hedge::Type::HEDGE_REQUIRED:
 			default:
 				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &OSSL_RANDOM);
 				break;
@@ -128,7 +128,7 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	{
 		initRv = EVP_PKEY_sign_message_init(sctx, sig_alg, NULL);
 	}
-	if (!initRv) {
+	if (initRv <= 0) {
 		ERROR_MSG("ML-DSA sign_message_init failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
@@ -180,8 +180,7 @@ bool OSSLMLDSA::signFinal(ByteString & /*signature*/)
 // Verification functions
 bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 					   const ByteString &signature, const AsymMech::Type mechanism,
-					   const void * param /* = NULL */, const size_t paramLen /* = 0 */,
-					   const void* additionalContext /*  = NULL */, const size_t additionalContextLen /*  = 0 */)
+					   const void * param /* = NULL */, const size_t paramLen /* = 0 */)
 {
 	if (mechanism != AsymMech::MLDSA)
 	{
@@ -226,7 +225,8 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 		return false;
 	}
 
-	if (param != NULL && paramLen < sizeof(SIGN_ADDITIONAL_CONTEXT))
+	if ((param == NULL && paramLen != 0) ||
+	    (param != NULL && paramLen < sizeof(SIGN_ADDITIONAL_CONTEXT)))
 	{
 		ERROR_MSG("Invalid parameters supplied");
 
@@ -235,25 +235,26 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 
 	OSSL_PARAM params[4], *p = params;
 	SIGN_ADDITIONAL_CONTEXT* signAdditionalContext = (SIGN_ADDITIONAL_CONTEXT*) param;
+	ByteString* context;
 	if (signAdditionalContext != NULL) {
 		Hedge::Type type = signAdditionalContext->hedgeType;
-		size_t contextSize = additionalContextLen;
-		if (contextSize > 0) {
-			if (additionalContext == NULL) {
-				ERROR_MSG("Invalid parameters, context pointer is NULL");
-				return false;
+		if (signAdditionalContext->additionalContext != NULL) {
+			context = signAdditionalContext->additionalContext;
+			size_t contextSize = context->size();
+			if (contextSize > 0) {
+				if (contextSize > 255) {
+					ERROR_MSG("Invalid parameters, context length > 255");
+					return false;
+				}
+				*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, context->byte_str(), contextSize);
 			}
-			if (contextSize > 255) {
-				ERROR_MSG("Invalid parameters, context length > 255");
-				return false;
-			}
-			const unsigned char* contextAsChars = (const unsigned char*) additionalContext;
-			*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, (unsigned char*)contextAsChars, contextSize);
 		}
 		switch (type) {
 			case Hedge::Type::DETERMINISTIC_REQUIRED:
 				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &OSSL_DETERMINISTIC);
 				break;
+			case Hedge::Type::HEDGE_PREFERRED:
+			case Hedge::Type::HEDGE_REQUIRED:
 			default:
 				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &OSSL_RANDOM);
 				break;
@@ -296,7 +297,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 		initRv = EVP_PKEY_verify_message_init(vctx, sig_alg, NULL);
 	}
 
-	if (!initRv) {
+	if (initRv <= 0) {
 		ERROR_MSG("ML-DSA verify init failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(vctx);
 		EVP_SIGNATURE_free(sig_alg);

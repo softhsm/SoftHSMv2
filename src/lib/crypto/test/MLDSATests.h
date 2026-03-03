@@ -1,7 +1,7 @@
 /*****************************************************************************
  MLDSATests.h
 
- Contains test cases to test the MLDSA class
+ Contains test cases to test the ML-DSA class
  *****************************************************************************/
 
 #ifndef _SOFTHSM_V2_MLDSATESTS_H
