@@ -146,6 +146,7 @@ bool OSSLMLDSAPrivateKey::PKCS8Decode(const ByteString& ber)
 	PKCS8_PRIV_KEY_INFO_free(p8);
 	if (localPKey == NULL) return false;
 	setFromOSSL(localPKey);
+	if (value.size() == 0) return false;
 	EVP_PKEY_free(localPKey);
 	return true;
 }

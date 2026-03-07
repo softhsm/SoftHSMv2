@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "ByteString.h"
+#include "MechanismParam.h"
 #include "AsymmetricParameters.h"
 
 

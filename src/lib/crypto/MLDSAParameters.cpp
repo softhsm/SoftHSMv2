@@ -39,20 +39,23 @@ ByteString MLDSAParameters::serialise() const
 
 bool MLDSAParameters::deserialise(ByteString& serialised)
 {
+	#ifdef WITH_ML_DSA
+		if (serialised.size() == 0)
+		{
+			return false;
+		}
 
-	if (serialised.size() == 0)
-	{
-		return false;
-	}
+		unsigned long parameter = serialised.long_val();
+		const char* name = OSSL::mldsaParameterSet2Name(parameter);
+		if (name == NULL) {
+			return false;
+		}
 
-	unsigned long parameter = serialised.long_val();
-	const char* name = OSSL::mldsaParameterSet2Name(parameter);
-	if (name == NULL) {
-		return false;
-	}
+		setParameterSet(serialised.long_val());
 
-	setParameterSet(serialised.long_val());
-
-	return true;
+		return true;
+	#else
+		return false
+	#endif
 }
 

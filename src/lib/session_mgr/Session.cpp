@@ -58,7 +58,7 @@ Session::Session(Slot* inSlot, bool inIsReadWrite, CK_VOID_PTR inPApplication, C
 	symmetricKey = NULL;
 	param = NULL;
 	paramLen = 0;
-	additionalContext = NULL;
+	mechanismParam = NULL;
 }
 
 // Constructor
@@ -86,7 +86,7 @@ Session::Session()
 	symmetricKey = NULL;
 	param = NULL;
 	paramLen = 0;
-	additionalContext = NULL;
+	mechanismParam = NULL;
 }
 
 // Destructor
@@ -193,9 +193,9 @@ void Session::resetOp()
 		paramLen = 0;
 	}
 
-	if (additionalContext != NULL) {
-		delete additionalContext;
-		additionalContext = NULL;
+	if (mechanismParam != NULL) {
+		delete mechanismParam;
+		mechanismParam = NULL;
 	}
 
 	if (digestOp != NULL)
@@ -366,28 +366,29 @@ void Session::setParameters(void* inParam, size_t inParamLen)
 		paramLen = inParamLen;
 	}
 
-	if (additionalContext != NULL) {
-		delete additionalContext;
-		additionalContext = NULL;
-	}
-
-	if (mechanism == AsymMech::MLDSA && inParamLen >= sizeof(SIGN_ADDITIONAL_CONTEXT) && (operation == SESSION_OP_SIGN || operation == SESSION_OP_VERIFY)) {
-		SIGN_ADDITIONAL_CONTEXT* inSignParam = (SIGN_ADDITIONAL_CONTEXT*) inParam;
-		if (inSignParam->additionalContext != NULL) {
-			ByteString* bs = inSignParam->additionalContext;
-			additionalContext = new ByteString(bs->byte_str(), bs->size());
-		}
-	}
 }
 
 void* Session::getParameters(size_t& inParamLen)
 {
 	inParamLen = paramLen;
-	if (mechanism == AsymMech::MLDSA && paramLen >= sizeof(SIGN_ADDITIONAL_CONTEXT) && (operation == SESSION_OP_SIGN || operation == SESSION_OP_VERIFY)) {
-		SIGN_ADDITIONAL_CONTEXT* signParam = (SIGN_ADDITIONAL_CONTEXT*) param;
-		signParam->additionalContext = additionalContext;
-	}
 	return param;
+}
+
+void Session::setMechanismParam(MechanismParam* inMechanismParam)
+{
+	if (inMechanismParam == NULL) return;
+
+	if (mechanismParam != NULL)
+	{
+		delete mechanismParam;
+	}
+
+	mechanismParam = inMechanismParam->clone();
+}
+
+MechanismParam* Session::getMechanismParam()
+{
+	return mechanismParam;
 }
 
 void Session::setReAuthentication(bool inReAuthentication)

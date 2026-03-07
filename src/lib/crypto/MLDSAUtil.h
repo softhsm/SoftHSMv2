@@ -11,7 +11,8 @@
 #ifdef WITH_ML_DSA
 #include "MLDSAPrivateKey.h"
 #include "MLDSAPublicKey.h"
-#include "AsymmetricAlgorithm.h"
+#include "MLDSAParameters.h"
+#include "MLDSAMechanismParam.h"
 #include "CryptoFactory.h"
 #include "ByteString.h"
 #include "Token.h"

@@ -7,6 +7,7 @@
 #include "config.h"
 #ifdef WITH_ML_DSA
 #include "MLDSAUtil.h"
+#include "MLDSAMechanismParam.h"
 
 /*static*/ CK_RV MLDSAUtil::getMLDSAPrivateKey(MLDSAPrivateKey* privateKey, Token* token, OSObject* key)
 {

@@ -39,6 +39,7 @@
 #include "MacAlgorithm.h"
 #include "AsymmetricAlgorithm.h"
 #include "SymmetricAlgorithm.h"
+#include "MechanismParam.h"
 #include "Token.h"
 #include "cryptoki.h"
 
@@ -106,6 +107,9 @@ public:
 	void setParameters(void* inParam, size_t inParamLen);
 	void* getParameters(size_t& inParamLen);
 
+	void setMechanismParam(MechanismParam* mechanismParam);
+	MechanismParam* getMechanismParam();
+
 	void setReAuthentication(bool inReAuthentication);
 	bool getReAuthentication();
 
@@ -162,7 +166,7 @@ private:
 	AsymMech::Type mechanism;
 	void* param;
 	size_t paramLen;
-	ByteString* additionalContext;
+	MechanismParam* mechanismParam;
 	bool reAuthentication;
 	bool allowMultiPartOp;
 	bool allowSinglePartOp;

@@ -223,7 +223,8 @@ int OSSL::byteString2oid(const ByteString& byteString)
 #endif
 
 #ifdef WITH_ML_DSA
-const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
+const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) 
+{
 
 	std::map<unsigned long, const char*>::const_iterator it = mldsaAlgNameFromParameterSet.find(parameterSet);
 
@@ -231,6 +232,11 @@ const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
 		return it->second;
 	}
 
+	return NULL;
+}
+#else
+const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) 
+{
 	return NULL;
 }
 #endif
