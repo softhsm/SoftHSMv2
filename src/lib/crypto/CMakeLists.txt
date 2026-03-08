@@ -28,6 +28,11 @@ set(SOURCES AESKey.cpp
             GOSTPublicKey.cpp
             HashAlgorithm.cpp
             MacAlgorithm.cpp
+            MLDSAMechanismParam.cpp
+            MLDSAParameters.cpp
+            MLDSAPrivateKey.cpp
+            MLDSAPublicKey.cpp
+            MLDSAUtil.cpp
             RSAParameters.cpp
             RSAPrivateKey.cpp
             RSAPublicKey.cpp
@@ -69,6 +74,10 @@ if(WITH_OPENSSL)
                         OSSLGOSTR3411.cpp
                         OSSLHMAC.cpp
                         OSSLMD5.cpp
+                        OSSLMLDSA.cpp
+                        OSSLMLDSAKeyPair.cpp
+                        OSSLMLDSAPrivateKey.cpp
+                        OSSLMLDSAPublicKey.cpp
                         OSSLRNG.cpp
                         OSSLRSA.cpp
                         OSSLRSAKeyPair.cpp

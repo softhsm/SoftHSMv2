@@ -61,7 +61,8 @@ OSSLDSA::~OSSLDSA()
 // Signing functions
 bool OSSLDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 		   ByteString& signature, const AsymMech::Type mechanism,
-		   const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+		   const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		   const MechanismParam* /* mechanismParam */)
 {
 	if (mechanism == AsymMech::DSA)
 	{
@@ -238,7 +239,8 @@ bool OSSLDSA::signFinal(ByteString& signature)
 // Verification functions
 bool OSSLDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 		     const ByteString& signature, const AsymMech::Type mechanism,
-		     const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+		     const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		     const MechanismParam* /* mechanismParam */)
 {
 	if (mechanism == AsymMech::DSA)
 	{

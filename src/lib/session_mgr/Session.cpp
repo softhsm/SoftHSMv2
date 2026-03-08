@@ -58,6 +58,7 @@ Session::Session(Slot* inSlot, bool inIsReadWrite, CK_VOID_PTR inPApplication, C
 	symmetricKey = NULL;
 	param = NULL;
 	paramLen = 0;
+	mechanismParam = NULL;
 }
 
 // Constructor
@@ -85,6 +86,7 @@ Session::Session()
 	symmetricKey = NULL;
 	param = NULL;
 	paramLen = 0;
+	mechanismParam = NULL;
 }
 
 // Destructor
@@ -189,6 +191,11 @@ void Session::resetOp()
 		free(param);
 		param = NULL;
 		paramLen = 0;
+	}
+
+	if (mechanismParam != NULL) {
+		delete mechanismParam;
+		mechanismParam = NULL;
 	}
 
 	if (digestOp != NULL)
@@ -358,12 +365,30 @@ void Session::setParameters(void* inParam, size_t inParamLen)
 		memcpy(param, inParam, inParamLen);
 		paramLen = inParamLen;
 	}
+
 }
 
 void* Session::getParameters(size_t& inParamLen)
 {
 	inParamLen = paramLen;
 	return param;
+}
+
+void Session::setMechanismParam(MechanismParam* inMechanismParam)
+{
+	if (inMechanismParam == NULL) return;
+
+	if (mechanismParam != NULL)
+	{
+		delete mechanismParam;
+	}
+
+	mechanismParam = inMechanismParam->clone();
+}
+
+MechanismParam* Session::getMechanismParam()
+{
+	return mechanismParam;
 }
 
 void Session::setReAuthentication(bool inReAuthentication)

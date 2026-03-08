@@ -150,6 +150,8 @@ void fill_CKA_table(std::map<unsigned long, std::string> &t)
 	t[CKA_OS_TOKENFLAGS] = "CKA_OS_TOKENFLAGS";
 	t[CKA_OS_SOPIN] = "CKA_OS_SOPIN";
 	t[CKA_OS_USERPIN] = "CKA_OS_USERPIN";
+	t[CKA_PARAMETER_SET] = "CKA_PARAMETER_SET";
+	t[CKA_SEED] = "CKA_SEED";
 }
 
 void fill_CKM_table(std::map<unsigned long, std::string> &t)
@@ -478,6 +480,8 @@ void fill_CKM_table(std::map<unsigned long, std::string> &t)
 	t[CKM_RSA_PKCS_OAEP_TPM_1_1] = "CKM_RSA_PKCS_OAEP_TPM_1_1";
 	t[CKM_EC_EDWARDS_KEY_PAIR_GEN] = "CKM_EC_EDWARDS_KEY_PAIR_GEN";
 	t[CKM_EDDSA] = "CKM_EDDSA";
+	t[CKM_ML_DSA_KEY_PAIR_GEN] = "CKM_ML_DSA_KEY_PAIR_GEN";
+	t[CKM_ML_DSA] = "CKM_ML_DSA";
 }
 
 void fill_CKO_table(std::map<unsigned long, std::string> &t)
@@ -544,6 +548,7 @@ void fill_CKK_table(std::map<unsigned long, std::string> &t)
 	t[CKK_GOSTR3411] = "CKK_GOSTR3411";
 	t[CKK_GOST28147] = "CKK_GOST28147";
 	t[CKK_EC_EDWARDS] = "CKK_EC_EDWARDS";
+	t[CKK_ML_DSA] = "CKK_ML_DSA";
 }
 
 void fill_CKC_table(std::map<unsigned long, std::string> &t)
