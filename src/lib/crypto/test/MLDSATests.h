@@ -17,6 +17,12 @@ class MLDSATests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testSerialisation);
 	CPPUNIT_TEST(testPKCS8);
 	CPPUNIT_TEST(testSigningVerifying);
+	CPPUNIT_TEST(testSigningMultiPartVerifying);
+    CPPUNIT_TEST(testSigningMultiPartVerifyingWithContext);
+	CPPUNIT_TEST(testSigningVerifyingMultiPart);
+    CPPUNIT_TEST(testSigningVerifyingMultiPartWithContext);
+	CPPUNIT_TEST(testSigningMultiPartVerifyingMultiPart);
+    CPPUNIT_TEST(testSigningMultiPartVerifyingMultiPartWithContext);
 	CPPUNIT_TEST(testSigningTestVector);
 	CPPUNIT_TEST(testSigningTestVectorEmptyContext);
 	CPPUNIT_TEST(testSigningTestVectorNonEmptyContext);
@@ -43,6 +49,12 @@ public:
 	void testSerialisation();
 	void testPKCS8();
 	void testSigningVerifying();
+	void testSigningMultiPartVerifying();
+    void testSigningMultiPartVerifyingWithContext();
+    void testSigningVerifyingMultiPart();
+    void testSigningVerifyingMultiPartWithContext();
+    void testSigningMultiPartVerifyingMultiPart();
+    void testSigningMultiPartVerifyingMultiPartWithContext();
 	void testSigningTestVector();
 	void testSigningTestVectorEmptyContext();
 	void testSigningTestVectorNonEmptyContext();
