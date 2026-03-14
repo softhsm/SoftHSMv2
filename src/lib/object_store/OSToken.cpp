@@ -62,7 +62,7 @@ OSToken::OSToken(const std::string inTokenPath, int inUmask)
 	tokenMutex = MutexFactory::i()->getMutex();
 	valid = (gen != NULL) && (tokenMutex != NULL) && tokenDir->isValid() && tokenObject->valid;
 
-	DEBUG_MSG("Opened token %s", tokenPath.c_str());
+	DEBUG_MSG("Opened token %s (valid=%d)", tokenPath.c_str(), valid);
 
 	index(true);
 }
@@ -596,9 +596,18 @@ bool OSToken::index(bool isFirstTime /* = false */)
 	}
 
 	// Check the integrity
-	if (!tokenDir->refresh() || !tokenObject->valid)
+	if (!tokenDir->refresh())
 	{
-		ERROR_MSG("Token integrity check failed");
+		ERROR_MSG("Failed to refresh token directory %s", tokenPath.c_str());
+
+		valid = false;
+
+		return false;
+	}
+
+	if (!tokenObject->valid)
+	{
+		ERROR_MSG("Token object is not valid for %s", tokenPath.c_str());
 
 		valid = false;
 
@@ -658,8 +667,13 @@ bool OSToken::index(bool isFirstTime /* = false */)
 
 	currentFiles = newSet;
 
-	DEBUG_MSG("%d objects were added and %d objects were removed", addedFiles.size(), removedFiles.size());
-	DEBUG_MSG("Current directory set contains %d objects", currentFiles.size());
+	DEBUG_MSG("%zu objects were added and %zu objects were removed", addedFiles.size(), removedFiles.size());
+	DEBUG_MSG("Current directory set contains %zu objects", currentFiles.size());
+
+	if (!removedFiles.empty())
+	{
+		WARNING_MSG("Token %s: %zu object(s) no longer on disk", tokenPath.c_str(), removedFiles.size());
+	}
 
 	// Now update the set of objects
 
@@ -709,6 +723,8 @@ bool OSToken::index(bool isFirstTime /* = false */)
 		}
 		else
 		{
+			WARNING_MSG("Token %s: invalidating object %s (file no longer present)",
+				tokenPath.c_str(), fileObject->getFilename().c_str());
 			fileObject->invalidate();
 		}
 	}
@@ -716,7 +732,7 @@ bool OSToken::index(bool isFirstTime /* = false */)
 	// Set the new objects
 	objects = newObjects;
 
-	DEBUG_MSG("The token now contains %d objects", objects.size());
+	DEBUG_MSG("The token now contains %zu objects", objects.size());
 
 	return true;
 }
