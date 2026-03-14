@@ -275,6 +275,8 @@ bool ObjectFile::isValid()
 // been deleted.
 void ObjectFile::invalidate()
 {
+	DEBUG_MSG("Object %s invalidated", path.c_str());
+
 	valid = false;
 
 	discardAttributes();
@@ -678,7 +680,7 @@ void ObjectFile::store(bool isCommit /* = false */)
 
 	if (!objectFile.isValid())
 	{
-		DEBUG_MSG("Cannot open object %s for writing", path.c_str());
+		ERROR_MSG("Cannot open object %s for writing", path.c_str());
 
 		valid = false;
 
@@ -693,6 +695,8 @@ void ObjectFile::store(bool isCommit /* = false */)
 
 		if (!writeAttributes(objectFile))
 		{
+			ERROR_MSG("Failed to write attributes to object %s", path.c_str());
+
 			valid = false;
 
 			return;
@@ -702,6 +706,8 @@ void ObjectFile::store(bool isCommit /* = false */)
 	{
 		if (!writeAttributes(objectFile))
 		{
+			ERROR_MSG("Failed to commit attributes to object %s", path.c_str());
+
 			valid = false;
 
 			return;
