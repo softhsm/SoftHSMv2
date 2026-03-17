@@ -48,6 +48,7 @@ const struct config Configuration::valid_config[] = {
 	{ "objectstore.backend",	CONFIG_TYPE_STRING },
 	{ "objectstore.umask",		CONFIG_TYPE_INT_OCTAL },
 	{ "log.level",			CONFIG_TYPE_STRING },
+	{ "log.file",			CONFIG_TYPE_STRING },
 	{ "slots.removable",		CONFIG_TYPE_BOOL },
 	{ "slots.mechanisms",		CONFIG_TYPE_STRING },
 	{ "library.reset_on_fork",	CONFIG_TYPE_BOOL },
