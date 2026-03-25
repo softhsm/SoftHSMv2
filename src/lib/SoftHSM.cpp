@@ -2730,7 +2730,7 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 
 	data += ByteString(pData, ulDataLen);
 
-		// Encrypt the data
+	// Encrypt the data
 	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism, parameters, paramLen))
 	{
 		session->resetOp();

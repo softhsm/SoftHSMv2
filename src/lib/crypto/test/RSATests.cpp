@@ -621,7 +621,6 @@ void RSATests::testEncryptDecrypt()
 	// Paddings to test
 	std::vector<AsymMech::Type> paddings;
 	paddings.push_back(AsymMech::RSA_PKCS);
-	//paddings.push_back(AsymMech::RSA_PKCS_OAEP);
 	paddings.push_back(AsymMech::RSA);
 
 	//OAEP parameters for test
