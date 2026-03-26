@@ -159,21 +159,21 @@ bool AsymmetricAlgorithm::isWrappingMech(AsymMech::Type padding)
 
 // Wrap/Unwrap keys
 bool AsymmetricAlgorithm::wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding,
-		const void* param, size_t paramLen)
+		 const MechanismParam* mechanismParam)
 {
 	if (!isWrappingMech(padding))
 		return false;
 
-	return encrypt(publicKey, data, encryptedData, padding, param, paramLen);
+	return encrypt(publicKey, data, encryptedData, padding, mechanismParam);
 }
 
 bool AsymmetricAlgorithm::unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding,
-	const void* param, size_t paramLen)
+	 const MechanismParam* mechanismParam)
 {
 	if (!isWrappingMech(padding))
 		return false;
 
-	return decrypt(privateKey, encryptedData, data, padding, param, paramLen);
+	return decrypt(privateKey, encryptedData, data, padding, mechanismParam);
 }
 
 

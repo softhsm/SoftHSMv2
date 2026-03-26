@@ -36,6 +36,7 @@
 #include "OSSLUtil.h"
 #include "CryptoFactory.h"
 #include "RSAParameters.h"
+#include "RSAMechanismParam.h"
 #include "OSSLRSAKeyPair.h"
 #include <algorithm>
 #include <openssl/evp.h>
@@ -1243,7 +1244,7 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-					  ByteString& encryptedData, const AsymMech::Type padding, const void* param, const size_t paramLen)
+					  ByteString& encryptedData, const AsymMech::Type padding, const MechanismParam* mechanismParam)
 {
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(OSSLRSAPublicKey::type))
@@ -1255,7 +1256,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 	// Retrieve the OpenSSL key object
 	EVP_PKEY* rsa = ((OSSLRSAPublicKey*)publicKey)->getOSSLKey();
-	const RSA_PKCS_OAEP_PARAMS* oaepParam = NULL;
+	const RSAOaepMechanismParam* oaepParam = NULL;
 
 	// Check the data and padding algorithm
 
@@ -1277,12 +1278,24 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	}
 	else if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
-		if ((param == NULL) || (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
+		if (mechanismParam == NULL)
 		{
-			ERROR_MSG("Invalid RSA encryption OAEP parameter supplied");
+			ERROR_MSG("RSA OAEP mechanism parameter not supplied");
+
 			return false;
 		}
-		oaepParam = (RSA_PKCS_OAEP_PARAMS *)param;
+		if (!mechanismParam->isOfType(RSAOaepMechanismParam::type))
+		{
+			ERROR_MSG("Invalid RSA OAEP mechanism parameter type supplied");
+
+			return false;
+		}
+		//if ((param == NULL) || (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
+		//{
+		//		ERROR_MSG("Invalid RSA encryption OAEP parameter supplied");
+		//	return false;
+		//}
+		oaepParam = dynamic_cast<const RSAOaepMechanismParam*>(mechanismParam);
 		size_t hashLen = 0;
 		switch (oaepParam->hashAlg)
 		{
@@ -1309,7 +1322,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			default:
 				return false;
 		}
-		switch (oaepParam->mgf)
+		switch (oaepParam->mgfAlg)
 		{
 			case AsymRSAMGF::MGF1_SHA1:
 				mgf = EVP_sha1();
@@ -1377,8 +1390,8 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	if (osslPadding == RSA_PKCS1_OAEP_PADDING)
 	{
 		void* labelData = NULL;
-		if (oaepParam->sourceDataLen != 0)
-			labelData = OPENSSL_memdup(oaepParam->sourceData, oaepParam->sourceDataLen);
+		if (oaepParam->label.size() != 0)
+			labelData = OPENSSL_memdup(oaepParam->label.const_byte_str(), oaepParam->label.size());
 
 		if ((EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
@@ -1388,7 +1401,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			ERROR_MSG("Set OAEP parameters for RSA encryption failed (0x%08X)", ERR_get_error());
 			return false;
 		}
-		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0)
+		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData,  oaepParam->label.size()) <= 0)
 		{
 			OPENSSL_free(labelData);
 			EVP_PKEY_CTX_free(ctx);
@@ -1411,7 +1424,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 // Decryption functions
 bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-					  ByteString& data, const AsymMech::Type padding, const void* param, const size_t paramLen)
+					  ByteString& data, const AsymMech::Type padding, const MechanismParam* mechanismParam)
 {
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(OSSLRSAPrivateKey::type))
@@ -1423,7 +1436,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 
 	// Retrieve the OpenSSL key object
 	EVP_PKEY* rsa = ((OSSLRSAPrivateKey*)privateKey)->getOSSLKey();
-	const RSA_PKCS_OAEP_PARAMS* oaepParam = NULL;
+	const RSAOaepMechanismParam* oaepParam = NULL;
 
 	// Check the input size
 	if (encryptedData.size() != (size_t)EVP_PKEY_size(rsa))
@@ -1444,12 +1457,26 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	else if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
 		osslPadding = RSA_PKCS1_OAEP_PADDING;
-		if ((param == NULL) || (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
+		if (mechanismParam == NULL)
 		{
-			ERROR_MSG("Invalid RSA decryption OAEP parameter supplied");
+			ERROR_MSG("RSA OAEP mechanism parameter not supplied");
+
 			return false;
 		}
-		oaepParam = (RSA_PKCS_OAEP_PARAMS*)param;
+		if (!mechanismParam->isOfType(RSAOaepMechanismParam::type))
+		{
+			ERROR_MSG("Invalid RSA OAEP mechanism parameter type supplied");
+
+			return false;
+		}
+
+		//if ((param == NULL) || (paramLen != sizeof(RSA_PKCS_OAEP_PARAMS)))
+		//{
+		//	ERROR_MSG("Invalid RSA decryption OAEP parameter supplied");
+		//	return false;
+		//}
+	    oaepParam = dynamic_cast<const RSAOaepMechanismParam*>(mechanismParam);
+		//oaepParam = (RSA_PKCS_OAEP_PARAMS*)param;
 		switch (oaepParam->hashAlg)
 		{
 			case HashAlgo::SHA1:
@@ -1470,7 +1497,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			default:
 				return false;
 		}
-		switch (oaepParam->mgf)
+		switch (oaepParam->mgfAlg)
 		{
 			case AsymRSAMGF::MGF1_SHA1:
 				mgf = EVP_sha1();
@@ -1520,8 +1547,8 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	if (osslPadding == RSA_PKCS1_OAEP_PADDING)
 	{
 		void* labelData = NULL;
-		if (oaepParam->sourceDataLen != 0)
-			labelData = OPENSSL_memdup(oaepParam->sourceData, oaepParam->sourceDataLen);
+		if (oaepParam->label.size() != 0)
+			labelData = OPENSSL_memdup(oaepParam->label.const_byte_str(), oaepParam->label.size());
 		if ((EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0) ||
 			(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, mgf) <= 0))
 		{
@@ -1530,7 +1557,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			ERROR_MSG("Set OAEP parameters for RSA decryption failed (0x%08X)", ERR_get_error());
 			return false;
 		}
-		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->sourceDataLen) <= 0)
+		if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelData, oaepParam->label.size()) <= 0)
 		{
 			OPENSSL_free(labelData);
 			EVP_PKEY_CTX_free(ctx);

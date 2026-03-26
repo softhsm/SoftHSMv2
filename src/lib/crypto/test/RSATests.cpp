@@ -38,6 +38,7 @@
 #include "RNG.h"
 #include "AsymmetricKeyPair.h"
 #include "AsymmetricAlgorithm.h"
+#include "RSAMechanismParam.h"
 #include "RSAParameters.h"
 #include "RSAPublicKey.h"
 #include "RSAPrivateKey.h"
@@ -649,8 +650,7 @@ void RSATests::testEncryptDecrypt()
 			{
 				// Generate some test data to encrypt based on the selected padding
 				ByteString testData;
-				void *parameters = NULL;
-				size_t paramLen = 0;
+				RSAOaepMechanismParam* mechanismParam = NULL;
 
 				if (*pad == AsymMech::RSA_PKCS)
 				{
@@ -669,7 +669,7 @@ void RSATests::testEncryptDecrypt()
 
 				// Encrypt the data
 				ByteString encryptedData;
-				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, *pad, parameters, paramLen));
+				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, *pad, mechanismParam));
 				// The encrypted data length should equal the modulus length
 				CPPUNIT_ASSERT(encryptedData.size() == (*k >> 3));
 				CPPUNIT_ASSERT(encryptedData != testData);
@@ -677,7 +677,7 @@ void RSATests::testEncryptDecrypt()
 				// Now decrypt the data
 				ByteString decryptedData;
 
-				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, *pad, parameters, paramLen));
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, *pad, mechanismParam));
 
 				// Check that the data was properly decrypted
 				CPPUNIT_ASSERT(decryptedData == testData);
@@ -687,9 +687,7 @@ void RSATests::testEncryptDecrypt()
 			{
 				// Generate some test data to encrypt based on the selected padding
 				ByteString testData;
-			
-				void *parameters = &(par->hashAlg);
-				size_t paramLen = sizeof(RSA_PKCS_OAEP_PARAMS);
+				RSAOaepMechanismParam mechanismParam(par->hashAlg, par->mgf, ByteString(reinterpret_cast<const unsigned char*>(par->sourceData),par->sourceDataLen));
 				size_t hashLen = 0;
 				switch (par->hashAlg)
 				{
@@ -716,7 +714,7 @@ void RSATests::testEncryptDecrypt()
 	            CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 2 - hashLen*2));
 				// Encrypt the data
 				ByteString encryptedData;
-				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, AsymMech::RSA_PKCS_OAEP, parameters, paramLen));
+				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, AsymMech::RSA_PKCS_OAEP, &mechanismParam));
 				// The encrypted data length should equal the modulus length
 				CPPUNIT_ASSERT(encryptedData.size() == (*k >> 3));
 				CPPUNIT_ASSERT(encryptedData != testData);
@@ -724,19 +722,18 @@ void RSATests::testEncryptDecrypt()
 				// Now decrypt the data
 				ByteString decryptedData;
 
-				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, AsymMech::RSA_PKCS_OAEP, parameters, paramLen));
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, AsymMech::RSA_PKCS_OAEP, &mechanismParam));
 
 				// Check that the data was properly decrypted
 				CPPUNIT_ASSERT(decryptedData == testData);
 
 				// Now decrypt the data with invalid label
 				ByteString decryptedData1;
-				RSA_PKCS_OAEP_PARAMS param1;
-				param1.hashAlg = par->hashAlg;
-				param1.mgf = par->mgf;
-				param1.sourceData = InvalidLabel;
-				param1.sourceDataLen = strlen(InvalidLabel);
-				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData1, AsymMech::RSA_PKCS_OAEP, &param1, paramLen) == false);
+				RSAOaepMechanismParam mechanismParam1;
+				mechanismParam1.hashAlg = par->hashAlg;
+				mechanismParam1.mgfAlg = par->mgf;
+				mechanismParam1.label = InvalidLabel;
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData1, AsymMech::RSA_PKCS_OAEP, &mechanismParam1) == false);
 			}
 
 			rsa->recycleKeyPair(kp);

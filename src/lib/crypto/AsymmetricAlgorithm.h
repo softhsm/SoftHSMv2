@@ -153,16 +153,16 @@ public:
 
 	// Encryption functions
 	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding,
-		const void* param = NULL, const size_t paramLen = 0) = 0;
+		 const MechanismParam* mechanismParam = NULL) = 0;
 	// Decryption functions
 	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding,
-		const void* param = NULL, const size_t paramLen = 0) = 0;
+		 const MechanismParam* mechanismParam = NULL) = 0;
 
 	// Wrap/Unwrap keys
 	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding,
-		const void* param = NULL, size_t paramLen = 0);
+		 const MechanismParam* mechanismParam = NULL);
 	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding,
-		const void* param = NULL, size_t paramLen = 0);
+		 const MechanismParam* mechanismParam = NULL);
 
 	// Key factory
 	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL) = 0;

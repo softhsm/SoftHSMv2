@@ -330,7 +330,7 @@ bool OSSLMLDSA::verifyFinal(const ByteString & /*signature*/)
 // Encryption functions
 bool OSSLMLDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/,
-					    const void* /*param*/, const size_t /*paramLen*/)
+					    const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-DSA does not support encryption");
 
@@ -340,7 +340,7 @@ bool OSSLMLDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 // Decryption functions
 bool OSSLMLDSA::decrypt(PrivateKey * /*privateKey*/, const ByteString & /*encryptedData*/,
 						ByteString & /*data*/, const AsymMech::Type /*padding*/,
-						const void* /*param*/, const size_t /*paramLen*/)
+						const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-DSA does not support decryption");
 
