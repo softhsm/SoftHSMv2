@@ -83,6 +83,7 @@ struct AsymMech
 		RSA_SHA384_PKCS_PSS,
 		RSA_SHA512_PKCS_PSS,
 		RSA_SSL,
+		RSA_AES_KEY_WRAP,
 		DSA,
 		DSA_SHA1,
 		DSA_SHA224,
@@ -152,6 +153,10 @@ public:
 	// Wrap/Unwrap keys
 	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
 	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+
+	// RSA-AES key wrap
+	virtual bool wrapKeyRSA_AES(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const ByteString& aesKey);
+	virtual bool unwrapKeyRSA_AES(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, ByteString& aesKey);
 
 	// Key factory
 	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL) = 0;
