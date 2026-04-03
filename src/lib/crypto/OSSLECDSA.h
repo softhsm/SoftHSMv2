@@ -35,13 +35,17 @@
 
 #include "config.h"
 #include "AsymmetricAlgorithm.h"
+#include "HashAlgorithm.h"
 #include <openssl/ecdsa.h>
 
 class OSSLECDSA : public AsymmetricAlgorithm
 {
 public:
+	// Constructor
+	OSSLECDSA();
+
 	// Destructor
-	virtual ~OSSLECDSA() { }
+	virtual ~OSSLECDSA();
 
 	// Signing functions
 	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
@@ -74,6 +78,7 @@ public:
 	virtual AsymmetricParameters* newParameters();
 
 private:
+	HashAlgorithm* pCurrentHash;
 };
 
 #endif // !_SOFTHSM_V2_OSSLECDSA_H
