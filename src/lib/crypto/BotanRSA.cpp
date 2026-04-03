@@ -37,6 +37,7 @@
 #include "CryptoFactory.h"
 #include "BotanCryptoFactory.h"
 #include "RSAParameters.h"
+#include "RSAMechanismParam.h"
 #include "BotanRSAKeyPair.h"
 #include <algorithm>
 #include <botan/rsa.h>
@@ -747,7 +748,7 @@ bool BotanRSA::verifyFinal(const ByteString& signature)
 // Encryption functions
 bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 		       ByteString& encryptedData, const AsymMech::Type padding,
-			   const void* param, const size_t paramLen)
+			   const MechanismParam* mechanismParam)
 {
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(BotanRSAPublicKey::type))
@@ -787,7 +788,7 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	}
 	if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
-		eme = getCipherOaep(publicKey->getBitLength(), data.size(), param, paramLen);
+		eme = getCipherOaep(publicKey->getBitLength(), data.size(), mechanismParam);
 		if (eme.empty())
 			return false;
 	}
@@ -831,7 +832,7 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 // Decryption functions
 bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		       ByteString& data, const AsymMech::Type padding,
-			   const void* param, const size_t paramLen)
+			   const MechanismParam* mechanismParam)
 {
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(BotanRSAPrivateKey::type))
@@ -872,7 +873,7 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 
 	if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
-		eme = getCipherOaep(privateKey->getBitLength(), 0, param, paramLen);
+		eme = getCipherOaep(privateKey->getBitLength(), 0 ,mechanismParam);
 		if (eme.empty())
 			return false;
 	}
@@ -1179,18 +1180,25 @@ std::string BotanRSA::getCipherRawPss(size_t bitLength, size_t dataSize, const v
 }
 #endif
 
-std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const void* param, const size_t paramLen)
+std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const MechanismParam* mechanismParam)
 {
-	if (param == NULL || paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+	if (mechanismParam == NULL)
 	{
-		ERROR_MSG("Invalid parameters");
+		ERROR_MSG("RSA OAEP mechanism parameter not supplied");
+
 		return "";
 	}
-	const RSA_PKCS_OAEP_PARAMS *oaepParam = (RSA_PKCS_OAEP_PARAMS*)param;
+	if (!mechanismParam->isOfType(RSAOaepMechanismParam::type))
+	{
+		ERROR_MSG("Invalid RSA OAEP mechanism parameter type supplied");
+
+		return "";
+	}
 	std::string hashStr = "";
 	std::string mgfStr = "";
 	size_t hashLen = 0;
-	switch (oaepParam->hashAlg)
+	const RSAOaepMechanismParam* rsaOaepMecahnismParam = dynamic_cast<const RSAOaepMechanismParam*>(mechanismParam);
+	switch (rsaOaepMecahnismParam->hashAlg)
 	{
 		case HashAlgo::SHA1:
 			hashStr = "SHA-160";
@@ -1216,7 +1224,7 @@ std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const voi
 			ERROR_MSG("Invalid hash parameter");
 			return "";
 	}
-	switch (oaepParam->mgf)
+	switch (rsaOaepMecahnismParam->mgfAlg)
 	{
 		case AsymRSAMGF::MGF1_SHA1:
 			mgfStr = "SHA-160";
@@ -1247,9 +1255,9 @@ std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const voi
 
 	std::ostringstream request;
 	request << "OAEP(" << hashStr << ",MGF1(" << mgfStr << ")";
-	if ((oaepParam->sourceData != NULL)&&(oaepParam->sourceDataLen != 0))
+	if (rsaOaepMecahnismParam->label.size() != 0)
 	{
-		request <<"," << std::string((const char*)oaepParam->sourceData,oaepParam->sourceDataLen);
+		request <<"," << rsaOaepMecahnismParam->label.const_byte_str();
 	}
 	request << ")";
 	return request.str();

@@ -95,7 +95,7 @@ bool BotanECDH::verifyFinal(const ByteString& /*signature*/)
 // Encryption functions
 bool BotanECDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/,
-		     const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+		    const MechanismParam* /* param = NULL */)
 {
 	ERROR_MSG("ECDH does not support encryption");
 
@@ -105,7 +105,7 @@ bool BotanECDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 // Decryption functions
 bool BotanECDH::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
 			ByteString& /*data*/, const AsymMech::Type /*padding*/,
-		    const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+		    const MechanismParam* /* param = NULL */)
 {
 	ERROR_MSG("ECDH does not support decryption");
 
