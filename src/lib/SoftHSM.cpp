@@ -13879,7 +13879,7 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 	    ERROR_MSG("mgf algorithm not supported for OAEP");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->ulSourceDataLen > 0xffffffff - sizeof(RSA_PKCS_OAEP_PARAMS))
+	if (params->ulSourceDataLen > MAX_RSA_OAEP_LABEL_LENGTH)
 	{
 		ERROR_MSG("OAEP Label too large");
 		return CKR_ARGUMENTS_BAD;

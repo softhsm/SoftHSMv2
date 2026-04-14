@@ -14,6 +14,9 @@
 #include "AsymmetricAlgorithm.h"
 #include "MechanismParam.h"
 
+// Limit OAEP label length to avoid overflow
+#define MAX_RSA_OAEP_LABEL_LENGTH  0x0fffffff
+
 // Mechanism parameter for RSA OAEP encryption
 class RSAOaepMechanismParam : public MechanismParam
 {

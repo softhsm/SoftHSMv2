@@ -625,14 +625,14 @@ void RSATests::testEncryptDecrypt()
 	paddings.push_back(AsymMech::RSA);
 
 	//OAEP parameters for test
-	std::vector<RSA_PKCS_OAEP_PARAMS> oaep_parameters;
-	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA1, NULL,0});
-	oaep_parameters.push_back({HashAlgo::SHA256,AsymRSAMGF::MGF1_SHA256, NULL,0});
-	oaep_parameters.push_back({HashAlgo::SHA384,AsymRSAMGF::MGF1_SHA384, NULL,0});
-	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA512, NULL,0});
-	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256, NULL,0});
-	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA224, TestLabel ,strlen(TestLabel)});
-	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256, TestLabel ,strlen(TestLabel)});
+	std::vector<RSAOaepMechanismParam> oaep_parameters;
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA1});
+	oaep_parameters.push_back({HashAlgo::SHA256,AsymRSAMGF::MGF1_SHA256});
+	oaep_parameters.push_back({HashAlgo::SHA384,AsymRSAMGF::MGF1_SHA384});
+	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA512});
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256});
+	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA224, TestLabel});
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256, TestLabel});
 
 	for (std::vector<ByteString>::iterator e = exponents.begin(); e != exponents.end(); e++)
 	{
@@ -683,11 +683,11 @@ void RSATests::testEncryptDecrypt()
 				CPPUNIT_ASSERT(decryptedData == testData);
 			}
 			// OAEP encryption test
-			for (std::vector<RSA_PKCS_OAEP_PARAMS>::iterator par = oaep_parameters.begin(); par != oaep_parameters.end(); par++)
+			for (std::vector<RSAOaepMechanismParam>::iterator par = oaep_parameters.begin(); par != oaep_parameters.end(); par++)
 			{
 				// Generate some test data to encrypt based on the selected padding
 				ByteString testData;
-				RSAOaepMechanismParam mechanismParam(par->hashAlg, par->mgf, ByteString(reinterpret_cast<const unsigned char*>(par->sourceData),par->sourceDataLen));
+				RSAOaepMechanismParam mechanismParam(par->hashAlg, par->mgfAlg, par->label);
 				size_t hashLen = 0;
 				switch (par->hashAlg)
 				{
@@ -731,7 +731,7 @@ void RSATests::testEncryptDecrypt()
 				ByteString decryptedData1;
 				RSAOaepMechanismParam mechanismParam1;
 				mechanismParam1.hashAlg = par->hashAlg;
-				mechanismParam1.mgfAlg = par->mgf;
+				mechanismParam1.mgfAlg = par->mgfAlg;
 				mechanismParam1.label = InvalidLabel;
 				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData1, AsymMech::RSA_PKCS_OAEP, &mechanismParam1) == false);
 			}

@@ -122,14 +122,6 @@ struct RSA_PKCS_PSS_PARAMS
 	size_t sLen;
 };
 
-struct RSA_PKCS_OAEP_PARAMS
-{
-	HashAlgo::Type hashAlg;
-	AsymRSAMGF::Type mgf;
-	void *sourceData;
-	size_t sourceDataLen;
-};
-
 class AsymmetricAlgorithm
 {
 public:
