@@ -65,7 +65,6 @@ BotanEDDSA::~BotanEDDSA()
 // Signing functions
 bool BotanEDDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 		      ByteString& signature, const AsymMech::Type mechanism,
-		      const void* /* param = NULL */, const size_t /* paramLen = 0 */,
 		      const MechanismParam* /* mechanismParam */)
 {
 	std::string emsa;
@@ -139,7 +138,7 @@ bool BotanEDDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 
 // Signing functions
 bool BotanEDDSA::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-			  const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			  const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("EDDSA does not support multi part signing");
 
@@ -163,7 +162,6 @@ bool BotanEDDSA::signFinal(ByteString& /*signature*/)
 // Verification functions
 bool BotanEDDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 			const ByteString& signature, const AsymMech::Type mechanism,
-			const void* /* param = NULL */, const size_t /* paramLen = 0 */,
 		    const MechanismParam* /* mechanismParam */)
 {
 	std::string emsa;
@@ -235,7 +233,7 @@ bool BotanEDDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 
 // Verification functions
 bool BotanEDDSA::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			    const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			    const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("EDDSA does not support multi part verifying");
 

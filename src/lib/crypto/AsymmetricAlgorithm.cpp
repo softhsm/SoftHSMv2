@@ -47,15 +47,14 @@ AsymmetricAlgorithm::AsymmetricAlgorithm()
 // Signing functions
 bool AsymmetricAlgorithm::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 			       ByteString& signature, const AsymMech::Type mechanism,
-			       const void* param /* = NULL */, const size_t paramLen /* = 0 */,
-				   const MechanismParam* /* mechanismParam = NULL */)
+				   const MechanismParam* mechanismParam /* = NULL */)
 {
 	// Compose from multi-part operations
-	return (signInit(privateKey, mechanism, param, paramLen) && signUpdate(dataToSign) && signFinal(signature));
+	return (signInit(privateKey, mechanism, mechanismParam) && signUpdate(dataToSign) && signFinal(signature));
 }
 
 bool AsymmetricAlgorithm::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
-				   const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+				   const MechanismParam* /* mechanismParam = NULL */)
 {
 	if ((currentOperation != NONE) || (privateKey == NULL))
 	{
@@ -96,15 +95,14 @@ bool AsymmetricAlgorithm::signFinal(ByteString& /*signature*/)
 // Verification functions
 bool AsymmetricAlgorithm::verify(PublicKey* publicKey, const ByteString& originalData,
 				 const ByteString& signature, const AsymMech::Type mechanism,
-				 const void* param /* = NULL */, const size_t paramLen /* = 0 */,
-				 const MechanismParam* /* mechanismParam = NULL */)
+				 const MechanismParam* mechanismParam /* = NULL */)
 {
 	// Compose from multi-part operations
-	return (verifyInit(publicKey, mechanism, param, paramLen) && verifyUpdate(originalData) && verifyFinal(signature));
+	return (verifyInit(publicKey, mechanism, mechanismParam) && verifyUpdate(originalData) && verifyFinal(signature));
 }
 
 bool AsymmetricAlgorithm::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
-				     const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+					 const MechanismParam* /* mechanismParam = NULL */)
 {
 	if ((currentOperation != NONE) || (publicKey == NULL))
 	{
