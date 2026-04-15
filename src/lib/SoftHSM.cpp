@@ -2092,7 +2092,8 @@ CK_RV SoftHSM::C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 				{
 					if (sizeof(CK_ULONG) != pTemplate[i].ulValueLen)
 						break;
-					CK_ULONG ulTemplateValue = *(CK_ULONG_PTR)pTemplate[i].pValue;
+					CK_ULONG ulTemplateValue;
+					memcpy(&ulTemplateValue, pTemplate[i].pValue, sizeof(ulTemplateValue));
 					if (attr.getUnsignedLongValue() != ulTemplateValue)
 						break;
 				}
