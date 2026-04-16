@@ -980,8 +980,8 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	if (padding == AsymMech::RSA)
 	{
 		// We compensate that Botan removes leading zeros
-		int modSize = pk->getN().size();
-		int decSize = decResult.size();
+		size_t modSize = pk->getN().size();
+		size_t decSize = decResult.size();
 		data.resize(modSize);
 		memcpy(&data[0] + modSize - decSize, decResult.data(), decSize);
 	}
