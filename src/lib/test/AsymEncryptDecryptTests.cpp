@@ -82,10 +82,10 @@ CK_RV AsymEncryptDecryptTests::generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK
 							 &hPuk, &hPrk) );
 }
 
-void AsymEncryptDecryptTests::rsaEncryptDecrypt(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey)
+void AsymEncryptDecryptTests::rsaEncryptDecrypt(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey,
+				CK_RSA_PKCS_OAEP_PARAMS* oaepParam)
 {
 	CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
-	CK_RSA_PKCS_OAEP_PARAMS oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, 1, NULL_PTR, 0 };
 	CK_BYTE plainText[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
 	CK_BYTE cipherText[256];
 	CK_ULONG ulCipherTextLen;
@@ -95,8 +95,11 @@ void AsymEncryptDecryptTests::rsaEncryptDecrypt(CK_MECHANISM_TYPE mechanismType,
 
 	if (mechanismType == CKM_RSA_PKCS_OAEP)
 	{
-		mechanism.pParameter = &oaepParams;
-		mechanism.ulParameterLen = sizeof(oaepParams);
+		mechanism.pParameter = oaepParam;
+		if (oaepParam != NULL_PTR)
+			mechanism.ulParameterLen = sizeof(CK_RSA_PKCS_OAEP_PARAMS);
+		else
+			mechanism.ulParameterLen = 0L;	
 	}
 
 	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession,&mechanism,hPublicKey) );
@@ -114,6 +117,27 @@ void AsymEncryptDecryptTests::rsaEncryptDecrypt(CK_MECHANISM_TYPE mechanismType,
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
 	CPPUNIT_ASSERT(memcmp(plainText, &recoveredText[ulRecoveredTextLen-sizeof(plainText)], sizeof(plainText)) == 0);
+
+	// Attempt to decrypt with wrong label
+	if (mechanismType == CKM_RSA_PKCS_OAEP)
+	{
+		const char InvalidDecryptionLabel[] = "INVALID DECRYPTION LABEL";
+		CK_RSA_PKCS_OAEP_PARAMS invalid_oaepParam;
+		invalid_oaepParam.hashAlg = oaepParam->hashAlg;
+		invalid_oaepParam.mgf = oaepParam->mgf;
+		invalid_oaepParam.source = 1;
+		invalid_oaepParam.pSourceData = (void*)InvalidDecryptionLabel;
+		invalid_oaepParam.ulSourceDataLen = strlen(InvalidDecryptionLabel);
+		mechanism.pParameter = &invalid_oaepParam;
+		mechanism.ulParameterLen = sizeof(CK_RSA_PKCS_OAEP_PARAMS);
+		rv = CRYPTOKI_F_PTR( C_DecryptInit(hSession,&mechanism,hPrivateKey) );
+		CPPUNIT_ASSERT(rv==CKR_OK);
+
+		ulRecoveredTextLen = sizeof(recoveredText);
+		rv = CRYPTOKI_F_PTR( C_Decrypt(hSession,cipherText,ulCipherTextLen,recoveredText,&ulRecoveredTextLen) );
+		CPPUNIT_ASSERT(rv==CKR_ENCRYPTED_DATA_INVALID);
+	}
+
 }
 
 // Check that RSA OAEP mechanism properly validates all input parameters
@@ -201,5 +225,32 @@ void AsymEncryptDecryptTests::testRsaEncryptDecrypt()
 	rsaOAEPParams(hSessionRO,hPublicKey);
 	rsaEncryptDecrypt(CKM_RSA_PKCS,hSessionRO,hPublicKey,hPrivateKey);
 	rsaEncryptDecrypt(CKM_RSA_X_509,hSessionRO,hPublicKey,hPrivateKey);
-	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey);
+	// Test RSA encrypt/decrypt with and without label
+	CK_RSA_PKCS_OAEP_PARAMS oaepParams;
+	const char EncryptLabel[] = "TEST ENCRYPTION LABEL";
+    oaepParams = { CKM_SHA_1, CKG_MGF1_SHA1, 1, NULL_PTR, 0 };
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams.pSourceData = (void*)EncryptLabel;
+	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams = { CKM_SHA224, CKG_MGF1_SHA224, 1, NULL_PTR, 0 };
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams.pSourceData = (void*)EncryptLabel;
+	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams = { CKM_SHA256, CKG_MGF1_SHA256, 1, NULL_PTR, 0 };
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams.pSourceData = (void*)EncryptLabel;
+	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+    oaepParams = { CKM_SHA384, CKG_MGF1_SHA384, 1, NULL_PTR, 0  };
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams.pSourceData = (void*)EncryptLabel;
+	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams = { CKM_SHA512, CKG_MGF1_SHA512, 1, NULL_PTR, 0  };
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+	oaepParams.pSourceData = (void*)EncryptLabel;
+	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
+	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
 }
