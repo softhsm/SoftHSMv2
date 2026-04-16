@@ -51,7 +51,7 @@
 
 // Signing functions
 bool OSSLDH::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-		      const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			  const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("DH does not support signing");
 
@@ -74,7 +74,7 @@ bool OSSLDH::signFinal(ByteString& /*signature*/)
 
 // Verification functions
 bool OSSLDH::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+		    const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("DH does not support verifying");
 

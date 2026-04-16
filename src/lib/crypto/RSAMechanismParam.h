@@ -40,5 +40,27 @@ public:
 	virtual bool isOfType(const char* inType) const;
 };
 
+class RSAPssMechanismParam : public MechanismParam
+{
+public:
+    HashAlgo::Type hashAlg;
+	AsymRSAMGF::Type mgfAlg;
+	size_t sLen;
+
+	// The type
+	static const char* type;
+
+	RSAPssMechanismParam();
+
+	RSAPssMechanismParam(HashAlgo::Type hashAlg,AsymRSAMGF::Type mgfAlg);
+
+	RSAPssMechanismParam(HashAlgo::Type hashAlg,AsymRSAMGF::Type mgfAlg,size_t sLen);
+	
+	RSAPssMechanismParam* clone() const;
+
+	// Check if the mechanism param is of the given type
+	virtual bool isOfType(const char* inType) const;
+};
+
 #endif // !_SOFTHSM_V2_RSAMECHANISMPARAM_H
 

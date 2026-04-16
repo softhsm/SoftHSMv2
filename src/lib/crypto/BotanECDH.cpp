@@ -48,7 +48,7 @@
 
 // Signing functions
 bool BotanECDH::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-			 const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			 const MechanismParam* /*mechanismParam = NULL*/)
 {
 	ERROR_MSG("ECDH does not support signing");
 
@@ -71,7 +71,7 @@ bool BotanECDH::signFinal(ByteString& /*signature*/)
 
 // Verification functions
 bool BotanECDH::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			   const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			   const MechanismParam* /*mechanismParam = NULL*/)
 {
 	ERROR_MSG("ECDH does not support verifying");
 

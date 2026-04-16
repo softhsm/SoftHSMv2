@@ -279,7 +279,7 @@ void RSATests::testSigningVerifying()
 #endif
 
 	/* Max salt length for SHA512 and 1024-bit RSA is 62 bytes */
-	RSA_PKCS_PSS_PARAMS pssParams[] = {
+	RSAPssMechanismParam pssParams[] = {
 		{ HashAlgo::SHA1,   AsymRSAMGF::MGF1_SHA1,   20 },
 		{ HashAlgo::SHA224, AsymRSAMGF::MGF1_SHA224, 0  },
 		{ HashAlgo::SHA256, AsymRSAMGF::MGF1_SHA256, 0  },
@@ -308,35 +308,29 @@ void RSATests::testSigningVerifying()
 			for (std::vector<AsymMech::Type>::iterator m = mechanisms.begin(); m != mechanisms.end(); m++)
 			{
 				ByteString blockSignature, singlePartSignature;
-				void* param = NULL;
-				size_t paramLen = 0;
+				RSAPssMechanismParam* mechanismParam = NULL;
 				bool isPSS = false;
 
 				switch (*m)
 				{
 					case AsymMech::RSA_SHA1_PKCS_PSS:
-						param = &pssParams[0];
-						paramLen = sizeof(pssParams[0]);
+						mechanismParam = &pssParams[0];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA224_PKCS_PSS:
-						param = &pssParams[1];
-						paramLen = sizeof(pssParams[1]);
+						mechanismParam = &pssParams[1];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA256_PKCS_PSS:
-						param = &pssParams[2];
-						paramLen = sizeof(pssParams[2]);
+						mechanismParam = &pssParams[2];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA384_PKCS_PSS:
-						param = &pssParams[3];
-						paramLen = sizeof(pssParams[3]);
+						mechanismParam = &pssParams[3];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA512_PKCS_PSS:
-						param = &pssParams[4];
-						paramLen = sizeof(pssParams[4]);
+						mechanismParam = &pssParams[4];
 						isPSS = true;
 						break;
 					default:
@@ -344,14 +338,14 @@ void RSATests::testSigningVerifying()
 				}
 
 				// Sign the data in blocks
-				CPPUNIT_ASSERT(rsa->signInit(kp->getPrivateKey(), *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->signInit(kp->getPrivateKey(), *m, mechanismParam));
 				CPPUNIT_ASSERT(rsa->signUpdate(dataToSign.substr(0, 134)));
 				CPPUNIT_ASSERT(rsa->signUpdate(dataToSign.substr(134, 289)));
 				CPPUNIT_ASSERT(rsa->signUpdate(dataToSign.substr(134 + 289)));
 				CPPUNIT_ASSERT(rsa->signFinal(blockSignature));
 
 				// Sign the data in one pass
-				CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, singlePartSignature, *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, singlePartSignature, *m, mechanismParam));
 
 				// If it is not a PSS signature, check if the two signatures match
 				if (!isPSS)
@@ -361,14 +355,14 @@ void RSATests::testSigningVerifying()
 				}
 
 				// Now perform multi-pass verification
-				CPPUNIT_ASSERT(rsa->verifyInit(kp->getPublicKey(), *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->verifyInit(kp->getPublicKey(), *m, mechanismParam));
 				CPPUNIT_ASSERT(rsa->verifyUpdate(dataToSign.substr(0, 125)));
 				CPPUNIT_ASSERT(rsa->verifyUpdate(dataToSign.substr(125, 247)));
 				CPPUNIT_ASSERT(rsa->verifyUpdate(dataToSign.substr(125 + 247)));
 				CPPUNIT_ASSERT(rsa->verifyFinal(blockSignature));
 
 				// And single-pass verification
-				CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, singlePartSignature, *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, singlePartSignature, *m, mechanismParam));
 			}
 
 			// Test mechanisms that do not perform internal hashing
@@ -400,28 +394,28 @@ void RSATests::testSigningVerifying()
 #ifdef WITH_RAW_PSS
 			// Test raw (SHA1) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 20));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0], sizeof(pssParams[0])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0], sizeof(pssParams[0])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0]));
 
 			// Test raw (SHA224) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 28));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1], sizeof(pssParams[1])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1], sizeof(pssParams[1])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1]));
 
 			// Test raw (SHA256) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 32));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2], sizeof(pssParams[2])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2], sizeof(pssParams[2])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2]));
 
 			// Test raw (SHA384) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 48));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3], sizeof(pssParams[3])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3], sizeof(pssParams[3])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3]));
 
 			// Test raw (SHA512) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 64));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4], sizeof(pssParams[4])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4], sizeof(pssParams[4])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4]));
 #endif
 
 			rsa->recycleKeyPair(kp);
