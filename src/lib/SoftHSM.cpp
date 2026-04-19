@@ -242,7 +242,7 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 			case CKA_CLASS:
 				if (pTemplate[i].ulValueLen == sizeof(CK_OBJECT_CLASS))
 				{
-					objClass = *(CK_OBJECT_CLASS_PTR)pTemplate[i].pValue;
+					memcpy(&objClass, pTemplate[i].pValue, sizeof(objClass));
 					bHasClass = true;
 				}
 				break;
