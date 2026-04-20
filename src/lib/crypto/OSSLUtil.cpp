@@ -172,12 +172,14 @@ ByteString OSSL::oid2ByteString(int nid)
 // Convert a ByteString to an OpenSSL EVP_PKEY id
 int OSSL::byteString2oid(const ByteString& byteString)
 {
-	ASN1_OBJECT *oid = NULL;
-	ASN1_PRINTABLESTRING *curve_name = NULL;
+	ASN1_OBJECT *oid;
+	ASN1_PRINTABLESTRING *curve_name;
 	const unsigned char *p = byteString.const_byte_str();
 	const unsigned char *pp = p;
+	const unsigned char *data;
 	long length;
-	int tag, pclass;
+	int tag, pclass, data_len;
+	int nid = NID_undef;
 
 	ASN1_get_object(&pp, &length, &tag, &pclass, byteString.size());
 	if (pclass == V_ASN1_UNIVERSAL && tag == V_ASN1_OBJECT)
@@ -189,40 +191,51 @@ int OSSL::byteString2oid(const ByteString& byteString)
 		{
 			return NID_undef;
 		}
-		
-		int nid = OBJ_obj2nid(oid);
+
+		nid = OBJ_obj2nid(oid);
 		ASN1_OBJECT_free(oid);
-		return nid;
 	}
 	else if (pclass == V_ASN1_UNIVERSAL && tag == V_ASN1_PRINTABLESTRING)
 	{
 		/* The final PKCS#11 3.0 expects curve name encoded as PrintableString */
 		curve_name = d2i_ASN1_PRINTABLESTRING(NULL, &p, byteString.size());
 
-		if (strcmp((char *)curve_name->data, "edwards25519") == 0)
+		if (curve_name == NULL)
 		{
+			return NID_undef;
+		}
+
+		data = ASN1_STRING_get0_data(curve_name);
+		data_len = ASN1_STRING_length(curve_name);
+
+		if (data_len == 12 && memcmp(data, "edwards25519", data_len) == 0)
+		{
+			ASN1_PRINTABLESTRING_free(curve_name);
 			return EVP_PKEY_ED25519;
 		}
 
-		if (strcmp((char *)curve_name->data, "curve25519") == 0)
+		if (data_len == 10 && memcmp(data, "curve25519", 10) == 0)
 		{
+			ASN1_PRINTABLESTRING_free(curve_name);
 			return EVP_PKEY_X25519;
 		}
 
-		if (strcmp((char *)curve_name->data, "edwards448") == 0)
+		if (data_len == 10 && memcmp(data, "edwards448", 10) == 0)
 		{
+			ASN1_PRINTABLESTRING_free(curve_name);
 			return EVP_PKEY_ED448;
 		}
 
-		if (strcmp((char *)curve_name->data, "curve448") == 0)
+		if (data_len == 8 && memcmp(data, "curve448", 8) == 0)
 		{
+			ASN1_PRINTABLESTRING_free(curve_name);
 			return EVP_PKEY_X448;
 		}
 
-		ASN1_STRING_free(curve_name);
+		ASN1_PRINTABLESTRING_free(curve_name);
 	}
 
-	return NID_undef;
+	return nid;
 }
 #endif
 
