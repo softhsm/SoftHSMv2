@@ -1,8 +1,0 @@
-@@ -29,7 +29,6 @@
- 	virtual bool isOfType(const char* inType);
- 
- 	// Setters for the SLH-DSA private key components
--	virtual void setSeed(const ByteString& inSeed);
- 	virtual void setValue(const ByteString& inValue);
- 	virtual void setParameterSet(unsigned long inParameterSet);
- 
