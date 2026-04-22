@@ -51,6 +51,7 @@ class SignVerifyTests : public TestsBase
 	CPPUNIT_TEST(testMacSignVerify);
 #ifdef WITH_ML_DSA
 	CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify, {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
+	CPPUNIT_TEST_PARAMETERIZED(testSLHDSASignVerify, {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHAKE_128S, CKP_SLH_DSA_SHA2_128F, CKP_SLH_DSA_SHAKE_128F, CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_192S, CKP_SLH_DSA_SHA2_192F, CKP_SLH_DSA_SHAKE_192F, CKP_SLH_DSA_SHA2_256S, CKP_SLH_DSA_SHAKE_256S, CKP_SLH_DSA_SHA2_256F, CKP_SLH_DSA_SHAKE_256F});
 #endif
 	CPPUNIT_TEST(testSignInitWrongKeyType);
 	CPPUNIT_TEST(testVerifyInitWrongKeyType);
@@ -67,6 +68,7 @@ public:
 	void testMacSignVerify();
 #ifdef WITH_ML_DSA
 	void testMLDSASignVerify(CK_ULONG parameterSet);
+	void testSLHDSASignVerify(CK_ULONG parameterSet);
 #endif
 	void testSignInitWrongKeyType();
 	void testVerifyInitWrongKeyType();
@@ -80,6 +82,7 @@ protected:
 	CK_RV generateED(const char* curve, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #endif
 #ifdef WITH_ML_DSA
+	CK_RV generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 	CK_RV generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #endif
 	void signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);

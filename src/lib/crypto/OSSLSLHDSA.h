@@ -1,0 +1,59 @@
+/*****************************************************************************
+ OSSLSLHDSA.h
+
+ OpenSSL SLH-DSA asymmetric algorithm implementation
+ *****************************************************************************/
+
+#ifndef _SOFTHSM_V2_OSSLSLHDSA_H
+#define _SOFTHSM_V2_OSSLSLHDSA_H
+
+#include "config.h"
+#ifdef WITH_SLH_DSA
+#include "AsymmetricAlgorithm.h"
+#include <openssl/evp.h>
+
+class OSSLSLHDSA : public AsymmetricAlgorithm
+{
+public:
+	// Destructor
+	virtual ~OSSLSLHDSA() { }
+
+	// Signing functions
+	virtual bool sign(PrivateKey *privateKey, const ByteString &dataToSign, ByteString &signature, const AsymMech::Type mechanism, const void *param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
+	virtual bool signUpdate(const ByteString& dataToSign);
+	virtual bool signFinal(ByteString& signature);
+
+	// Verification functions
+	virtual bool verify(PublicKey* publicKey, const ByteString& originalData, const ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0);
+	virtual bool verifyUpdate(const ByteString& originalData);
+	virtual bool verifyFinal(const ByteString& signature);
+
+	// Encryption functions
+	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
+
+	// Decryption functions
+	virtual bool checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode);
+	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+	virtual unsigned long getMinKeySize();
+	virtual unsigned long getMaxKeySize();
+
+	// Key factory
+	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL);
+	virtual bool reconstructKeyPair(AsymmetricKeyPair** ppKeyPair, ByteString& serialisedData);
+	virtual bool reconstructPublicKey(PublicKey** ppPublicKey, ByteString& serialisedData);
+	virtual bool reconstructPrivateKey(PrivateKey** ppPrivateKey, ByteString& serialisedData);
+	virtual bool reconstructParameters(AsymmetricParameters** ppParams, ByteString& serialisedData);
+	virtual PublicKey* newPublicKey();
+	virtual PrivateKey* newPrivateKey();
+	virtual AsymmetricParameters* newParameters();
+
+private:
+	static int OSSL_RANDOM;
+	static int OSSL_DETERMINISTIC;
+};
+
+#endif // !WITH_SLH_DSA
+#endif // !_SOFTHSM_V2_OSSLSLHDSA_H
+

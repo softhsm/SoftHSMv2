@@ -36,6 +36,7 @@
 #include "OSSLUtil.h"
 #ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
+#include "SLHDSAParameters.h"
 #include <map>
 #endif
 #include <openssl/asn1.h>
@@ -43,6 +44,21 @@
 #include <openssl/err.h>
 
 #ifdef WITH_ML_DSA
+static const std::map<unsigned long, const char*> slhdsaAlgNameFromParameterSet {
+	{SLHDSAParameters::SLH_DSA_SHA2_128S_PARAMETER_SET, "SLH-DSA-SHA2-128s"},
+	{SLHDSAParameters::SLH_DSA_SHAKE_128S_PARAMETER_SET, "SLH-DSA-SHAKE-128s"},
+	{SLHDSAParameters::SLH_DSA_SHA2_128F_PARAMETER_SET, "SLH-DSA-SHA2-128f"},
+	{SLHDSAParameters::SLH_DSA_SHAKE_128F_PARAMETER_SET, "SLH-DSA-SHAKE-128f"},
+	{SLHDSAParameters::SLH_DSA_SHA2_192S_PARAMETER_SET, "SLH-DSA-SHA2-192s"},
+	{SLHDSAParameters::SLH_DSA_SHAKE_192S_PARAMETER_SET, "SLH-DSA-SHAKE-192s"},
+	{SLHDSAParameters::SLH_DSA_SHA2_192F_PARAMETER_SET, "SLH-DSA-SHA2-192f"},
+	{SLHDSAParameters::SLH_DSA_SHAKE_192F_PARAMETER_SET, "SLH-DSA-SHAKE-192f"},
+	{SLHDSAParameters::SLH_DSA_SHA2_256S_PARAMETER_SET, "SLH-DSA-SHA2-256s"},
+	{SLHDSAParameters::SLH_DSA_SHAKE_256S_PARAMETER_SET, "SLH-DSA-SHAKE-256s"},
+	{SLHDSAParameters::SLH_DSA_SHA2_256F_PARAMETER_SET, "SLH-DSA-SHA2-256f"},
+	{SLHDSAParameters::SLH_DSA_SHAKE_256F_PARAMETER_SET, "SLH-DSA-SHAKE-256f"},
+};
+
 static const std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet {
 	{MLDSAParameters::ML_DSA_44_PARAMETER_SET, "ML-DSA-44"},
 	{MLDSAParameters::ML_DSA_65_PARAMETER_SET, "ML-DSA-65"},
@@ -234,3 +250,19 @@ const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
 	return NULL;
 }
 #endif
+
+const char* OSSL::slhdsaParameterSet2Name(unsigned long parameterSet) {
+	std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.find(parameterSet);
+	if (it != slhdsaAlgNameFromParameterSet.end()) {
+		return it->second;
+	}
+	return NULL;
+}
+
+unsigned long OSSL::name2slhdsaParameterSet(const char* name) {
+	if (!name) return 0;
+	for (std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.begin(); it != slhdsaAlgNameFromParameterSet.end(); ++it) {
+		if (strcmp(it->second, name) == 0) return it->first;
+	}
+	return 0;
+}
