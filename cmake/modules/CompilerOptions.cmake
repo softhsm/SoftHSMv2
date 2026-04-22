@@ -370,6 +370,22 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
         message(STATUS "OpenSSL: Support for EDDSA is disabled")
     endif(ENABLE_EDDSA)
 
+    # acx_openssl_mldsa.m4
+    if(ENABLE_MLDSA)
+        set(WITH_ML_DSA 1)
+        message(STATUS "OpenSSL: ML-DSA support enabled")
+    else(ENABLE_MLDSA)
+        message(STATUS "OpenSSL: Support for ML-DSA is disabled")
+    endif(ENABLE_MLDSA)
+
+    # acx_openssl_slhdsa.m4
+    if(ENABLE_SLHDSA)
+        set(WITH_SLH_DSA 1)
+        message(STATUS "OpenSSL: SLH-DSA support enabled")
+    else(ENABLE_SLHDSA)
+        message(STATUS "OpenSSL: Support for SLH-DSA is disabled")
+    endif(ENABLE_SLHDSA)
+
     # acx_openssl_gost.m4
     if(ENABLE_GOST)
         set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_gost.c)

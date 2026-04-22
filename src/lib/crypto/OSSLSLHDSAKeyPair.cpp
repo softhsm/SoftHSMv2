@@ -14,6 +14,7 @@ void OSSLSLHDSAKeyPair::setPublicKey(OSSLSLHDSAPublicKey& publicKey)
 {
 	// Copy only the public material; avoid sharing OpenSSL handles
 	pubKey.setValue(publicKey.getValue());
+	pubKey.setParameterSet(publicKey.getParameterSet());
 }
 
 // Set the private key
@@ -21,6 +22,7 @@ void OSSLSLHDSAKeyPair::setPrivateKey(OSSLSLHDSAPrivateKey& privateKey)
 {
 	// Copy only the raw material; avoid sharing OpenSSL handles
 	privKey.setValue(privateKey.getValue());
+	privKey.setParameterSet(privateKey.getParameterSet());
 }
 
 // Return the public key

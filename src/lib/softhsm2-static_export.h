@@ -1,0 +1,43 @@
+
+#ifndef SOFTHSM2_STATIC_EXPORT_H
+#define SOFTHSM2_STATIC_EXPORT_H
+
+#ifdef SOFTHSM2_STATIC_STATIC_DEFINE
+#  define SOFTHSM2_STATIC_EXPORT
+#  define SOFTHSM2_STATIC_NO_EXPORT
+#else
+#  ifndef SOFTHSM2_STATIC_EXPORT
+#    ifdef softhsm2_static_EXPORTS
+        /* We are building this library */
+#      define SOFTHSM2_STATIC_EXPORT 
+#    else
+        /* We are using this library */
+#      define SOFTHSM2_STATIC_EXPORT 
+#    endif
+#  endif
+
+#  ifndef SOFTHSM2_STATIC_NO_EXPORT
+#    define SOFTHSM2_STATIC_NO_EXPORT 
+#  endif
+#endif
+
+#ifndef SOFTHSM2_STATIC_DEPRECATED
+#  define SOFTHSM2_STATIC_DEPRECATED __attribute__ ((__deprecated__))
+#endif
+
+#ifndef SOFTHSM2_STATIC_DEPRECATED_EXPORT
+#  define SOFTHSM2_STATIC_DEPRECATED_EXPORT SOFTHSM2_STATIC_EXPORT SOFTHSM2_STATIC_DEPRECATED
+#endif
+
+#ifndef SOFTHSM2_STATIC_DEPRECATED_NO_EXPORT
+#  define SOFTHSM2_STATIC_DEPRECATED_NO_EXPORT SOFTHSM2_STATIC_NO_EXPORT SOFTHSM2_STATIC_DEPRECATED
+#endif
+
+/* NOLINTNEXTLINE(readability-avoid-unconditional-preprocessor-if) */
+#if 0 /* DEFINE_NO_DEPRECATED */
+#  ifndef SOFTHSM2_STATIC_NO_DEPRECATED
+#    define SOFTHSM2_STATIC_NO_DEPRECATED
+#  endif
+#endif
+
+#endif /* SOFTHSM2_STATIC_EXPORT_H */
