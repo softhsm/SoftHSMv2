@@ -1,0 +1,160 @@
+#! /bin/sh
+# This file is in the public domain
+
+CWD=`pwd`
+
+# binaries
+
+OPENSSL=${OPENSSL-openssl}
+OPENSSL=`command -v "$OPENSSL"`
+if test -z "$OPENSSL" ; then
+  echo "error: openssl utility not found" >&2
+  exit 77
+fi
+
+openssl() {
+"$OPENSSL" ${1+"$@"}
+}
+
+openssl_version=`openssl version` || exit $?
+if test -z "$openssl_version" ; then
+  echo "cannot determine OpenSSL version" >&2
+  exit 99
+fi
+
+case $openssl_version in
+*"OpenSSL 0.9."*|\
+*"OpenSSL 1."*)
+  echo "$openssl_version is not impacted" >&2
+  exit 77
+  ;;
+esac
+# NOTE OpenSSL > 1.*
+
+
+# find a PKCS#11 provider
+p11_find_provider() {
+  if test -z "$PROV_PKCS11" ; then
+
+    # try to extract path ...
+    moduledir=`openssl version -m 2>/dev/null \
+      | sed -e 's/^MODULESDIR: "//' -e 's/"$//'`
+    if test -z "$moduledir" ; then
+      echo "cannot determine OpenSSL MODULESDIR" >&2
+      exit 99
+    fi
+    if test -d "$moduledir" ; then :
+    else
+      echo "does not exist MODULESDIR: $moduledir" >&2
+      exit 99
+    fi
+
+    for N in pkcs11 libpkcs11 ; do
+      for S in so dll ; do
+        test -f "$moduledir"/$N.$S || continue
+        PROV_PKCS11="$moduledir"/$N.$S
+        break
+      done
+      test -n "$PROV_PKCS11" && break
+    done
+    test -n "$PROV_PKCS11"
+  else
+    test -f "$PROV_PKCS11"
+  fi
+}
+
+if p11_find_provider ; then :
+else
+  echo "error: PKCS#11 provider not found" >&2
+  exit 77
+fi
+
+
+D=`cd ../../lib/.libs/ && pwd`
+if test -z "$D" ; then
+  echo "unexpectedly missing library directory" >&2
+  exit 99
+fi
+P11MODULE=
+for S in so dll ; do
+  for F in "$D"/*softhsm2.$S ; do
+    test -f "$F" || continue
+    P11MODULE="$F"
+    break
+  done
+  test -n "$P11MODULE" && break
+done
+if test -z "$P11MODULE" ; then
+  echo "error: unexpected module suffix" >&2
+  exit 1
+fi
+if command -v realpath > /dev/null ; then
+  P11MODULE=`realpath "$P11MODULE"`
+fi
+
+softhsm2_tool() {
+"$CWD"/softhsm2-util --module "$P11MODULE" ${1+"$@"}
+}
+
+
+# configurations
+TOKEN_DIR="$CWD"/tokens
+rm -rf "$TOKEN_DIR"
+mkdir "$TOKEN_DIR"
+
+
+OPENSSL_CONF="$TOKEN_DIR"/openssl.conf
+cat > "$OPENSSL_CONF" <<EOF
+openssl_conf = config
+
+[ config ]
+providers = provider_section
+
+[ provider_section ]
+default = default_section
+provider1 = provider1_section
+
+[default_section]
+activate = 1
+
+[provider1_section]
+pkcs11-module-path = $P11MODULE
+module = $PROV_PKCS11
+activate = 1
+EOF
+export OPENSSL_CONF
+
+
+SOFTHSM2_CONF="$TOKEN_DIR"/softhsm2.conf
+cat > "$SOFTHSM2_CONF" <<EOF
+directories.tokendir = $TOKEN_DIR
+objectstore.backend = file
+slots.removable = false
+slots.mechanisms = ALL
+log.level = ERROR
+EOF
+export SOFTHSM2_CONF
+
+
+# execution
+set -e
+
+TOKEN_PIN=4321
+TOKEN_ID=01
+PASS_URI=pass:$TOKEN_PIN
+PASS_FILE=pass:dcba
+KEY_URI=pkcs11:id=%$TOKEN_ID
+KEY_FILE="$TOKEN_DIR"/test_key
+SIGN_FILE="$TOKEN_DIR"/test_sign
+
+softhsm2_tool --init-token --label test0 --slot free --so-pin 12345678 --pin $TOKEN_PIN
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$KEY_FILE" -pass $PASS_FILE
+softhsm2_tool --import "$KEY_FILE" --import-type keypair --id $TOKEN_ID --label test_key --token test0 --pin $TOKEN_PIN
+
+#openssl storeutl -passin $PASS_URI $KEY_URI
+
+# sample command that crash before workaround due to OpenSSL "at_exit" flaw
+openssl pkeyutl -sign -inkey $KEY_URI -passin $PASS_URI -rawin -in ./Makefile -out "$SIGN_FILE"
+
+# just in case
+openssl pkeyutl -verify -inkey "$KEY_FILE" -passin $PASS_FILE -rawin -in ./Makefile -sigfile "$SIGN_FILE"
