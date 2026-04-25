@@ -429,6 +429,8 @@ bool OSSLECDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 	    !ECDSA_SIG_set0(sig, bn_r, bn_s))
 	{
 		ERROR_MSG("Could not add data to the ECDSA_SIG object");
+		BN_free(bn_r);
+		BN_free(bn_s);
 		ECDSA_SIG_free(sig);
 		return false;
 	}
@@ -445,6 +447,7 @@ bool OSSLECDSA::verify(PublicKey* publicKey, const ByteString& originalData,
                 || !digest->hashFinal(prepDataToSign))
         {
             delete digest;
+			ECDSA_SIG_free(sig);
             return false;
         }
         delete digest;
