@@ -101,6 +101,8 @@
 #include <unistd.h>
 #endif
 
+bool SoftHSM::isInitialised;
+
 // Initialise the one-and-only instance
 
 #ifdef HAVE_CXX11
