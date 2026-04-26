@@ -36,7 +36,6 @@
 #include "config.h"
 #ifdef WITH_SLH_DSA
 #include "AsymmetricAlgorithm.h"
-#include <openssl/evp.h>
 
 class OSSLSLHDSA : public AsymmetricAlgorithm
 {

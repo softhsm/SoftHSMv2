@@ -42,6 +42,9 @@ class SLHDSAPrivateKey : public PrivateKey
  /** \brief The type */
 	static const char* type;
 
+ /** \brief Constructor */
+	SLHDSAPrivateKey();
+
  /** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
@@ -68,7 +71,7 @@ class SLHDSAPrivateKey : public PrivateKey
 protected:
     
 	ByteString value;
-	unsigned long parameterSet = 0;
+	unsigned long parameterSet;
 };
 
 #endif // !_SOFTHSM_V2_SLHDSAPRIVATEKEY_H

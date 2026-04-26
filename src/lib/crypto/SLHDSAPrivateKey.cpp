@@ -13,6 +13,12 @@
 // Set the type
 /*static*/ const char* SLHDSAPrivateKey::type = "Abstract SLH-DSA private key";
 
+// Constructor
+SLHDSAPrivateKey::SLHDSAPrivateKey()
+{
+	parameterSet = 0;
+}
+
 // Check if the key is of the given type
 bool SLHDSAPrivateKey::isOfType(const char* inType)
 {

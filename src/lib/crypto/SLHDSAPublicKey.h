@@ -43,6 +43,9 @@ public:
  /** \brief The type */
 	static const char* type;
 
+ /** \brief Constructor */
+	SLHDSAPublicKey();
+
  /** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
@@ -70,7 +73,7 @@ protected:
     
  /** \brief Public components */
 	ByteString value;
-	unsigned long parameterSet = 0;
+	unsigned long parameterSet;
 
 };
 

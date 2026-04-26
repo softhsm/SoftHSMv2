@@ -7988,8 +7988,12 @@ CK_RV SoftHSM::C_UnwrapKey(CK_SESSION_HANDLE hSession,
 #endif
 #ifdef WITH_SLH_DSA
       else if (keyType == CKK_SLH_DSA) {
-        bOK = bOK && SLHDSAUtil::setSLHDSAPrivateKey(osobject, keydata, token,
+        CK_RV slh_rv = SLHDSAUtil::setSLHDSAPrivateKey(osobject, keydata, token,
                                                      isPrivate != CK_FALSE);
+        if (slh_rv != CKR_OK) {
+            bOK = false;
+            rv = slh_rv;
+        }
       }
 #endif
       else

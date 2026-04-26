@@ -75,29 +75,29 @@
 	return CKR_OK;
 }
 
-/*static*/ bool SLHDSAUtil::setSLHDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate)
+/*static*/ CK_RV SLHDSAUtil::setSLHDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate)
 {
 	if (key == NULL)
 	{
-		return false;
+		return CKR_ARGUMENTS_BAD;
 	}
 
 	AsymmetricAlgorithm* slhdsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::SLHDSA);
 	if (slhdsa == NULL)
 	{
-		return false;
+		return CKR_GENERAL_ERROR;
 	}
 	PrivateKey* priv = slhdsa->newPrivateKey();
 	if (priv == NULL)
 	{
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
-		return false;
+		return CKR_HOST_MEMORY;
 	}
 	if (!priv->PKCS8Decode(ber))
 	{
 		slhdsa->recyclePrivateKey(priv);
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
-		return false;
+		return CKR_ATTRIBUTE_VALUE_INVALID;
 	}
 	// SLH-DSA Private Key Attributes
 	ByteString value;
@@ -107,13 +107,13 @@
 		{
 			slhdsa->recyclePrivateKey(priv);
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
-			return false;
+			return CKR_ARGUMENTS_BAD;
 		}
 		if (!token->encrypt(((SLHDSAPrivateKey*)priv)->getValue(), value))
 		{
 			slhdsa->recyclePrivateKey(priv);
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
-			return false;
+			return CKR_GENERAL_ERROR;
 		}
 	}
 	else
@@ -127,7 +127,7 @@
 	slhdsa->recyclePrivateKey(priv);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
 
-	return bOK;
+	return bOK ? CKR_OK : CKR_GENERAL_ERROR;
 }
 
 /*static*/ CK_RV SLHDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType)

@@ -37,7 +37,6 @@
 #ifdef WITH_SLH_DSA
 #include "SLHDSAParameters.h"
 #include "SLHDSAPrivateKey.h"
-#include <openssl/bn.h>
 #include <openssl/evp.h>
 
 class OSSLSLHDSAPrivateKey : public SLHDSAPrivateKey
