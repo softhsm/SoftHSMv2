@@ -249,27 +249,27 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 			case CKA_KEY_TYPE:
 				if (pTemplate[i].ulValueLen == sizeof(CK_KEY_TYPE))
 				{
-					keyType = *(CK_KEY_TYPE*)pTemplate[i].pValue;
+					memcpy(&keyType, pTemplate[i].pValue, sizeof(keyType));
 					bHasKeyType = true;
 				}
 				break;
 			case CKA_CERTIFICATE_TYPE:
 				if (pTemplate[i].ulValueLen == sizeof(CK_CERTIFICATE_TYPE))
 				{
-					certType = *(CK_CERTIFICATE_TYPE*)pTemplate[i].pValue;
+					memcpy(&certType, pTemplate[i].pValue, sizeof(certType));
 					bHasCertType = true;
 				}
 				break;
 			case CKA_TOKEN:
 				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
 				{
-					isOnToken = *(CK_BBOOL*)pTemplate[i].pValue;
+					memcpy(&isOnToken, pTemplate[i].pValue, sizeof(isOnToken));
 				}
 				break;
 			case CKA_PRIVATE:
 				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
 				{
-					isPrivate = *(CK_BBOOL*)pTemplate[i].pValue;
+					memcpy(&isPrivate, pTemplate[i].pValue, sizeof(isPrivate));
 					bHasPrivate = true;
 				}
 				break;
@@ -1713,12 +1713,12 @@ CK_RV SoftHSM::C_CopyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject
 	{
 		if ((pTemplate[i].type == CKA_TOKEN) && (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)))
 		{
-			isOnToken = *(CK_BBOOL*)pTemplate[i].pValue;
+			memcpy(&isOnToken, pTemplate[i].pValue, sizeof(isOnToken));
 			continue;
 		}
 		if ((pTemplate[i].type == CKA_PRIVATE) && (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)))
 		{
-			isPrivate = *(CK_BBOOL*)pTemplate[i].pValue;
+			memcpy(&isPrivate, pTemplate[i].pValue, sizeof(isPrivate));
 			continue;
 		}
 	}
@@ -2082,7 +2082,9 @@ CK_RV SoftHSM::C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 			{
 				if (sizeof(CK_BBOOL) != pTemplate[i].ulValueLen)
 					break;
-				bool bTemplateValue = (*(CK_BBOOL*)pTemplate[i].pValue == CK_TRUE);
+				CK_BBOOL b = CK_FALSE;
+				memcpy(&b, pTemplate[i].pValue, sizeof(b));
+				bool bTemplateValue = (b == CK_TRUE);
 				if (attr.getBooleanValue() != bTemplateValue)
 					break;
 			}
