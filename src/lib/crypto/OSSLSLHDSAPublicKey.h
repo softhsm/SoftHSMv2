@@ -45,6 +45,7 @@ public:
  /** \brief Constructors */
 	OSSLSLHDSAPublicKey();
 
+ /** \brief Constructor from OpenSSL representation */
 	OSSLSLHDSAPublicKey(const EVP_PKEY* inSLHDSAKEY);
 
  /** \brief Destructor */
@@ -64,6 +65,7 @@ public:
  /** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
+ /** \brief Setters for the SLH-DSA public key components */
 	virtual void setValue(const ByteString& value);
 
  /** \brief Set from OpenSSL representation */

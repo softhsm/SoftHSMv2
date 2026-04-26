@@ -55,6 +55,7 @@ public:
  /** \brief Get the bit length */
 	virtual unsigned long getBitLength() const;
 
+ /** \brief Setters for the SLH-DSA public key components */
 	virtual void setValue(const ByteString& value);
 	virtual void setParameterSet(unsigned long inParameterSet);
 

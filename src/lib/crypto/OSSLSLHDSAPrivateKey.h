@@ -46,6 +46,7 @@ public:
  /** \brief Constructors */
 	OSSLSLHDSAPrivateKey();
 
+ /** \brief Constructor from OpenSSL representation */
 	OSSLSLHDSAPrivateKey(const EVP_PKEY* inSLHDSAKEY);
 
  /** \brief Destructor */
