@@ -35,6 +35,6 @@ public:
 	virtual bool isOfType(const char* inType) const;
 };
 
-#endif // !WITH_SLH_DSA
+#endif // WITH_SLH_DSA
 #endif // !_SOFTHSM_V2_SLHDSAMECHANISMPARAM_H
 

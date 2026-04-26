@@ -10,7 +10,7 @@
 #include "OSSLSLHDSAKeyPair.h"
 
 // Set the public key
-void OSSLSLHDSAKeyPair::setPublicKey(OSSLSLHDSAPublicKey& publicKey)
+void OSSLSLHDSAKeyPair::setPublicKey(const OSSLSLHDSAPublicKey& publicKey)
 {
 	// Copy only the public material; avoid sharing OpenSSL handles
 	pubKey.setValue(publicKey.getValue());
@@ -18,7 +18,7 @@ void OSSLSLHDSAKeyPair::setPublicKey(OSSLSLHDSAPublicKey& publicKey)
 }
 
 // Set the private key
-void OSSLSLHDSAKeyPair::setPrivateKey(OSSLSLHDSAPrivateKey& privateKey)
+void OSSLSLHDSAKeyPair::setPrivateKey(const OSSLSLHDSAPrivateKey& privateKey)
 {
 	// Copy only the raw material; avoid sharing OpenSSL handles
 	privKey.setValue(privateKey.getValue());

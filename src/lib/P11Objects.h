@@ -447,7 +447,6 @@ protected:
 	bool initialized;
 };
 
-#endif // !_SOFTHSM_V2_P11OBJECTS_H
 class P11SLHDSAPublicKeyObj : public P11PublicKeyObj
 {
 public:
@@ -473,4 +472,6 @@ public:
 protected:
 	bool initialized;
 };
+
+#endif // !_SOFTHSM_V2_P11OBJECTS_H
 

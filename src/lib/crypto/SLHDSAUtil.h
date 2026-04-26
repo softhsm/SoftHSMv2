@@ -31,5 +31,5 @@ public:
 
 };
 
-#endif // !WITH_SLH_DSA
+#endif // WITH_SLH_DSA
 #endif // !_SOFTHSM_V2_SLHDSAUTIL_H
