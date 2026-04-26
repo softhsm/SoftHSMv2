@@ -184,7 +184,7 @@ private:
 #endif
 
 	// Is the SoftHSM PKCS #11 library initialised?
-	bool isInitialised;
+	static bool isInitialised;
 	bool isRemovable;
 
 	SessionObjectStore* sessionObjectStore;

@@ -37,5 +37,14 @@ softhsm2_util_SOURCES +=	softhsm2-util-botan.cpp
 endif
 
 EXTRA_DIST =		$(srcdir)/CMakeLists.txt \
+			$(srcdir)/p11prov \
 			$(srcdir)/*.h \
 			$(srcdir)/*.cpp
+
+TESTS =
+if WITH_OPENSSL
+TESTS +=		p11prov
+endif
+
+clean-local:
+	-rm -rf tokens
