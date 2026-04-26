@@ -17,11 +17,13 @@
 #include <openssl/x509.h>
 
 // Constructors
+/** \brief OSSLSLHDSAPrivateKey */
 OSSLSLHDSAPrivateKey::OSSLSLHDSAPrivateKey()
 {
 	pkey = NULL;
 }
 
+/** \brief OSSLSLHDSAPrivateKey */
 OSSLSLHDSAPrivateKey::OSSLSLHDSAPrivateKey(const EVP_PKEY* inSLHDSAKEY)
 {
 	pkey = NULL;
@@ -30,6 +32,7 @@ OSSLSLHDSAPrivateKey::OSSLSLHDSAPrivateKey(const EVP_PKEY* inSLHDSAKEY)
 }
 
 // Destructor
+/** \brief ~OSSLSLHDSAPrivateKey */
 OSSLSLHDSAPrivateKey::~OSSLSLHDSAPrivateKey()
 {
 	if (pkey != NULL)
@@ -39,6 +42,7 @@ OSSLSLHDSAPrivateKey::~OSSLSLHDSAPrivateKey()
 	}
 }
 
+/** \brief OSSLSLHDSAPrivateKey */
 OSSLSLHDSAPrivateKey::OSSLSLHDSAPrivateKey(OSSLSLHDSAPrivateKey&& other) noexcept  
 	: SLHDSAPrivateKey(std::move(other)), pkey(other.pkey)  
 {  
@@ -61,6 +65,7 @@ OSSLSLHDSAPrivateKey& OSSLSLHDSAPrivateKey::operator=(OSSLSLHDSAPrivateKey&& oth
 const char* OSSLSLHDSAPrivateKey::type = "OpenSSL SLH-DSA Private Key";
 
 // Set from OpenSSL representation
+/** \brief setFromOSSL */
 bool OSSLSLHDSAPrivateKey::setFromOSSL(const EVP_PKEY* inSLHDSAKEY)
 {
 	// let's use max priv length
@@ -91,11 +96,13 @@ bool OSSLSLHDSAPrivateKey::setFromOSSL(const EVP_PKEY* inSLHDSAKEY)
 }
 
 // Check if the key is of the given type
+/** \brief isOfType */
 bool OSSLSLHDSAPrivateKey::isOfType(const char* inType)
 {
 	return !strcmp(type, inType);
 }
 
+/** \brief setValue */
 void OSSLSLHDSAPrivateKey::setValue(const ByteString& inValue)
 {
 	SLHDSAPrivateKey::setValue(inValue);
@@ -106,6 +113,7 @@ void OSSLSLHDSAPrivateKey::setValue(const ByteString& inValue)
 	}
 }
 // Encode into PKCS#8 DER
+/** \brief PKCS8Encode */
 ByteString OSSLSLHDSAPrivateKey::PKCS8Encode()
 {
 	ByteString der;
@@ -128,6 +136,7 @@ ByteString OSSLSLHDSAPrivateKey::PKCS8Encode()
 }
 
 // Decode from PKCS#8 BER
+/** \brief PKCS8Decode */
 bool OSSLSLHDSAPrivateKey::PKCS8Decode(const ByteString& ber)
 {
 	int len = ber.size();
@@ -144,6 +153,7 @@ bool OSSLSLHDSAPrivateKey::PKCS8Decode(const ByteString& ber)
 }
 
 // Retrieve the OpenSSL representation of the key
+/** \brief getOSSLKey */
 EVP_PKEY* OSSLSLHDSAPrivateKey::getOSSLKey()
 {
 	if (pkey == NULL) createOSSLKey();
@@ -152,6 +162,7 @@ EVP_PKEY* OSSLSLHDSAPrivateKey::getOSSLKey()
 }
 
 // Create the OpenSSL representation of the key
+/** \brief createOSSLKey */
 void OSSLSLHDSAPrivateKey::createOSSLKey()
 {
 	if (pkey != NULL) return;

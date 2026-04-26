@@ -15,11 +15,13 @@
 #include <string.h>
 
 // Constructors
+/** \brief OSSLSLHDSAPublicKey */
 OSSLSLHDSAPublicKey::OSSLSLHDSAPublicKey()
 {
 	pkey = NULL;
 }
 
+/** \brief OSSLSLHDSAPublicKey */
 OSSLSLHDSAPublicKey::OSSLSLHDSAPublicKey(const EVP_PKEY* inEVPPKEY)
 {
 	pkey = NULL;
@@ -28,6 +30,7 @@ OSSLSLHDSAPublicKey::OSSLSLHDSAPublicKey(const EVP_PKEY* inEVPPKEY)
 }
 
 // Destructor
+/** \brief ~OSSLSLHDSAPublicKey */
 OSSLSLHDSAPublicKey::~OSSLSLHDSAPublicKey()
 {
 	if (pkey != NULL)
@@ -37,6 +40,7 @@ OSSLSLHDSAPublicKey::~OSSLSLHDSAPublicKey()
 	}
 }
 
+/** \brief OSSLSLHDSAPublicKey */
 OSSLSLHDSAPublicKey::OSSLSLHDSAPublicKey(OSSLSLHDSAPublicKey&& other) noexcept
     : SLHDSAPublicKey(std::move(other)), pkey(other.pkey)
 {
@@ -62,6 +66,7 @@ OSSLSLHDSAPublicKey& OSSLSLHDSAPublicKey::operator=(OSSLSLHDSAPublicKey&& other)
 /*static*/ const char* OSSLSLHDSAPublicKey::type = "OpenSSL SLH-DSA Public Key";
 
 // Set from OpenSSL representation
+/** \brief setFromOSSL */
 void OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 {
 	// let's use max pub length
@@ -91,11 +96,13 @@ void OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 }
 
 // Check if the key is of the given type
+/** \brief isOfType */
 bool OSSLSLHDSAPublicKey::isOfType(const char* inType)
 {
 	 return !strcmp(OSSLSLHDSAPublicKey::type, inType) || SLHDSAPublicKey::isOfType(inType);
 }
 
+/** \brief setValue */
 void OSSLSLHDSAPublicKey::setValue(const ByteString& inValue)
 {
 	SLHDSAPublicKey::setValue(inValue);
@@ -107,6 +114,7 @@ void OSSLSLHDSAPublicKey::setValue(const ByteString& inValue)
 }
 
 // Retrieve the OpenSSL representation of the key
+/** \brief getOSSLKey */
 EVP_PKEY* OSSLSLHDSAPublicKey::getOSSLKey()
 {
 	if (pkey == NULL) createOSSLKey();
@@ -115,6 +123,7 @@ EVP_PKEY* OSSLSLHDSAPublicKey::getOSSLKey()
 }
 
 // Create the OpenSSL representation of the key
+/** \brief createOSSLKey */
 void OSSLSLHDSAPublicKey::createOSSLKey()
 {
 	if (pkey != NULL) return;

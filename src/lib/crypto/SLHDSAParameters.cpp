@@ -13,29 +13,34 @@
 /*static*/ const char* SLHDSAParameters::type = "SLH-DSA parameters";
 
 // Set the parameter set
+/** \brief setParameterSet */
 void SLHDSAParameters::setParameterSet(const unsigned long inParameterSet)
 {
 	parameterSet = inParameterSet;
 }
 
 // Get the parameter set
+/** \brief getParameterSet */
 unsigned long SLHDSAParameters::getParameterSet() const
 {
 	return parameterSet;
 }
 
 // Are the parameters of the given type?
+/** \brief areOfType */
 bool SLHDSAParameters::areOfType(const char* inType)
 {
 	return (strcmp(type, inType) == 0);
 }
 
 // Serialisation
+/** \brief serialise */
 ByteString SLHDSAParameters::serialise() const
 {
 	return ByteString(getParameterSet());
 }
 
+/** \brief deserialise */
 bool SLHDSAParameters::deserialise(ByteString& serialised)
 {
 	if (serialised.size() != 8)

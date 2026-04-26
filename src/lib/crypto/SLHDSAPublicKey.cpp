@@ -14,29 +14,34 @@
 /*static*/ const char* SLHDSAPublicKey::type = "Abstract SLH-DSA public key";
 
 // Constructor
+/** \brief SLHDSAPublicKey */
 SLHDSAPublicKey::SLHDSAPublicKey()
 {
 	parameterSet = 0;
 }
 
 // Check if the key is of the given type
+/** \brief isOfType */
 bool SLHDSAPublicKey::isOfType(const char* inType)
 {
 	return !strcmp(type, inType);
 }
 
+/** \brief getBitLength */
 unsigned long SLHDSAPublicKey::getBitLength() const
 {
 	return getValue().bits();
 }
 
 // Get the parameter set length
+/** \brief getParameterSet */
 unsigned long SLHDSAPublicKey::getParameterSet() const
 {
 	return parameterSet;
 }
 
 // Get the signature length
+/** \brief getOutputLength */
 unsigned long SLHDSAPublicKey::getOutputLength() const
 {
 	switch(parameterSet) {
@@ -68,21 +73,25 @@ unsigned long SLHDSAPublicKey::getOutputLength() const
 	return 0UL;
 }
 
+/** \brief getValue */
 const ByteString& SLHDSAPublicKey::getValue() const
 {
 	return value;
 }
 
+/** \brief setValue */
 void SLHDSAPublicKey::setValue(const ByteString& inValue)
 {
 	value = inValue;
 }
 
+/** \brief serialise */
 ByteString SLHDSAPublicKey::serialise() const
 {
 	return value.serialise() + ByteString((const unsigned char*)&parameterSet, sizeof(unsigned long)).serialise();
 }
 
+/** \brief deserialise */
 bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 {
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
@@ -104,6 +113,7 @@ bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 	return true;
 }
 
+/** \brief setParameterSet */
 void SLHDSAPublicKey::setParameterSet(unsigned long inParameterSet)
 {
 	parameterSet = inParameterSet;

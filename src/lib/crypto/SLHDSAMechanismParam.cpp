@@ -10,14 +10,17 @@
 #include "MechanismParam.h"
 #include "SLHDSAMechanismParam.h"
 
+/** \brief SLHDSAMechanismParam */
 SLHDSAMechanismParam::SLHDSAMechanismParam() {
     this->hedgeType = Hedge::HEDGE_PREFERRED;
 }
 
+/** \brief SLHDSAMechanismParam */
 SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType) {
     this->hedgeType = hedgeType;
 }
 
+/** \brief SLHDSAMechanismParam */
 SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, ByteString additionalContext) {
     this->hedgeType = hedgeType;
     this->additionalContext = additionalContext;
@@ -26,12 +29,14 @@ SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, ByteString add
 // Set the type
 /*static*/ const char* SLHDSAMechanismParam::type = "SLH-DSA Signature param";
 
+/** \brief clone */
 SLHDSAMechanismParam* SLHDSAMechanismParam::clone() const
 {
     return new SLHDSAMechanismParam(static_cast<const SLHDSAMechanismParam&>(*this)); // call the copy ctor.
 }
 
 // Check if the parameter is of the given type
+/** \brief isOfType */
 bool SLHDSAMechanismParam::isOfType(const char* inType) const
 {
     return !strcmp(type, inType);

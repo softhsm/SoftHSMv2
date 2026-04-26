@@ -9,6 +9,7 @@
 #include "SLHDSAUtil.h"
 #include "SLHDSAMechanismParam.h"
 
+/** \brief getSLHDSAPrivateKey */
 /*static*/ CK_RV SLHDSAUtil::getSLHDSAPrivateKey(SLHDSAPrivateKey* privateKey, Token* token, OSObject* key)
 {
 	if (privateKey == NULL) return CKR_ARGUMENTS_BAD;
@@ -42,6 +43,7 @@
 	return CKR_OK;
 }
 
+/** \brief getSLHDSAPublicKey */
 /*static*/ CK_RV SLHDSAUtil::getSLHDSAPublicKey(SLHDSAPublicKey* publicKey, Token* token, OSObject* key)
 {
 	if (publicKey == NULL) return CKR_ARGUMENTS_BAD;
@@ -75,6 +77,7 @@
 	return CKR_OK;
 }
 
+/** \brief setSLHDSAPrivateKey */
 /*static*/ CK_RV SLHDSAUtil::setSLHDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate)
 {
 	if (key == NULL)
@@ -130,6 +133,7 @@
 	return bOK ? CKR_OK : CKR_GENERAL_ERROR;
 }
 
+/** \brief setHedge */
 /*static*/ CK_RV SLHDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType)
 {
 

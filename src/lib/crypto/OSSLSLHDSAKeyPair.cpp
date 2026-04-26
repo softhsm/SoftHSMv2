@@ -10,6 +10,7 @@
 #include "OSSLSLHDSAKeyPair.h"
 
 // Set the public key
+/** \brief setPublicKey */
 void OSSLSLHDSAKeyPair::setPublicKey(const OSSLSLHDSAPublicKey& publicKey)
 {
 	// Copy only the public material; avoid sharing OpenSSL handles
@@ -18,6 +19,7 @@ void OSSLSLHDSAKeyPair::setPublicKey(const OSSLSLHDSAPublicKey& publicKey)
 }
 
 // Set the private key
+/** \brief setPrivateKey */
 void OSSLSLHDSAKeyPair::setPrivateKey(const OSSLSLHDSAPrivateKey& privateKey)
 {
 	// Copy only the raw material; avoid sharing OpenSSL handles
@@ -26,22 +28,26 @@ void OSSLSLHDSAKeyPair::setPrivateKey(const OSSLSLHDSAPrivateKey& privateKey)
 }
 
 // Return the public key
+/** \brief getPublicKey */
 PublicKey* OSSLSLHDSAKeyPair::getPublicKey()
 {
 	return &pubKey;
 }
 
+/** \brief getConstPublicKey */
 const PublicKey* OSSLSLHDSAKeyPair::getConstPublicKey() const
 {
 	return &pubKey;
 }
 
 // Return the private key
+/** \brief getPrivateKey */
 PrivateKey* OSSLSLHDSAKeyPair::getPrivateKey()
 {
 	return &privKey;
 }
 
+/** \brief getConstPrivateKey */
 const PrivateKey* OSSLSLHDSAKeyPair::getConstPrivateKey() const
 {
 	return &privKey;

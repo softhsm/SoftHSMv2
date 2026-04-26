@@ -1989,9 +1989,11 @@ bool P11DHDomainObj::init(OSObject *inobject)
 	initialized = true;
 	return true;
 }
+/** \brief P11SLHDSAPublicKeyObj */
 P11SLHDSAPublicKeyObj::P11SLHDSAPublicKeyObj() { initialized = false; }
 
 // Add attributes
+/** \brief init */
 bool P11SLHDSAPublicKeyObj::init(OSObject *inobject) {
   if (initialized)
     return true;
@@ -2031,9 +2033,11 @@ bool P11SLHDSAPublicKeyObj::init(OSObject *inobject) {
   return true;
 }
 
+/** \brief P11SLHDSAPrivateKeyObj */
 P11SLHDSAPrivateKeyObj::P11SLHDSAPrivateKeyObj() { initialized = false; }
 
 // Add attributes
+/** \brief init */
 bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject) {
   if (initialized)
     return true;

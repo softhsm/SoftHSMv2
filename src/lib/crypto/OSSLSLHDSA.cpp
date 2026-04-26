@@ -25,6 +25,7 @@ int OSSLSLHDSA::OSSL_RANDOM = 0;
 int OSSLSLHDSA::OSSL_DETERMINISTIC = 1;
 
 // Signing functions
+/** \brief sign */
 bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 					 ByteString &signature, const AsymMech::Type mechanism,
 					 const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
@@ -155,6 +156,7 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	return true;
 }
 
+/** \brief signInit */
 bool OSSLSLHDSA::signInit(PrivateKey * /*privateKey*/, const AsymMech::Type /*mechanism*/,
 						 const void * /* param = NULL */, const size_t /* paramLen = 0 */)
 {
@@ -163,6 +165,7 @@ bool OSSLSLHDSA::signInit(PrivateKey * /*privateKey*/, const AsymMech::Type /*me
 	return false;
 }
 
+/** \brief signUpdate */
 bool OSSLSLHDSA::signUpdate(const ByteString & /*dataToSign*/)
 {
 	ERROR_MSG("SLH-DSA does not support multi part signing");
@@ -170,6 +173,7 @@ bool OSSLSLHDSA::signUpdate(const ByteString & /*dataToSign*/)
 	return false;
 }
 
+/** \brief signFinal */
 bool OSSLSLHDSA::signFinal(ByteString & /*signature*/)
 {
 	ERROR_MSG("SLH-DSA does not support multi part signing");
@@ -178,6 +182,7 @@ bool OSSLSLHDSA::signFinal(ByteString & /*signature*/)
 }
 
 // Verification functions
+/** \brief verify */
 bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 					   const ByteString &signature, const AsymMech::Type mechanism,
 					   const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
@@ -305,6 +310,7 @@ bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	return true;
 }
 
+/** \brief verifyInit */
 bool OSSLSLHDSA::verifyInit(PublicKey * /*publicKey*/, const AsymMech::Type /*mechanism*/,
 						   const void * /* param = NULL */, const size_t /* paramLen = 0 */)
 {
@@ -313,6 +319,7 @@ bool OSSLSLHDSA::verifyInit(PublicKey * /*publicKey*/, const AsymMech::Type /*me
 	return false;
 }
 
+/** \brief verifyUpdate */
 bool OSSLSLHDSA::verifyUpdate(const ByteString & /*originalData*/)
 {
 	ERROR_MSG("SLH-DSA does not support multi part verifying");
@@ -320,6 +327,7 @@ bool OSSLSLHDSA::verifyUpdate(const ByteString & /*originalData*/)
 	return false;
 }
 
+/** \brief verifyFinal */
 bool OSSLSLHDSA::verifyFinal(const ByteString & /*signature*/)
 {
 	ERROR_MSG("SLH-DSA does not support multi part verifying");
@@ -328,6 +336,7 @@ bool OSSLSLHDSA::verifyFinal(const ByteString & /*signature*/)
 }
 
 // Encryption functions
+/** \brief encrypt */
 bool OSSLSLHDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/)
 {
@@ -337,6 +346,7 @@ bool OSSLSLHDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 }
 
 // Decryption functions
+/** \brief decrypt */
 bool OSSLSLHDSA::decrypt(PrivateKey * /*privateKey*/, const ByteString & /*encryptedData*/,
 						ByteString & /*data*/, const AsymMech::Type /*padding*/)
 {
@@ -345,16 +355,19 @@ bool OSSLSLHDSA::decrypt(PrivateKey * /*privateKey*/, const ByteString & /*encry
 	return false;
 }
 
+/** \brief getMinKeySize */
 unsigned long OSSLSLHDSA::getMinKeySize()
 {
 	return SLHDSAParameters::SLH_DSA_SHA2_128S_PUB_LENGTH;
 }
 
+/** \brief getMaxKeySize */
 unsigned long OSSLSLHDSA::getMaxKeySize()
 {
 	return SLHDSAParameters::SLH_DSA_SHA2_256F_PUB_LENGTH;
 }
 
+/** \brief checkEncryptedDataSize */
 bool OSSLSLHDSA::checkEncryptedDataSize(PrivateKey * /* privateKey*/, const ByteString & /*encryptedData*/, int * /* errorCode*/)
 {
 	ERROR_MSG("SLH-DSA does not support encryption");
@@ -363,6 +376,7 @@ bool OSSLSLHDSA::checkEncryptedDataSize(PrivateKey * /* privateKey*/, const Byte
 }
 
 // Key factory
+/** \brief generateKeyPair */
 bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameters *parameters, RNG * /*rng = NULL */)
 {
 	// Check parameters
@@ -425,6 +439,7 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParame
 	return true;
 }
 
+/** \brief reconstructKeyPair */
 bool OSSLSLHDSA::reconstructKeyPair(AsymmetricKeyPair **ppKeyPair, ByteString &serialisedData)
 {
 	// Check input
@@ -463,6 +478,7 @@ bool OSSLSLHDSA::reconstructKeyPair(AsymmetricKeyPair **ppKeyPair, ByteString &s
 	return true;
 }
 
+/** \brief reconstructPublicKey */
 bool OSSLSLHDSA::reconstructPublicKey(PublicKey **ppPublicKey, ByteString &serialisedData)
 {
 	// Check input
@@ -486,6 +502,7 @@ bool OSSLSLHDSA::reconstructPublicKey(PublicKey **ppPublicKey, ByteString &seria
 	return true;
 }
 
+/** \brief reconstructPrivateKey */
 bool OSSLSLHDSA::reconstructPrivateKey(PrivateKey **ppPrivateKey, ByteString &serialisedData)
 {
 	// Check input
@@ -509,21 +526,25 @@ bool OSSLSLHDSA::reconstructPrivateKey(PrivateKey **ppPrivateKey, ByteString &se
 	return true;
 }
 
+/** \brief newPublicKey */
 PublicKey *OSSLSLHDSA::newPublicKey()
 {
 	return (PublicKey *)new OSSLSLHDSAPublicKey();
 }
 
+/** \brief newPrivateKey */
 PrivateKey *OSSLSLHDSA::newPrivateKey()
 {
 	return (PrivateKey *)new OSSLSLHDSAPrivateKey();
 }
 
+/** \brief newParameters */
 AsymmetricParameters *OSSLSLHDSA::newParameters()
 {
 	return (AsymmetricParameters *)new SLHDSAParameters();
 }
 
+/** \brief reconstructParameters */
 bool OSSLSLHDSA::reconstructParameters(AsymmetricParameters **ppParams, ByteString &serialisedData)
 {
 	// Check input parameters
