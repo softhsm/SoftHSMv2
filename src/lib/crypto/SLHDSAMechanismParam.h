@@ -20,7 +20,7 @@ public:
 	Hedge::Type hedgeType;
 	ByteString additionalContext;
 
-	// The type
+ /** \brief The type */
 	static const char* type;
 
 	SLHDSAMechanismParam();
@@ -31,7 +31,7 @@ public:
 	
 	SLHDSAMechanismParam* clone() const;
 
-	// Check if the mechanism param is of the given type
+ /** \brief Check if the mechanism param is of the given type */
 	virtual bool isOfType(const char* inType) const;
 };
 

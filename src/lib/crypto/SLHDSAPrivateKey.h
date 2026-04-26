@@ -13,29 +13,29 @@
 class SLHDSAPrivateKey : public PrivateKey
 {
 	public:
-	// The type
+ /** \brief The type */
 	static const char* type;
 
-	// Check if the key is of the given type
+ /** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
-	// Get the SLH-DSA parameter set
+ /** \brief Get the SLH-DSA parameter set */
 	virtual unsigned long getParameterSet() const;
 
-	// Get the signature length
+ /** \brief Get the signature length */
 	virtual unsigned long getOutputLength() const;
 
-	// Get the bit length
+ /** \brief Get the bit length */
 	virtual unsigned long getBitLength() const;
 
-	// Setters for the SLH-DSA private key components
+ /** \brief Setters for the SLH-DSA private key components */
 	virtual void setValue(const ByteString& value);
 	virtual void setParameterSet(unsigned long inParameterSet);
 
-	// Getters for the SLH-DSA private key components
+ /** \brief Getters for the SLH-DSA private key components */
 	virtual const ByteString& getValue() const;
 
-	// Serialisation
+ /** \brief Serialisation */
 	virtual ByteString serialise() const;
 	virtual bool deserialise(ByteString& serialised);
 

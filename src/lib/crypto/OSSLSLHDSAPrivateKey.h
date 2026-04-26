@@ -17,48 +17,48 @@
 class OSSLSLHDSAPrivateKey : public SLHDSAPrivateKey
 {
 public:
-	// Constructors
+ /** \brief Constructors */
 	OSSLSLHDSAPrivateKey();
 
 	OSSLSLHDSAPrivateKey(const EVP_PKEY* inSLHDSAKEY);
 
-	// Destructor
+ /** \brief Destructor */
 	virtual ~OSSLSLHDSAPrivateKey();
 
-	// Non-copyable (raw ownership of EVP_PKEY)  
+ /** \brief Non-copyable (raw ownership of EVP_PKEY) */
 	OSSLSLHDSAPrivateKey(const OSSLSLHDSAPrivateKey&) = delete;  
     OSSLSLHDSAPrivateKey& operator=(const OSSLSLHDSAPrivateKey&) = delete;  
   
-	// Movable  
+ /** \brief Movable */
 	OSSLSLHDSAPrivateKey(OSSLSLHDSAPrivateKey&&) noexcept;  
 	OSSLSLHDSAPrivateKey& operator=(OSSLSLHDSAPrivateKey&&) noexcept;  
 
-	// The type
+ /** \brief The type */
 	static const char* type;
 
-	// Check if the key is of the given type
+ /** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
-	// Setters for the SLH-DSA private key components
+ /** \brief Setters for the SLH-DSA private key components */
 	virtual void setValue(const ByteString& value);
 	
-	// Encode into PKCS#8 DER
+ /** \brief Encode into PKCS#8 DER */
 	virtual ByteString PKCS8Encode();
 
-	// Decode from PKCS#8 BER
+ /** \brief Decode from PKCS#8 BER */
 	virtual bool PKCS8Decode(const ByteString& ber);
 
-	// Set from OpenSSL representation
+ /** \brief Set from OpenSSL representation */
 	virtual bool setFromOSSL(const EVP_PKEY* inSLHDSAKEY);
 
-	// Retrieve the OpenSSL representation of the key
+ /** \brief Retrieve the OpenSSL representation of the key */
 	EVP_PKEY* getOSSLKey();
 
 private:
-	// The internal OpenSSL representation
+ /** \brief The internal OpenSSL representation */
 	EVP_PKEY* pkey;
 
-	// Create the OpenSSL representation of the key
+ /** \brief Create the OpenSSL representation of the key */
 	void createOSSLKey();
 
 };

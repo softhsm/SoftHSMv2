@@ -15,19 +15,19 @@
 class SLHDSAParameters : public AsymmetricParameters
 {
 public:
-	// The type
+ /** \brief The type */
 	static const char* type;
 
-	// Get the SLH-DSA parameter set
+ /** \brief Get the SLH-DSA parameter set */
 	virtual unsigned long getParameterSet() const;
 
-	// Setters for the SLH-DSA parameter set
+ /** \brief Setters for the SLH-DSA parameter set */
 	virtual void setParameterSet(const unsigned long parameterSet);
 
-	// Are the parameters of the given type?
+ /** \brief Are the parameters of the given type? */
 	virtual bool areOfType(const char* inType);
 
-	// Serialisation
+ /** \brief Serialisation */
 	virtual ByteString serialise() const;
 	virtual bool deserialise(ByteString& serialised);
 

@@ -16,41 +16,41 @@
 class OSSLSLHDSAPublicKey : public SLHDSAPublicKey
 {
 public:
-	// Constructors
+ /** \brief Constructors */
 	OSSLSLHDSAPublicKey();
 
 	OSSLSLHDSAPublicKey(const EVP_PKEY* inSLHDSAKEY);
 
-	// Destructor
+ /** \brief Destructor */
 	virtual ~OSSLSLHDSAPublicKey();
 
-	// Non-copyable (raw ownership of EVP_PKEY)
+ /** \brief Non-copyable (raw ownership of EVP_PKEY) */
     OSSLSLHDSAPublicKey(const OSSLSLHDSAPublicKey&) = delete;
     OSSLSLHDSAPublicKey& operator=(const OSSLSLHDSAPublicKey&) = delete;
 
-	// Movable
+ /** \brief Movable */
 	OSSLSLHDSAPublicKey(OSSLSLHDSAPublicKey&&) noexcept;
 	OSSLSLHDSAPublicKey& operator=(OSSLSLHDSAPublicKey&&) noexcept;
 
-	// The type
+ /** \brief The type */
 	static const char* type;
 
-	// Check if the key is of the given type
+ /** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
 	virtual void setValue(const ByteString& value);
 
-	// Set from OpenSSL representation
+ /** \brief Set from OpenSSL representation */
 	virtual void setFromOSSL(const EVP_PKEY* inSLHDSAKEY);
 
-	// Retrieve the OpenSSL representation of the key
+ /** \brief Retrieve the OpenSSL representation of the key */
 	EVP_PKEY* getOSSLKey();
 
 private:
-	// The internal OpenSSL representation
+ /** \brief The internal OpenSSL representation */
 	EVP_PKEY* pkey;
 
-	// Create the OpenSSL representation of the key
+ /** \brief Create the OpenSSL representation of the key */
 	void createOSSLKey();
 };
 
