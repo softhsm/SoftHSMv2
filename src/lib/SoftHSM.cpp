@@ -240,36 +240,41 @@ static CK_RV extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate,
 		switch (pTemplate[i].type)
 		{
 			case CKA_CLASS:
-				if (pTemplate[i].ulValueLen == sizeof(CK_OBJECT_CLASS))
+				if (pTemplate[i].ulValueLen == sizeof(CK_OBJECT_CLASS) &&
+				    pTemplate[i].pValue != NULL_PTR)
 				{
 					memcpy(&objClass, pTemplate[i].pValue, sizeof(objClass));
 					bHasClass = true;
 				}
 				break;
 			case CKA_KEY_TYPE:
-				if (pTemplate[i].ulValueLen == sizeof(CK_KEY_TYPE))
+				if (pTemplate[i].ulValueLen == sizeof(CK_KEY_TYPE) &&
+				    pTemplate[i].pValue != NULL_PTR)
 				{
-					keyType = *(CK_KEY_TYPE*)pTemplate[i].pValue;
+					memcpy(&keyType, pTemplate[i].pValue, sizeof(keyType));
 					bHasKeyType = true;
 				}
 				break;
 			case CKA_CERTIFICATE_TYPE:
-				if (pTemplate[i].ulValueLen == sizeof(CK_CERTIFICATE_TYPE))
+				if (pTemplate[i].ulValueLen == sizeof(CK_CERTIFICATE_TYPE) &&
+				    pTemplate[i].pValue != NULL_PTR)
 				{
-					certType = *(CK_CERTIFICATE_TYPE*)pTemplate[i].pValue;
+					memcpy(&certType, pTemplate[i].pValue, sizeof(certType));
 					bHasCertType = true;
 				}
 				break;
 			case CKA_TOKEN:
-				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
+				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL) &&
+				    pTemplate[i].pValue != NULL_PTR)
 				{
-					isOnToken = *(CK_BBOOL*)pTemplate[i].pValue;
+					memcpy(&isOnToken, pTemplate[i].pValue, sizeof(isOnToken));
 				}
 				break;
 			case CKA_PRIVATE:
-				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
+				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL) &&
+				    pTemplate[i].pValue != NULL_PTR)
 				{
-					isPrivate = *(CK_BBOOL*)pTemplate[i].pValue;
+					memcpy(&isPrivate, pTemplate[i].pValue, sizeof(isPrivate));
 					bHasPrivate = true;
 				}
 				break;
@@ -1711,14 +1716,16 @@ CK_RV SoftHSM::C_CopyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject
 
 	for (CK_ULONG i = 0; i < ulCount; i++)
 	{
-		if ((pTemplate[i].type == CKA_TOKEN) && (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)))
+		if ((pTemplate[i].type == CKA_TOKEN) && (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)) &&
+		    (pTemplate[i].pValue != NULL_PTR))
 		{
-			isOnToken = *(CK_BBOOL*)pTemplate[i].pValue;
+			memcpy(&isOnToken, pTemplate[i].pValue, sizeof(isOnToken));
 			continue;
 		}
-		if ((pTemplate[i].type == CKA_PRIVATE) && (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)))
+		if ((pTemplate[i].type == CKA_PRIVATE) && (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)) &&
+		    (pTemplate[i].pValue != NULL_PTR))
 		{
-			isPrivate = *(CK_BBOOL*)pTemplate[i].pValue;
+			memcpy(&isPrivate, pTemplate[i].pValue, sizeof(isPrivate));
 			continue;
 		}
 	}
@@ -2080,9 +2087,12 @@ CK_RV SoftHSM::C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 
 			if (attr.isBooleanAttribute())
 			{
-				if (sizeof(CK_BBOOL) != pTemplate[i].ulValueLen)
+				if (sizeof(CK_BBOOL) != pTemplate[i].ulValueLen ||
+				    pTemplate[i].pValue == NULL_PTR)
 					break;
-				bool bTemplateValue = (*(CK_BBOOL*)pTemplate[i].pValue == CK_TRUE);
+				CK_BBOOL b = CK_FALSE;
+				memcpy(&b, pTemplate[i].pValue, sizeof(b));
+				bool bTemplateValue = (b == CK_TRUE);
 				if (attr.getBooleanValue() != bTemplateValue)
 					break;
 			}
@@ -2090,7 +2100,8 @@ CK_RV SoftHSM::C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 			{
 				if (attr.isUnsignedLongAttribute())
 				{
-					if (sizeof(CK_ULONG) != pTemplate[i].ulValueLen)
+					if (sizeof(CK_ULONG) != pTemplate[i].ulValueLen ||
+					    pTemplate[i].pValue == NULL_PTR)
 						break;
 					CK_ULONG ulTemplateValue;
 					memcpy(&ulTemplateValue, pTemplate[i].pValue, sizeof(ulTemplateValue));
