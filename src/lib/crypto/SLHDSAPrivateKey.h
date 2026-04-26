@@ -70,7 +70,9 @@ class SLHDSAPrivateKey : public PrivateKey
 
 protected:
     
+ /** \brief Private key value */
 	ByteString value;
+ /** \brief Parameter set */
 	unsigned long parameterSet;
 };
 

@@ -53,10 +53,12 @@ public:
 
  /** \brief Non-copyable (raw ownership of EVP_PKEY) */
 	OSSLSLHDSAPrivateKey(const OSSLSLHDSAPrivateKey&) = delete;  
+ /** \brief Non-copyable assignment */
     OSSLSLHDSAPrivateKey& operator=(const OSSLSLHDSAPrivateKey&) = delete;  
   
  /** \brief Movable */
 	OSSLSLHDSAPrivateKey(OSSLSLHDSAPrivateKey&&) noexcept;  
+ /** \brief Movable assignment */
 	OSSLSLHDSAPrivateKey& operator=(OSSLSLHDSAPrivateKey&&) noexcept;  
 
  /** \brief The type */

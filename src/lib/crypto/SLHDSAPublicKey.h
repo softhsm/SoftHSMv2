@@ -73,6 +73,7 @@ protected:
     
  /** \brief Public components */
 	ByteString value;
+ /** \brief Parameter set */
 	unsigned long parameterSet;
 
 };

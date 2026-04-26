@@ -33,61 +33,110 @@ public:
 
 	
 	/* SLH-DSA values for CKA_PARAMETER_SETS */
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128S_PARAMETER_SET = CKP_SLH_DSA_SHA2_128S;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128S_PARAMETER_SET = CKP_SLH_DSA_SHAKE_128S;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128F_PARAMETER_SET = CKP_SLH_DSA_SHA2_128F;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128F_PARAMETER_SET = CKP_SLH_DSA_SHAKE_128F;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192S_PARAMETER_SET = CKP_SLH_DSA_SHA2_192S;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192S_PARAMETER_SET = CKP_SLH_DSA_SHAKE_192S;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192F_PARAMETER_SET = CKP_SLH_DSA_SHA2_192F;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192F_PARAMETER_SET = CKP_SLH_DSA_SHAKE_192F;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256S_PARAMETER_SET = CKP_SLH_DSA_SHA2_256S;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256S_PARAMETER_SET = CKP_SLH_DSA_SHAKE_256S;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256F_PARAMETER_SET = CKP_SLH_DSA_SHA2_256F;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256F_PARAMETER_SET = CKP_SLH_DSA_SHAKE_256F;
 
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128S_PRIV_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128S_PRIV_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128F_PRIV_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128F_PRIV_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192S_PRIV_LENGTH = 96;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192S_PRIV_LENGTH = 96;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192F_PRIV_LENGTH = 96;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192F_PRIV_LENGTH = 96;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256S_PRIV_LENGTH = 128;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256S_PRIV_LENGTH = 128;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256F_PRIV_LENGTH = 128;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256F_PRIV_LENGTH = 128;
 
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128S_PUB_LENGTH = 32;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128S_PUB_LENGTH = 32;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128F_PUB_LENGTH = 32;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128F_PUB_LENGTH = 32;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192S_PUB_LENGTH = 48;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192S_PUB_LENGTH = 48;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192F_PUB_LENGTH = 48;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192F_PUB_LENGTH = 48;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256S_PUB_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256S_PUB_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256F_PUB_LENGTH = 64;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256F_PUB_LENGTH = 64;
 
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128S_SIGNATURE_LENGTH = 7856;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128S_SIGNATURE_LENGTH = 7856;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128F_SIGNATURE_LENGTH = 17088;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_128F_SIGNATURE_LENGTH = 17088;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192S_SIGNATURE_LENGTH = 16224;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192S_SIGNATURE_LENGTH = 16224;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_192F_SIGNATURE_LENGTH = 35664;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_192F_SIGNATURE_LENGTH = 35664;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256S_SIGNATURE_LENGTH = 29792;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256S_SIGNATURE_LENGTH = 29792;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_256F_SIGNATURE_LENGTH = 49856;
+	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHAKE_256F_SIGNATURE_LENGTH = 49856;
 
 
 
 private:
+ /** \brief The parameter set */
 	unsigned long parameterSet = 0;
 
 };

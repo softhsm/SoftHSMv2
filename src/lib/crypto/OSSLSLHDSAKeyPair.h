@@ -50,10 +50,12 @@ public:
 
  /** \brief Return the public key */
 	virtual PublicKey* getPublicKey();
+ /** \brief Return the constant public key */
 	virtual const PublicKey* getConstPublicKey() const;
 
  /** \brief Return the private key */
 	virtual PrivateKey* getPrivateKey();
+ /** \brief Return the constant private key */
 	virtual const PrivateKey* getConstPrivateKey() const;
 
 private:

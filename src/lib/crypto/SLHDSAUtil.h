@@ -47,12 +47,17 @@
 class SLHDSAUtil
 {
 public:
+ /** \brief Delete constructor */
 	SLHDSAUtil() = delete;
+ /** \brief Get the private key */
 	static CK_RV getSLHDSAPrivateKey(SLHDSAPrivateKey* privateKey, Token* token, OSObject* key);
+ /** \brief Get the public key */
 	static CK_RV getSLHDSAPublicKey(SLHDSAPublicKey* publicKey, Token* token, OSObject* key);
 
+ /** \brief Set the private key */
 	static CK_RV setSLHDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate);
 
+ /** \brief Set the hedge type */
 	static CK_RV setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType);
 
 };
