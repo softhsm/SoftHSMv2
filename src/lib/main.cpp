@@ -50,10 +50,12 @@
 #endif
 
 // PKCS #11 function list
+// NOTE: keep list synchronised with implementation
 static CK_FUNCTION_LIST functionList =
 {
 	// Version information
-	{ CRYPTOKI_VERSION_MAJOR, CRYPTOKI_VERSION_MINOR },
+	// NOTE: keep version numbers according to the implementation
+	{ 2, 40 },
 	// Function pointers
 	C_Initialize,
 	C_Finalize,
