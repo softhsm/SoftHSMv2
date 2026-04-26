@@ -211,8 +211,10 @@ int OSSL::byteString2oid(const ByteString& byteString)
 		{
 			return NID_undef;
 		}
-
-		return OBJ_obj2nid(oid);
+		
+		int nid = OBJ_obj2nid(oid);
+		ASN1_OBJECT_free(oid);
+		return nid;
 	}
 	else if (pclass == V_ASN1_UNIVERSAL && tag == V_ASN1_PRINTABLESTRING)
 	{
@@ -238,6 +240,8 @@ int OSSL::byteString2oid(const ByteString& byteString)
 		{
 			return EVP_PKEY_X448;
 		}
+
+		ASN1_STRING_free(curve_name);
 	}
 
 	return NID_undef;

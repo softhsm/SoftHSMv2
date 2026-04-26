@@ -233,42 +233,49 @@ extractObjectInformation(CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount,
   bool bHasCertType = false;
   bool bHasPrivate = false;
 
-  // Extract object information
-  for (CK_ULONG i = 0; i < ulCount; ++i) {
-    switch (pTemplate[i].type) {
-    case CKA_CLASS:
-      if (pTemplate[i].ulValueLen == sizeof(CK_OBJECT_CLASS)) {
-        objClass = *(CK_OBJECT_CLASS_PTR)pTemplate[i].pValue;
-        bHasClass = true;
-      }
-      break;
-    case CKA_KEY_TYPE:
-      if (pTemplate[i].ulValueLen == sizeof(CK_KEY_TYPE)) {
-        keyType = *(CK_KEY_TYPE *)pTemplate[i].pValue;
-        bHasKeyType = true;
-      }
-      break;
-    case CKA_CERTIFICATE_TYPE:
-      if (pTemplate[i].ulValueLen == sizeof(CK_CERTIFICATE_TYPE)) {
-        certType = *(CK_CERTIFICATE_TYPE *)pTemplate[i].pValue;
-        bHasCertType = true;
-      }
-      break;
-    case CKA_TOKEN:
-      if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)) {
-        isOnToken = *(CK_BBOOL *)pTemplate[i].pValue;
-      }
-      break;
-    case CKA_PRIVATE:
-      if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL)) {
-        isPrivate = *(CK_BBOOL *)pTemplate[i].pValue;
-        bHasPrivate = true;
-      }
-      break;
-    default:
-      break;
-    }
-  }
+	// Extract object information
+	for (CK_ULONG i = 0; i < ulCount; ++i)
+	{
+		switch (pTemplate[i].type)
+		{
+			case CKA_CLASS:
+				if (pTemplate[i].ulValueLen == sizeof(CK_OBJECT_CLASS))
+				{
+					memcpy(&objClass, pTemplate[i].pValue, sizeof(objClass));
+					bHasClass = true;
+				}
+				break;
+			case CKA_KEY_TYPE:
+				if (pTemplate[i].ulValueLen == sizeof(CK_KEY_TYPE))
+				{
+					keyType = *(CK_KEY_TYPE*)pTemplate[i].pValue;
+					bHasKeyType = true;
+				}
+				break;
+			case CKA_CERTIFICATE_TYPE:
+				if (pTemplate[i].ulValueLen == sizeof(CK_CERTIFICATE_TYPE))
+				{
+					certType = *(CK_CERTIFICATE_TYPE*)pTemplate[i].pValue;
+					bHasCertType = true;
+				}
+				break;
+			case CKA_TOKEN:
+				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
+				{
+					isOnToken = *(CK_BBOOL*)pTemplate[i].pValue;
+				}
+				break;
+			case CKA_PRIVATE:
+				if (pTemplate[i].ulValueLen == sizeof(CK_BBOOL))
+				{
+					isPrivate = *(CK_BBOOL*)pTemplate[i].pValue;
+					bHasPrivate = true;
+				}
+				break;
+			default:
+				break;
+		}
+	}
 
   if (bImplicit) {
     return CKR_OK;
