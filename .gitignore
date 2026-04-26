@@ -50,6 +50,7 @@ test-results.xml
 
 # Temporary files
 *~
+*.orig
 
 # Building directories
 build

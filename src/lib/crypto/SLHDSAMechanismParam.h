@@ -25,63 +25,48 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ SLHDSAMechanismParam.h
 
- OpenSSL convenience functions
+ SLH-DSA mechanism parameters used for signing/verifying operations
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#ifndef _SOFTHSM_V2_SLHDSAMECHANISMPARAM_H
+#define _SOFTHSM_V2_SLHDSAMECHANISMPARAM_H
 
 #include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#ifdef WITH_EDDSA
-#include <openssl/objects.h>
-#endif
-
-namespace OSSL
-{
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
-
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
-
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
-
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
-
-#ifdef WITH_EDDSA
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
-
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
-
-#ifdef WITH_ML_DSA
-	const char* mldsaParameterSet2Name(unsigned long parameterSet);
-#endif
-
 #ifdef WITH_SLH_DSA
-	const char* slhdsaParameterSet2Name(unsigned long parameterSet);
-	unsigned long name2slhdsaParameterSet(const char* name);
-#endif
-}
+#include "ByteString.h"
+#include "MechanismParam.h"
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+
+class SLHDSAMechanismParam : public MechanismParam
+{
+public:
+
+ /** \brief The Hedge Type */
+	Hedge::Type hedgeType;
+ /** \brief Additional Context */
+	ByteString additionalContext;
+
+ /** \brief The type */
+	static const char* type;
+
+ /** \brief Default constructor */
+	SLHDSAMechanismParam();
+
+ /** \brief Constructor with Hedge Type */
+	SLHDSAMechanismParam(Hedge::Type hedgeType);
+
+ /** \brief Constructor with Hedge Type and Additional Context */
+	SLHDSAMechanismParam(Hedge::Type hedgeType, ByteString additionalContext);
+	
+ /** \brief Clone */
+	SLHDSAMechanismParam* clone() const;
+
+ /** \brief Check if the mechanism param is of the given type */
+	virtual bool isOfType(const char* inType) const;
+};
+
+#endif // WITH_SLH_DSA
+#endif // !_SOFTHSM_V2_SLHDSAMECHANISMPARAM_H
 

@@ -12,15 +12,6 @@
 #include "ByteString.h"
 #include "MechanismParam.h"
 
-struct Hedge
-{
-	enum Type
-	{
-		HEDGE_PREFERRED,
-		HEDGE_REQUIRED,
-		DETERMINISTIC_REQUIRED
-	};
-};
 
 class MLDSAMechanismParam : public MechanismParam
 {
