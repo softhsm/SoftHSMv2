@@ -93,6 +93,8 @@
 #include <unistd.h>
 #endif
 
+int objects_deleted = 0;
+
 // Initialise the one-and-only instance
 
 #ifdef HAVE_CXX11
@@ -420,6 +422,8 @@ void SoftHSM::reset()
 {
 	if (instance.get())
 		instance.reset();
+
+	objects_deleted = 0;
 }
 
 // Constructor
@@ -459,6 +463,7 @@ SoftHSM::~SoftHSM()
 
 	isInitialised = false;
 
+	objects_deleted = 1;
 	resetMutexFactoryCallbacks();
 }
 
