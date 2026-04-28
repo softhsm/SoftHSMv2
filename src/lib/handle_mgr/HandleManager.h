@@ -38,6 +38,7 @@
 #include "cryptoki.h"
 
 #include <map>
+#include <set>
 
 #define CK_INTERNAL_SESSION_HANDLE CK_SESSION_HANDLE
 
@@ -88,6 +89,14 @@ private:
     std::map< CK_ULONG, Handle> handles;
     std::map< CK_VOID_PTR, CK_ULONG> objects;
     CK_ULONG handleCounter;
+
+    // Secondary indexes for efficient cleanup without full-map scans.
+    // Maps a session handle to the set of object handles created in that session.
+    std::map< CK_SESSION_HANDLE, std::set<CK_ULONG> > sessionObjectHandles;
+    // Maps a slot ID to the set of all handles (sessions + objects) for that slot.
+    std::map< CK_SLOT_ID, std::set<CK_ULONG> > slotHandles;
+    // Tracks the number of open sessions per slot to avoid counting scans.
+    std::map< CK_SLOT_ID, CK_ULONG> slotSessionCount;
 };
 
 #endif // !_SOFTHSM_V2_HANDLEMANAGER_H
