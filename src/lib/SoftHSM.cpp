@@ -32,6 +32,7 @@
  The implementation of the SoftHSM's main class
  *****************************************************************************/
 
+#include "HashAlgorithm.h"
 #include "config.h"
 #include "log.h"
 #include "access.h"
@@ -2521,6 +2522,11 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism;
+	void* param = NULL;
+	size_t paramLen = 0;
+	MechanismParam* mechanismParam = NULL;
+	CK_RSA_PKCS_OAEP_PARAMS_PTR pOaepParams;
+	RSA_PKCS_OAEP_PARAMS oaepParam;
 	bool isRSA = false;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -2538,11 +2544,38 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 		case CKM_RSA_PKCS_OAEP:
 			if (keyType != CKK_RSA)
 				return CKR_KEY_TYPE_INCONSISTENT;
+
 			rv = MechParamCheckRSAPKCSOAEP(pMechanism);
 			if (rv != CKR_OK)
 				return rv;
 
 			mechanism = AsymMech::RSA_PKCS_OAEP;
+			unsigned long allowedMgf;
+			pOaepParams = CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter);
+
+			switch (pOaepParams->hashAlg) {
+			    case CKM_SHA_1:
+					oaepParam.hashAlg = HashAlgo::SHA1;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA1;
+					allowedMgf = CKG_MGF1_SHA1;
+					break;
+			}
+
+			if (pOaepParams->mgf != allowedMgf) {
+				ERROR_MSG("Hash and MGF don't match");
+				return CKR_ARGUMENTS_BAD;
+			}
+
+			oaepParam.pSourceData = malloc(pOaepParams->ulSourceDataLen);
+			if (oaepParam.pSourceData == NULL)
+			{
+				return CKR_HOST_MEMORY;
+			}
+			memcpy((void*)oaepParam.pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
+			oaepParam.ulSourceDataLen = pOaepParams->ulSourceDataLen;
+
+			param = &oaepParam;
+			paramLen = sizeof(oaepParam);
 			isRSA = true;
 			break;
 		default:
@@ -2578,6 +2611,7 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setOpType(SESSION_OP_ENCRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
+	session->setParameters(param, paramLen);
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
@@ -2678,6 +2712,9 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
 	PublicKey* publicKey = session->getPublicKey();
+	size_t paramLen;
+	void* param = session->getParameters(paramLen);
+	MechanismParam* mechanismParam = session->getMechanismParam();
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || publicKey == NULL)
 	{
 		session->resetOp();
@@ -2712,7 +2749,7 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 	data += ByteString(pData, ulDataLen);
 
 	// Encrypt the data
-	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism))
+	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism,param, paramLen, mechanismParam))
 	{
 		session->resetOp();
 		return CKR_GENERAL_ERROR;
@@ -7203,7 +7240,7 @@ CK_RV SoftHSM::UnwrapKeySym
 	SymWrap::Type mode = SymWrap::Unknown;
 	size_t bb = 8;
 	size_t blocksize = 0;
-	
+
 	switch(pMechanism->mechanism) {
 #ifdef HAVE_AES_KEY_WRAP
 		case CKM_AES_KEY_WRAP:
@@ -7249,14 +7286,14 @@ CK_RV SoftHSM::UnwrapKeySym
 	ByteString iv;
 	ByteString decryptedFinal;
 	CK_RV rv = CKR_OK;
-	
+
 	switch(pMechanism->mechanism) {
 
 	case CKM_AES_CBC_PAD:
 	case CKM_DES3_CBC_PAD:
 		iv.resize(blocksize);
 		memcpy(&iv[0], pMechanism->pParameter, blocksize);
-		
+
 		if (!cipher->decryptInit(unwrappingkey, SymMode::CBC, iv, false))
 		{
 			cipher->recycleKey(unwrappingkey);
@@ -7285,7 +7322,7 @@ CK_RV SoftHSM::UnwrapKeySym
 			return CKR_GENERAL_ERROR; // TODO should be another error
 		}
 		break;
-		
+
 	default:
 		// Unwrap the key
 		rv = CKR_OK;
@@ -7576,7 +7613,7 @@ CK_RV SoftHSM::C_UnwrapKey
                             pMechanism->ulParameterLen != 8)
 				return CKR_ARGUMENTS_BAD;
 			break;
-			
+
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -7620,7 +7657,7 @@ CK_RV SoftHSM::C_UnwrapKey
 	if (pMechanism->mechanism == CKM_DES3_CBC && (unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES2 ||
 		unwrapKey->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DES3))
 		return CKR_WRAPPING_KEY_TYPE_INCONSISTENT;
-	
+
 	// Check if the unwrapping key can be used for unwrapping
 	if (unwrapKey->getBooleanValue(CKA_UNWRAP, false) == false)
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
@@ -8431,11 +8468,11 @@ CK_RV SoftHSM::generateAES
 	if (rv == CKR_OK)
 	{
 		OSObject* osobject = (OSObject*)handleManager->getObject(*phKey);
-		if (osobject == NULL_PTR || !osobject->isValid()) 
+		if (osobject == NULL_PTR || !osobject->isValid())
         {
 			rv = CKR_FUNCTION_FAILED;
-		} 
-        else if (osobject->startTransaction()) 
+		}
+        else if (osobject->startTransaction())
         {
 			bool bOK = true;
 
@@ -13721,29 +13758,9 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 	}
 
 	CK_RSA_PKCS_OAEP_PARAMS_PTR params = (CK_RSA_PKCS_OAEP_PARAMS_PTR)pMechanism->pParameter;
-	if (params->hashAlg != CKM_SHA_1)
-	{
-		ERROR_MSG("hashAlg must be CKM_SHA_1");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->mgf != CKG_MGF1_SHA1)
-	{
-		ERROR_MSG("mgf must be CKG_MGF1_SHA1");
-		return CKR_ARGUMENTS_BAD;
-	}
 	if (params->source != CKZ_DATA_SPECIFIED)
 	{
 		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->pSourceData != NULL)
-	{
-		ERROR_MSG("pSourceData must be NULL");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->ulSourceDataLen != 0)
-	{
-		ERROR_MSG("ulSourceDataLen must be 0");
 		return CKR_ARGUMENTS_BAD;
 	}
 	return CKR_OK;
