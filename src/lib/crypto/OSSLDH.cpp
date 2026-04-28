@@ -51,7 +51,7 @@
 
 // Signing functions
 bool OSSLDH::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-		      const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			  const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("DH does not support signing");
 
@@ -74,7 +74,7 @@ bool OSSLDH::signFinal(ByteString& /*signature*/)
 
 // Verification functions
 bool OSSLDH::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+		    const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("DH does not support verifying");
 
@@ -97,7 +97,8 @@ bool OSSLDH::verifyFinal(const ByteString& /*signature*/)
 
 // Encryption functions
 bool OSSLDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-		     ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/)
+		     ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/,
+			const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("DH does not support encryption");
 
@@ -106,7 +107,8 @@ bool OSSLDH::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool OSSLDH::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-		     ByteString& /*data*/, const AsymMech::Type /*padding*/)
+		     ByteString& /*data*/, const AsymMech::Type /*padding*/,
+			const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("DH does not support decryption");
 

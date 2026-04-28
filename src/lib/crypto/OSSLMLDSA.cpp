@@ -27,7 +27,6 @@ int OSSLMLDSA::OSSL_DETERMINISTIC = 1;
 // Signing functions
 bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 					 ByteString &signature, const AsymMech::Type mechanism,
-					 const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
 					 const MechanismParam* mechanismParam)
 {
 	if (mechanism != AsymMech::MLDSA)
@@ -156,7 +155,7 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 }
 
 bool OSSLMLDSA::signInit(PrivateKey * /*privateKey*/, const AsymMech::Type /*mechanism*/,
-						 const void * /* param = NULL */, const size_t /* paramLen = 0 */)
+						 const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("ML-DSA does not support multi part signing");
 
@@ -180,7 +179,6 @@ bool OSSLMLDSA::signFinal(ByteString & /*signature*/)
 // Verification functions
 bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 					   const ByteString &signature, const AsymMech::Type mechanism,
-					   const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
 					   const MechanismParam* mechanismParam)
 {
 	if (mechanism != AsymMech::MLDSA)
@@ -306,7 +304,7 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 }
 
 bool OSSLMLDSA::verifyInit(PublicKey * /*publicKey*/, const AsymMech::Type /*mechanism*/,
-						   const void * /* param = NULL */, const size_t /* paramLen = 0 */)
+						   const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("ML-DSA does not support multi part verifying");
 
@@ -329,7 +327,8 @@ bool OSSLMLDSA::verifyFinal(const ByteString & /*signature*/)
 
 // Encryption functions
 bool OSSLMLDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
-						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/)
+						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/,
+					    const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-DSA does not support encryption");
 
@@ -338,7 +337,8 @@ bool OSSLMLDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 
 // Decryption functions
 bool OSSLMLDSA::decrypt(PrivateKey * /*privateKey*/, const ByteString & /*encryptedData*/,
-						ByteString & /*data*/, const AsymMech::Type /*padding*/)
+						ByteString & /*data*/, const AsymMech::Type /*padding*/,
+						const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-DSA does not support decryption");
 

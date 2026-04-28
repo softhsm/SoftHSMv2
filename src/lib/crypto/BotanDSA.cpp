@@ -61,8 +61,7 @@ BotanDSA::~BotanDSA()
 // Signing functions
 bool BotanDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 		    ByteString& signature, const AsymMech::Type mechanism,
-		    const void* param /* = NULL */, const size_t paramLen /* = 0 */,
-		    const MechanismParam* /* mechanismParam */)
+		    const MechanismParam*  mechanismParam )
 {
 	std::string emsa;
 
@@ -73,7 +72,7 @@ bool BotanDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 	else
         {
 		// Call default implementation
-		return AsymmetricAlgorithm::sign(privateKey, dataToSign, signature, mechanism, param, paramLen);
+		return AsymmetricAlgorithm::sign(privateKey, dataToSign, signature, mechanism, mechanismParam);
         }
 
 	// Check if the private key is the right type
@@ -134,9 +133,9 @@ bool BotanDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 }
 
 bool BotanDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
-			const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+			const MechanismParam* mechanismParam /*= NULL */)
 {
-	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -279,8 +278,7 @@ bool BotanDSA::signFinal(ByteString& signature)
 // Verification functions
 bool BotanDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 		      const ByteString& signature, const AsymMech::Type mechanism,
-		      const void* param /* = NULL */, const size_t paramLen /* = 0 */,
-		      const MechanismParam* /* mechanismParam */)
+		      const MechanismParam* mechanismParam)
 {
 	std::string emsa;
 
@@ -291,7 +289,7 @@ bool BotanDSA::verify(PublicKey* publicKey, const ByteString& originalData,
         else
         {
 		// Call the generic function
-		return AsymmetricAlgorithm::verify(publicKey, originalData, signature, mechanism, param, paramLen);
+		return AsymmetricAlgorithm::verify(publicKey, originalData, signature, mechanism, mechanismParam);
 	}
 
 	// Check if the public key is the right type
@@ -349,9 +347,9 @@ bool BotanDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 }
 
 bool BotanDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
-			  const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+			  const MechanismParam* mechanismParam /*= NULL */)
 {
-	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -487,7 +485,8 @@ bool BotanDSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool BotanDSA::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-		       ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/)
+		       ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/,
+			   const MechanismParam* /* param = NULL */)
 {
 	ERROR_MSG("DSA does not support encryption");
 
@@ -496,7 +495,8 @@ bool BotanDSA::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool BotanDSA::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-		       ByteString& /*data*/, const AsymMech::Type /*padding*/)
+		       ByteString& /*data*/, const AsymMech::Type /*padding*/,
+			   const MechanismParam* /* param = NULL */)
 {
 	ERROR_MSG("DSA does not support decryption");
 

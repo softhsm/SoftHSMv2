@@ -47,6 +47,7 @@
 #include "DESKey.h"
 #include "RNG.h"
 #include "RSAParameters.h"
+#include "RSAMechanismParam.h"
 #include "RSAPublicKey.h"
 #include "RSAPrivateKey.h"
 #include "DSAParameters.h"
@@ -2522,6 +2523,7 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism;
 	bool isRSA = false;
+	MechanismParam* mechanismParam = NULL;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
 			if (keyType != CKK_RSA)
@@ -2572,8 +2574,23 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	}
 	else
 	{
-		return CKR_MECHANISM_INVALID;
-        }
+	   return CKR_MECHANISM_INVALID;
+    }
+	// set mechanism parameters
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		RSAOaepMechanismParam* rsaOaepMechanismParam = new RSAOaepMechanismParam;
+		rv = BuildRSAOAEPParam((CK_RSA_PKCS_OAEP_PARAMS *)pMechanism->pParameter,
+							   rsaOaepMechanismParam);
+		if (rv != CKR_OK)
+		{
+			delete rsaOaepMechanismParam;
+			asymCrypto->recyclePublicKey(publicKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+			return rv;
+		}
+		mechanismParam = rsaOaepMechanismParam;
+	}
 
 	session->setOpType(SESSION_OP_ENCRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
@@ -2581,7 +2598,11 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPublicKey(publicKey);
-
+	if (mechanismParam != NULL)
+	{
+		session->setMechanismParam(mechanismParam);
+		delete mechanismParam;
+	}
 	return CKR_OK;
 }
 
@@ -2677,7 +2698,9 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 {
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
+	MechanismParam* mechanismParam = session->getMechanismParam();
 	PublicKey* publicKey = session->getPublicKey();
+		
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || publicKey == NULL)
 	{
 		session->resetOp();
@@ -2712,7 +2735,7 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 	data += ByteString(pData, ulDataLen);
 
 	// Encrypt the data
-	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism))
+	if (!asymCrypto->encrypt(publicKey,data,encryptedData,mechanism, mechanismParam))
 	{
 		session->resetOp();
 		return CKR_GENERAL_ERROR;
@@ -3255,6 +3278,7 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism = AsymMech::Unknown;
+	MechanismParam* mechanismParam = NULL;
 	bool isRSA = false;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -3314,14 +3338,32 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	{
 		session->setReAuthentication(true);
 	}
-
+    // set mechanism parameters
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		RSAOaepMechanismParam* rsaOaepMechanismParam = new RSAOaepMechanismParam;
+		rv = BuildRSAOAEPParam((CK_RSA_PKCS_OAEP_PARAMS *)pMechanism->pParameter,
+							   rsaOaepMechanismParam);
+		if (rv != CKR_OK)
+		{
+			delete rsaOaepMechanismParam;
+			asymCrypto->recyclePrivateKey(privateKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+			return rv;
+		}
+		mechanismParam = rsaOaepMechanismParam;
+	}
 	session->setOpType(SESSION_OP_DECRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPrivateKey(privateKey);
-
+	if (mechanismParam != NULL)
+	{
+		session->setMechanismParam(mechanismParam);
+		delete mechanismParam;
+	}
 	return CKR_OK;
 }
 
@@ -3409,7 +3451,9 @@ static CK_RV AsymDecrypt(Session* session, CK_BYTE_PTR pEncryptedData, CK_ULONG 
 {
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
+	MechanismParam* mechanismParam = session->getMechanismParam();
 	PrivateKey* privateKey = session->getPrivateKey();
+
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || privateKey == NULL)
 	{
 		session->resetOp();
@@ -3443,7 +3487,7 @@ static CK_RV AsymDecrypt(Session* session, CK_BYTE_PTR pEncryptedData, CK_ULONG 
 	ByteString data;
 
 	// Decrypt the data
-	if (!asymCrypto->decrypt(privateKey,encryptedData,data,mechanism))
+	if (!asymCrypto->decrypt(privateKey,encryptedData,data,mechanism,mechanismParam))
 	{
 		session->resetOp();
 		return CKR_ENCRYPTED_DATA_INVALID;
@@ -4196,10 +4240,8 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism = AsymMech::Unknown;
-	void* param = NULL;
-	size_t paramLen = 0;
 	MechanismParam* mechanismParam = NULL;
-	RSA_PKCS_PSS_PARAMS pssParam;
+	RSAPssMechanismParam rsaPssParam;
 	bool bAllowMultiPartOp;
 	bool isRSA = false;
 	bool isDSA = false;
@@ -4272,28 +4314,28 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 
 			switch(CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg) {
 				case CKM_SHA_1:
-					pssParam.hashAlg = HashAlgo::SHA1;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA1;
+					rsaPssParam.hashAlg = HashAlgo::SHA1;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA1;
 					allowedMgf = CKG_MGF1_SHA1;
 					break;
 				case CKM_SHA224:
-					pssParam.hashAlg = HashAlgo::SHA224;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA224;
+					rsaPssParam.hashAlg = HashAlgo::SHA224;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA224;
 					allowedMgf = CKG_MGF1_SHA224;
 					break;
 				case CKM_SHA256:
-					pssParam.hashAlg = HashAlgo::SHA256;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA256;
+					rsaPssParam.hashAlg = HashAlgo::SHA256;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA256;
 					allowedMgf = CKG_MGF1_SHA256;
 					break;
 				case CKM_SHA384:
-					pssParam.hashAlg = HashAlgo::SHA384;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA384;
+					rsaPssParam.hashAlg = HashAlgo::SHA384;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA384;
 					allowedMgf = CKG_MGF1_SHA384;
 					break;
 				case CKM_SHA512:
-					pssParam.hashAlg = HashAlgo::SHA512;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA512;
+					rsaPssParam.hashAlg = HashAlgo::SHA512;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
 					allowedMgf = CKG_MGF1_SHA512;
 					break;
 				default:
@@ -4306,9 +4348,8 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 				return CKR_ARGUMENTS_BAD;
 			}
 
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = false;
 			isRSA = true;
 			break;
@@ -4323,11 +4364,10 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA1_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA1;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA1;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA1;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA1;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -4341,11 +4381,10 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA224_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA224;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA224;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA224;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA224;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -4359,11 +4398,10 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA256_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA256;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA256;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA256;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA256;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -4377,11 +4415,10 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA384_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA384;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA384;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA384;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA384;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -4395,11 +4432,10 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA512_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA512;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA512;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA512;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -4677,7 +4713,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 	}
 
 	// Initialize signing
-	if (bAllowMultiPartOp && !asymCrypto->signInit(privateKey,mechanism,param,paramLen))
+	if (bAllowMultiPartOp && !asymCrypto->signInit(privateKey,mechanism,mechanismParam))
 	{
 		asymCrypto->recyclePrivateKey(privateKey);
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
@@ -4693,7 +4729,6 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 	session->setOpType(SESSION_OP_SIGN);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
-	session->setParameters(param, paramLen);
 	session->setMechanismParam(mechanismParam);
 	session->setAllowMultiPartOp(bAllowMultiPartOp);
 	session->setAllowSinglePartOp(true);
@@ -4774,8 +4809,6 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
 	PrivateKey* privateKey = session->getPrivateKey();
-	size_t paramLen;
-	void* param = session->getParameters(paramLen);
 	MechanismParam* mechanismParam = session->getMechanismParam();
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || privateKey == NULL)
 	{
@@ -4826,7 +4859,7 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 			return CKR_GENERAL_ERROR;
 		}
 	}
-	else if (!asymCrypto->sign(privateKey,data,signature,mechanism,param,paramLen,mechanismParam))
+	else if (!asymCrypto->sign(privateKey,data,signature,mechanism,mechanismParam))
 	{
 		session->resetOp();
 		return CKR_GENERAL_ERROR;
@@ -5296,10 +5329,8 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism = AsymMech::Unknown;
-	void* param = NULL;
-	size_t paramLen = 0;
 	MechanismParam* mechanismParam = NULL;
-	RSA_PKCS_PSS_PARAMS pssParam;
+	RSAPssMechanismParam rsaPssParam;
 	bool bAllowMultiPartOp;
 	bool isRSA = false;
 	bool isDSA = false;
@@ -5372,28 +5403,28 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			unsigned long expectedMgf;
 			switch(CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg) {
 				case CKM_SHA_1:
-					pssParam.hashAlg = HashAlgo::SHA1;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA1;
+					rsaPssParam.hashAlg = HashAlgo::SHA1;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA1;
 					expectedMgf = CKG_MGF1_SHA1;
 					break;
 				case CKM_SHA224:
-					pssParam.hashAlg = HashAlgo::SHA224;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA224;
+					rsaPssParam.hashAlg = HashAlgo::SHA224;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA224;
 					expectedMgf = CKG_MGF1_SHA224;
 					break;
 				case CKM_SHA256:
-					pssParam.hashAlg = HashAlgo::SHA256;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA256;
+					rsaPssParam.hashAlg = HashAlgo::SHA256;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA256;
 					expectedMgf = CKG_MGF1_SHA256;
 					break;
 				case CKM_SHA384:
-					pssParam.hashAlg = HashAlgo::SHA384;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA384;
+					rsaPssParam.hashAlg = HashAlgo::SHA384;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA384;
 					expectedMgf = CKG_MGF1_SHA384;
 					break;
 				case CKM_SHA512:
-					pssParam.hashAlg = HashAlgo::SHA512;
-					pssParam.mgf = AsymRSAMGF::MGF1_SHA512;
+					rsaPssParam.hashAlg = HashAlgo::SHA512;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
 					expectedMgf = CKG_MGF1_SHA512;
 					break;
 				default:
@@ -5404,9 +5435,8 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = false;
 			isRSA = true;
 			break;
@@ -5421,11 +5451,10 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA1_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA1;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA1;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA1;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA1;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -5439,11 +5468,10 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA224_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA224;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA224;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA224;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA224;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -5457,11 +5485,10 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA256_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA256;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA256;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA256;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA256;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -5475,11 +5502,10 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA384_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA384;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA384;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA384;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA384;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -5493,11 +5519,11 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			mechanism = AsymMech::RSA_SHA512_PKCS_PSS;
-			pssParam.hashAlg = HashAlgo::SHA512;
-			pssParam.mgf = AsymRSAMGF::MGF1_SHA512;
-			pssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
-			param = &pssParam;
-			paramLen = sizeof(pssParam);
+			rsaPssParam.hashAlg = HashAlgo::SHA512;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
@@ -5775,7 +5801,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	}
 
 	// Initialize verifying
-	if (bAllowMultiPartOp && !asymCrypto->verifyInit(publicKey,mechanism,param,paramLen))
+	if (bAllowMultiPartOp && !asymCrypto->verifyInit(publicKey,mechanism, mechanismParam))
 	{
 		asymCrypto->recyclePublicKey(publicKey);
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
@@ -5785,7 +5811,6 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	session->setOpType(SESSION_OP_VERIFY);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
-	session->setParameters(param, paramLen);
 	session->setMechanismParam(mechanismParam);
 	session->setAllowMultiPartOp(bAllowMultiPartOp);
 	session->setAllowSinglePartOp(true);
@@ -5854,8 +5879,6 @@ static CK_RV AsymVerify(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen,
 	AsymmetricAlgorithm* asymCrypto = session->getAsymmetricCryptoOp();
 	AsymMech::Type mechanism = session->getMechanism();
 	PublicKey* publicKey = session->getPublicKey();
-	size_t paramLen;
-	void* param = session->getParameters(paramLen);
 	MechanismParam* mechanismParam = session->getMechanismParam();
 	if (asymCrypto == NULL || !session->getAllowSinglePartOp() || publicKey == NULL)
 	{
@@ -5896,7 +5919,7 @@ static CK_RV AsymVerify(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen,
 			return CKR_SIGNATURE_INVALID;
 		}
 	}
-	else if (!asymCrypto->verify(publicKey,data,signature,mechanism,param,paramLen,mechanismParam))
+	else if (!asymCrypto->verify(publicKey,data,signature,mechanism, mechanismParam))
 	{
 		session->resetOp();
 		return CKR_SIGNATURE_INVALID;
@@ -6711,9 +6734,12 @@ CK_RV SoftHSM::WrapKeyAsym
 	ByteString& wrapped
 )
 {
+	CK_RV rv = CKR_OK;
 	const size_t bb = 8;
 	AsymAlgo::Type algo = AsymAlgo::Unknown;
 	AsymMech::Type mech = AsymMech::Unknown;
+	MechanismParam* mechanismParam = NULL;
+	size_t hashLen = 0;
 
 	CK_ULONG modulus_length;
 	switch(pMechanism->mechanism) {
@@ -6741,10 +6767,8 @@ CK_RV SoftHSM::WrapKeyAsym
 
 		case CKM_RSA_PKCS_OAEP:
 			mech = AsymMech::RSA_PKCS_OAEP;
-			// SHA-1 is the only supported option
 			// PKCS#11 2.40 draft 2 section 2.1.8: input length <= k-2-2hashLen
-			if (keydata.size() > modulus_length - 2 - 2 * 160 / 8)
-				return CKR_KEY_SIZE_RANGE;
+			// key length will be check later
 			break;
 
 		default:
@@ -6773,20 +6797,39 @@ CK_RV SoftHSM::WrapKeyAsym
 			break;
 
 		default:
+		    cipher->recyclePublicKey(publicKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
 			return CKR_MECHANISM_INVALID;
 	}
-	// Wrap the key
-	if (!cipher->wrapKey(publicKey, keydata, wrapped, mech))
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
 	{
-		cipher->recyclePublicKey(publicKey);
-		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
-		return CKR_GENERAL_ERROR;
+		RSAOaepMechanismParam* rsaOaepMechanismParam = new RSAOaepMechanismParam;
+		rv = BuildRSAOAEPParam((CK_RSA_PKCS_OAEP_PARAMS *)pMechanism->pParameter,
+			rsaOaepMechanismParam,&hashLen);
+		if (rv != CKR_OK)
+		{
+			delete rsaOaepMechanismParam;
+			cipher->recyclePublicKey(publicKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+			return rv;
+		}	
+		if (keydata.size() > modulus_length - 2 - (2 * hashLen))
+		{
+			delete rsaOaepMechanismParam;
+			cipher->recyclePublicKey(publicKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+			return CKR_KEY_SIZE_RANGE;
+		}
+		mechanismParam = rsaOaepMechanismParam;
 	}
-
+	// Wrap the key
+	if (!cipher->wrapKey(publicKey, keydata, wrapped, mech, mechanismParam))
+		rv = CKR_GENERAL_ERROR;
+    delete mechanismParam;
 	cipher->recyclePublicKey(publicKey);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
 
-	return CKR_OK;
+	return rv;
 }
 
 // Internal: Wrap with mechanism RSA_AES_KEY_WRAP
@@ -7312,6 +7355,8 @@ CK_RV SoftHSM::UnwrapKeyAsym
 	// Get the symmetric algorithm matching the mechanism
 	AsymAlgo::Type algo = AsymAlgo::Unknown;
 	AsymMech::Type mode = AsymMech::Unknown;
+	MechanismParam* mechanismParam = NULL;
+
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
 			algo = AsymAlgo::RSA;
@@ -7348,12 +7393,29 @@ CK_RV SoftHSM::UnwrapKeyAsym
 			break;
 
 		default:
+			cipher->recyclePrivateKey(unwrappingkey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
 			return CKR_MECHANISM_INVALID;
 	}
-
+	
+	if (pMechanism->mechanism == CKM_RSA_PKCS_OAEP)
+	{
+		RSAOaepMechanismParam* rsaOaepMechanismParam = new RSAOaepMechanismParam;
+		rv = BuildRSAOAEPParam((CK_RSA_PKCS_OAEP_PARAMS *)pMechanism->pParameter,
+			rsaOaepMechanismParam);
+		if (rv != CKR_OK)
+		{
+			delete rsaOaepMechanismParam;
+			cipher->recyclePrivateKey(unwrappingkey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+			return rv;
+		}
+		mechanismParam = rsaOaepMechanismParam;
+	}
 	// Unwrap the key
-	if (!cipher->unwrapKey(unwrappingkey, wrapped, keydata, mode))
+	if (!cipher->unwrapKey(unwrappingkey, wrapped, keydata, mode, mechanismParam ))
 		rv = CKR_GENERAL_ERROR;
+	delete mechanismParam;
 	cipher->recyclePrivateKey(unwrappingkey);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
 	return rv;
@@ -13719,31 +13781,16 @@ CK_RV SoftHSM::MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism)
 		ERROR_MSG("pParameter must be of type CK_RSA_PKCS_OAEP_PARAMS");
 		return CKR_ARGUMENTS_BAD;
 	}
-
 	CK_RSA_PKCS_OAEP_PARAMS_PTR params = (CK_RSA_PKCS_OAEP_PARAMS_PTR)pMechanism->pParameter;
-	if (params->hashAlg != CKM_SHA_1)
-	{
-		ERROR_MSG("hashAlg must be CKM_SHA_1");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->mgf != CKG_MGF1_SHA1)
-	{
-		ERROR_MSG("mgf must be CKG_MGF1_SHA1");
-		return CKR_ARGUMENTS_BAD;
-	}
+	
 	if (params->source != CKZ_DATA_SPECIFIED)
 	{
 		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->pSourceData != NULL)
+	if ((params-> pSourceData == NULL)&&(params->ulSourceDataLen != 0))
 	{
-		ERROR_MSG("pSourceData must be NULL");
-		return CKR_ARGUMENTS_BAD;
-	}
-	if (params->ulSourceDataLen != 0)
-	{
-		ERROR_MSG("ulSourceDataLen must be 0");
+		ERROR_MSG("pSourceData is NULL");
 		return CKR_ARGUMENTS_BAD;
 	}
 	return CKR_OK;
@@ -13775,27 +13822,93 @@ CK_RV SoftHSM::MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism)
 		ERROR_MSG("pOAEPParams must be of type CK_RSA_PKCS_OAEP_PARAMS");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->pOAEPParams->mgf < 1UL || params->pOAEPParams->mgf > 5UL)
-	{
-		ERROR_MSG("mgf not supported");
-		return CKR_ARGUMENTS_BAD;
-	}
 	if (params->pOAEPParams->source != CKZ_DATA_SPECIFIED)
 	{
 		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->pOAEPParams->pSourceData != NULL)
+	if ((params->pOAEPParams->pSourceData == NULL) && (params->pOAEPParams->ulSourceDataLen != 0))
 	{
-		ERROR_MSG("pSourceData must be NULL");
+		ERROR_MSG("pSourceData is NULL");
 		return CKR_ARGUMENTS_BAD;
 	}
-	if (params->pOAEPParams->ulSourceDataLen != 0)
-	{
-		ERROR_MSG("ulSourceDataLen must be 0");
-		return CKR_ARGUMENTS_BAD;
-	}
+	return CKR_OK;
+}
 
+CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
+								 RSAOaepMechanismParam* mechanismParam,
+								 size_t* hashLen)
+{
+	if (params == NULL)
+	{
+		ERROR_MSG("parameters is NULL for RSA OAEP encryption");
+	    return CKR_ARGUMENTS_BAD;
+	}  
+	if (params->source != CKZ_DATA_SPECIFIED)
+	{
+		ERROR_MSG("source must be CKZ_DATA_SPECIFIED");
+		return CKR_ARGUMENTS_BAD;
+	}  
+	if ((params->pSourceData == NULL) && (params->ulSourceDataLen != 0))
+	{
+		ERROR_MSG("pSourceData is NULL");
+		return CKR_ARGUMENTS_BAD;
+	}
+	switch (params->hashAlg)
+	{
+	case CKM_SHA_1:
+		mechanismParam->hashAlg = HashAlgo::SHA1;
+		if (hashLen) *hashLen = 20;
+		break;
+	case CKM_SHA224:
+		mechanismParam->hashAlg = HashAlgo::SHA224;
+		if (hashLen) *hashLen = 28;
+		break;
+	case CKM_SHA256:
+		mechanismParam->hashAlg = HashAlgo::SHA256;
+		if (hashLen) *hashLen = 32;
+		break;
+	case CKM_SHA384:
+		mechanismParam->hashAlg = HashAlgo::SHA384;
+		if (hashLen) *hashLen = 48;
+		break;
+	case CKM_SHA512:
+		mechanismParam->hashAlg = HashAlgo::SHA512;
+		if (hashLen) *hashLen = 64;
+		break;
+	default:
+	    ERROR_MSG("hash algorithm not supported for OAEP");
+		return CKR_ARGUMENTS_BAD;
+	}
+	switch (params->mgf)
+	{
+	case CKG_MGF1_SHA1:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA1;
+		break;
+	case CKG_MGF1_SHA224:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA224;
+		break;
+	case CKG_MGF1_SHA256:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA256;
+		break;
+	case CKG_MGF1_SHA384:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA384;
+		break;
+	case CKG_MGF1_SHA512:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA512;
+		break;
+	default:
+	    ERROR_MSG("mgf algorithm not supported for OAEP");
+		return CKR_ARGUMENTS_BAD;
+	}
+	if (params->ulSourceDataLen > MAX_RSA_OAEP_LABEL_LENGTH)
+	{
+		ERROR_MSG("OAEP Label too large");
+		return CKR_ARGUMENTS_BAD;
+	}
+	// copy label data to mechanismParam
+	mechanismParam->label = ByteString(reinterpret_cast<const unsigned char*>(params->pSourceData),params->ulSourceDataLen);
+	
 	return CKR_OK;
 }
 

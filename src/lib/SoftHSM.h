@@ -42,6 +42,7 @@
 #include "HandleManager.h"
 #include "RSAPublicKey.h"
 #include "RSAPrivateKey.h"
+#include "RSAMechanismParam.h"
 #include "DSAPublicKey.h"
 #include "DSAPrivateKey.h"
 #include "ECPublicKey.h"
@@ -525,7 +526,9 @@ private:
 
 	CK_RV MechParamCheckRSAPKCSOAEP(CK_MECHANISM_PTR pMechanism);
 	CK_RV MechParamCheckRSAAESKEYWRAP(CK_MECHANISM_PTR pMechanism);
-
+    CK_RV BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS* par,
+                                RSAOaepMechanismParam* mechanismParam,
+							    size_t* hashLen = NULL);
 	bool isMechanismPermitted(OSObject* key, CK_MECHANISM_TYPE mechanism);
 	void prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE> &t);
 	bool detectFork(void);

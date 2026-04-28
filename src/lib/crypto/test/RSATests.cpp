@@ -38,6 +38,7 @@
 #include "RNG.h"
 #include "AsymmetricKeyPair.h"
 #include "AsymmetricAlgorithm.h"
+#include "RSAMechanismParam.h"
 #include "RSAParameters.h"
 #include "RSAPublicKey.h"
 #include "RSAPrivateKey.h"
@@ -278,7 +279,7 @@ void RSATests::testSigningVerifying()
 #endif
 
 	/* Max salt length for SHA512 and 1024-bit RSA is 62 bytes */
-	RSA_PKCS_PSS_PARAMS pssParams[] = {
+	RSAPssMechanismParam pssParams[] = {
 		{ HashAlgo::SHA1,   AsymRSAMGF::MGF1_SHA1,   20 },
 		{ HashAlgo::SHA224, AsymRSAMGF::MGF1_SHA224, 0  },
 		{ HashAlgo::SHA256, AsymRSAMGF::MGF1_SHA256, 0  },
@@ -307,35 +308,29 @@ void RSATests::testSigningVerifying()
 			for (std::vector<AsymMech::Type>::iterator m = mechanisms.begin(); m != mechanisms.end(); m++)
 			{
 				ByteString blockSignature, singlePartSignature;
-				void* param = NULL;
-				size_t paramLen = 0;
+				RSAPssMechanismParam* mechanismParam = NULL;
 				bool isPSS = false;
 
 				switch (*m)
 				{
 					case AsymMech::RSA_SHA1_PKCS_PSS:
-						param = &pssParams[0];
-						paramLen = sizeof(pssParams[0]);
+						mechanismParam = &pssParams[0];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA224_PKCS_PSS:
-						param = &pssParams[1];
-						paramLen = sizeof(pssParams[1]);
+						mechanismParam = &pssParams[1];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA256_PKCS_PSS:
-						param = &pssParams[2];
-						paramLen = sizeof(pssParams[2]);
+						mechanismParam = &pssParams[2];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA384_PKCS_PSS:
-						param = &pssParams[3];
-						paramLen = sizeof(pssParams[3]);
+						mechanismParam = &pssParams[3];
 						isPSS = true;
 						break;
 					case AsymMech::RSA_SHA512_PKCS_PSS:
-						param = &pssParams[4];
-						paramLen = sizeof(pssParams[4]);
+						mechanismParam = &pssParams[4];
 						isPSS = true;
 						break;
 					default:
@@ -343,14 +338,14 @@ void RSATests::testSigningVerifying()
 				}
 
 				// Sign the data in blocks
-				CPPUNIT_ASSERT(rsa->signInit(kp->getPrivateKey(), *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->signInit(kp->getPrivateKey(), *m, mechanismParam));
 				CPPUNIT_ASSERT(rsa->signUpdate(dataToSign.substr(0, 134)));
 				CPPUNIT_ASSERT(rsa->signUpdate(dataToSign.substr(134, 289)));
 				CPPUNIT_ASSERT(rsa->signUpdate(dataToSign.substr(134 + 289)));
 				CPPUNIT_ASSERT(rsa->signFinal(blockSignature));
 
 				// Sign the data in one pass
-				CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, singlePartSignature, *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, singlePartSignature, *m, mechanismParam));
 
 				// If it is not a PSS signature, check if the two signatures match
 				if (!isPSS)
@@ -360,14 +355,14 @@ void RSATests::testSigningVerifying()
 				}
 
 				// Now perform multi-pass verification
-				CPPUNIT_ASSERT(rsa->verifyInit(kp->getPublicKey(), *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->verifyInit(kp->getPublicKey(), *m, mechanismParam));
 				CPPUNIT_ASSERT(rsa->verifyUpdate(dataToSign.substr(0, 125)));
 				CPPUNIT_ASSERT(rsa->verifyUpdate(dataToSign.substr(125, 247)));
 				CPPUNIT_ASSERT(rsa->verifyUpdate(dataToSign.substr(125 + 247)));
 				CPPUNIT_ASSERT(rsa->verifyFinal(blockSignature));
 
 				// And single-pass verification
-				CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, singlePartSignature, *m, param, paramLen));
+				CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, singlePartSignature, *m, mechanismParam));
 			}
 
 			// Test mechanisms that do not perform internal hashing
@@ -399,28 +394,28 @@ void RSATests::testSigningVerifying()
 #ifdef WITH_RAW_PSS
 			// Test raw (SHA1) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 20));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0], sizeof(pssParams[0])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0], sizeof(pssParams[0])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[0]));
 
 			// Test raw (SHA224) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 28));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1], sizeof(pssParams[1])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1], sizeof(pssParams[1])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[1]));
 
 			// Test raw (SHA256) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 32));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2], sizeof(pssParams[2])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2], sizeof(pssParams[2])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[2]));
 
 			// Test raw (SHA384) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 48));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3], sizeof(pssParams[3])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3], sizeof(pssParams[3])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[3]));
 
 			// Test raw (SHA512) PKCS PSS signing
 			CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 64));
-			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4], sizeof(pssParams[4])));
-			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4], sizeof(pssParams[4])));
+			CPPUNIT_ASSERT(rsa->sign(kp->getPrivateKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4]));
+			CPPUNIT_ASSERT(rsa->verify(kp->getPublicKey(), dataToSign, signature, AsymMech::RSA_PKCS_PSS, &pssParams[4]));
 #endif
 
 			rsa->recycleKeyPair(kp);
@@ -601,7 +596,9 @@ void RSATests::testEncryptDecrypt()
 {
 	AsymmetricKeyPair* kp;
 	RSAParameters p;
-
+	char TestLabel[] = "THIS IS A GOOD DAY";
+	char InvalidLabel[] = "ALWAYS BAD";
+	
 	// Public exponents to test
 	std::vector<ByteString> exponents;
 	exponents.push_back("010001");
@@ -614,13 +611,22 @@ void RSATests::testEncryptDecrypt()
 	keySizes.push_back(1024);
 	keySizes.push_back(1280);
 	keySizes.push_back(2048);
-	//keySizes.push_back(4096);
+	keySizes.push_back(4096);
 
 	// Paddings to test
 	std::vector<AsymMech::Type> paddings;
 	paddings.push_back(AsymMech::RSA_PKCS);
-	paddings.push_back(AsymMech::RSA_PKCS_OAEP);
 	paddings.push_back(AsymMech::RSA);
+
+	//OAEP parameters for test
+	std::vector<RSAOaepMechanismParam> oaep_parameters;
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA1});
+	oaep_parameters.push_back({HashAlgo::SHA256,AsymRSAMGF::MGF1_SHA256});
+	oaep_parameters.push_back({HashAlgo::SHA384,AsymRSAMGF::MGF1_SHA384});
+	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA512});
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256});
+	oaep_parameters.push_back({HashAlgo::SHA512,AsymRSAMGF::MGF1_SHA224, TestLabel});
+	oaep_parameters.push_back({HashAlgo::SHA1,AsymRSAMGF::MGF1_SHA256, TestLabel});
 
 	for (std::vector<ByteString>::iterator e = exponents.begin(); e != exponents.end(); e++)
 	{
@@ -638,15 +644,13 @@ void RSATests::testEncryptDecrypt()
 			{
 				// Generate some test data to encrypt based on the selected padding
 				ByteString testData;
+				RSAOaepMechanismParam* mechanismParam = NULL;
 
 				if (*pad == AsymMech::RSA_PKCS)
 				{
 					CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 12));
 				}
-				else if (*pad == AsymMech::RSA_PKCS_OAEP)
-				{
-					CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 42));
-				}
+				
 				else if (*pad == AsymMech::RSA)
 				{
 					CPPUNIT_ASSERT(rng->generateRandom(testData, *k >> 3));
@@ -659,9 +663,7 @@ void RSATests::testEncryptDecrypt()
 
 				// Encrypt the data
 				ByteString encryptedData;
-
-				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, *pad));
-
+				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, *pad, mechanismParam));
 				// The encrypted data length should equal the modulus length
 				CPPUNIT_ASSERT(encryptedData.size() == (*k >> 3));
 				CPPUNIT_ASSERT(encryptedData != testData);
@@ -669,10 +671,63 @@ void RSATests::testEncryptDecrypt()
 				// Now decrypt the data
 				ByteString decryptedData;
 
-				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, *pad));
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, *pad, mechanismParam));
 
 				// Check that the data was properly decrypted
 				CPPUNIT_ASSERT(decryptedData == testData);
+			}
+			// OAEP encryption test
+			for (std::vector<RSAOaepMechanismParam>::iterator par = oaep_parameters.begin(); par != oaep_parameters.end(); par++)
+			{
+				// Generate some test data to encrypt based on the selected padding
+				ByteString testData;
+				RSAOaepMechanismParam mechanismParam(par->hashAlg, par->mgfAlg, par->label);
+				size_t hashLen = 0;
+				switch (par->hashAlg)
+				{
+					case HashAlgo::SHA1:
+						hashLen = 20;
+						break;
+					case HashAlgo::SHA224:
+						hashLen = 28;
+						break;	
+					case HashAlgo::SHA256:
+						hashLen = 32;
+						break;
+					case HashAlgo::SHA384:
+						hashLen = 48;
+						break;	
+					case HashAlgo::SHA512:
+						hashLen = 64;
+						break;	
+					default:
+					    CPPUNIT_ASSERT(true == false);		
+				}
+				if ((*k >> 3) <= (hashLen*2)+2)
+				   continue; //skip test - hash too long for key size
+	            CPPUNIT_ASSERT(rng->generateRandom(testData, (*k >> 3) - 2 - hashLen*2));
+				// Encrypt the data
+				ByteString encryptedData;
+				CPPUNIT_ASSERT(rsa->encrypt(kp->getPublicKey(), testData, encryptedData, AsymMech::RSA_PKCS_OAEP, &mechanismParam));
+				// The encrypted data length should equal the modulus length
+				CPPUNIT_ASSERT(encryptedData.size() == (*k >> 3));
+				CPPUNIT_ASSERT(encryptedData != testData);
+
+				// Now decrypt the data
+				ByteString decryptedData;
+
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData, AsymMech::RSA_PKCS_OAEP, &mechanismParam));
+
+				// Check that the data was properly decrypted
+				CPPUNIT_ASSERT(decryptedData == testData);
+
+				// Now decrypt the data with invalid label
+				ByteString decryptedData1;
+				RSAOaepMechanismParam mechanismParam1;
+				mechanismParam1.hashAlg = par->hashAlg;
+				mechanismParam1.mgfAlg = par->mgfAlg;
+				mechanismParam1.label = InvalidLabel;
+				CPPUNIT_ASSERT(rsa->decrypt(kp->getPrivateKey(), encryptedData, decryptedData1, AsymMech::RSA_PKCS_OAEP, &mechanismParam1) == false);
 			}
 
 			rsa->recycleKeyPair(kp);
