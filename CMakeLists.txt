@@ -146,3 +146,6 @@ set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_SOURCE_IGNORE_FILES "build/*;\.git/*")
 
 include(CPack)
+
+# Compiler commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
