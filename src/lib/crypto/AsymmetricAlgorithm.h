@@ -122,6 +122,24 @@ struct RSA_PKCS_PSS_PARAMS
 	size_t sLen;
 };
 
+struct AsymOAEPSource
+{
+    enum Type
+    {
+        Unknown,
+        DATA_SPECIFIED,
+    };
+};
+
+struct RSA_PKCS_OAEP_PARAMS
+{
+    HashAlgo::Type hashAlg;
+	AsymRSAMGF::Type mgf;
+	AsymOAEPSource::Type source;
+	void *pSourceData;
+	size_t ulSourceDataLen;
+};
+
 class AsymmetricAlgorithm
 {
 public:
@@ -144,14 +162,14 @@ public:
 	virtual bool verifyFinal(const ByteString& signature);
 
 	// Encryption functions
-	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding) = 0;
+	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
 
 	// Decryption functions
-	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding) = 0;
+	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
 
 	// Wrap/Unwrap keys
-	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
-	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
 
 	// Key factory
 	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL) = 0;
@@ -194,4 +212,3 @@ private:
 };
 
 #endif // !_SOFTHSM_V2_ASYMMETRICALGORITHM_H
-

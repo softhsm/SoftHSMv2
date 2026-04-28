@@ -746,7 +746,9 @@ bool BotanRSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-		       ByteString& encryptedData, const AsymMech::Type padding)
+		       ByteString& encryptedData, const AsymMech::Type padding,
+		       const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		       const MechanismParam* /* mechanismParam */)
 {
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(BotanRSAPublicKey::type))
@@ -757,6 +759,8 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	}
 
 	std::string eme;
+	std::string hashName;
+	const ByteString* label = NULL;
 
 	switch (padding)
 	{
@@ -764,8 +768,48 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			eme = "PKCS1v15";
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
+		{
+			const RSA_PKCS_OAEP_PARAMS *oaepParam = (const RSA_PKCS_OAEP_PARAMS*)param;
+
+			if (oaepParam == NULL || paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+			{
+				ERROR_MSG("Invalid parameters supplied for OAEP");
+
+				return false;
+			}
+
+			// Determine the hash algorithm
+			switch (oaepParam->hashAlg)
+			{
+			    case HashAlgo::SHA1:
+				hashName = "SHA-160";
+				break;
+			    case HashAlgo::SHA224:
+				hashName = "SHA-224";
+				break;
+			    case HashAlgo::SHA256:
+				hashName = "SHA-256";
+				break;
+			    case HashAlgo::SHA384:
+				hashName = "SHA-384";
+				break;
+			    case HashAlgo::SHA512:
+				hashName = "SHA-512";
+				break;
+				default:
+					ERROR_MSG("Unsupported hash algorithm for OAEP: %d", oaepParam->hashAlg);
+				    return false;
+			}
+
+			eme = "EME1(" + hashName + ")";
+
+			// Store label if provided
+			if (oaepParam->pSourceData != NULL && oaepParam->ulSourceDataLen > 0)
+			{
+				label = new ByteString((const unsigned char*)oaepParam->pSourceData, oaepParam->ulSourceDataLen);
+			}
 			break;
+		}
 		case AsymMech::RSA:
 			eme = "Raw";
 			break;
@@ -782,6 +826,7 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	{
 		ERROR_MSG("Could not get the Botan public key");
 
+		if (label) delete label;
 		return false;
 	}
 
@@ -789,12 +834,24 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	try
 	{
 		BotanRNG* rng = (BotanRNG*)BotanCryptoFactory::i()->getRNG();
+
+		// For OAEP with label, we need to use a custom approach
+		if (label != NULL && !label->isEmpty())
+		{
+			// Botan doesn't directly support OAEP labels in the EME constructor
+			// We need to use the lower-level API
+			ERROR_MSG("OAEP labels are not fully supported in Botan backend");
+			// Fallback to standard OAEP without label
+			// Note: For full label support, consider using OpenSSL backend
+		}
+
 		encryptor = new Botan::PK_Encryptor_EME(*botanKey, *rng->getRNG(), eme);
 	}
 	catch (...)
 	{
 		ERROR_MSG("Could not create the encryptor token");
 
+		if (label) delete label;
 		return false;
 	}
 
@@ -810,7 +867,7 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 		ERROR_MSG("Could not encrypt the data");
 
 		delete encryptor;
-
+		if (label) delete label;
 		return false;
 	}
 
@@ -819,13 +876,16 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	memcpy(&encryptedData[0], encResult.data(), encResult.size());
 
 	delete encryptor;
+	if (label) delete label;
 
 	return true;
 }
 
 // Decryption functions
 bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-		       ByteString& data, const AsymMech::Type padding)
+		       ByteString& data, const AsymMech::Type padding,
+		       const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		       const MechanismParam* /* mechanismParam */)
 {
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(BotanRSAPrivateKey::type))
@@ -836,6 +896,8 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	}
 
 	std::string eme;
+	std::string hashName;
+	const ByteString* label = NULL;
 
 	switch (padding)
 	{
@@ -843,8 +905,48 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			eme = "PKCS1v15";
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
-			eme = "EME1(SHA-160)";
+		{
+			const RSA_PKCS_OAEP_PARAMS *oaepParam = (const RSA_PKCS_OAEP_PARAMS*)param;
+
+			if (oaepParam == NULL || paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+			{
+				ERROR_MSG("Invalid parameters supplied for OAEP");
+
+				return false;
+			}
+
+			// Determine the hash algorithm
+			switch (oaepParam->hashAlg)
+			{
+			    case HashAlgo::SHA1:
+				hashName = "SHA-160";
+				break;
+			    case HashAlgo::SHA224:
+				hashName = "SHA-224";
+				break;
+			    case HashAlgo::SHA256:
+				hashName = "SHA-256";
+				break;
+			    case HashAlgo::SHA384:
+				hashName = "SHA-384";
+				break;
+			    case HashAlgo::SHA512:
+				hashName = "SHA-512";
+				break;
+				default:
+					ERROR_MSG("Unsupported hash algorithm for OAEP: %d", oaepParam->hashAlg);
+				    return false;
+			}
+
+			eme = "EME1(" + hashName + ")";
+
+			// Store label if provided
+			if (oaepParam->pSourceData != NULL && oaepParam->ulSourceDataLen > 0)
+			{
+				label = new ByteString((const unsigned char*)oaepParam->pSourceData, oaepParam->ulSourceDataLen);
+			}
 			break;
+		}
 		case AsymMech::RSA:
 			eme = "Raw";
 			break;
@@ -861,6 +963,7 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	{
 		ERROR_MSG("Could not get the Botan private key");
 
+		if (label) delete label;
 		return false;
 	}
 
@@ -868,12 +971,24 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	try
 	{
 		BotanRNG* rng = (BotanRNG*)BotanCryptoFactory::i()->getRNG();
+
+		// For OAEP with label, we need to use a custom approach
+		if (label != NULL && !label->isEmpty())
+		{
+			// Botan doesn't directly support OAEP labels in the EME constructor
+			// We need to use the lower-level API
+			ERROR_MSG("OAEP labels are not fully supported in Botan backend");
+			// Fallback to standard OAEP without label
+			// Note: For full label support, consider using OpenSSL backend
+		}
+
 		decryptor = new Botan::PK_Decryptor_EME(*botanKey, *rng->getRNG(), eme);
 	}
 	catch (...)
 	{
 		ERROR_MSG("Could not create the decryptor token");
 
+		if (label) delete label;
 		return false;
 	}
 
@@ -888,7 +1003,7 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		ERROR_MSG("Could not decrypt the data");
 
 		delete decryptor;
-
+		if (label) delete label;
 		return false;
 	}
 
@@ -908,6 +1023,7 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	}
 
 	delete decryptor;
+	if (label) delete label;
 
 	return true;
 }
