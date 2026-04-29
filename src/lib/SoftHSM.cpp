@@ -2589,16 +2589,35 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				return CKR_ARGUMENTS_BAD;
 			}
 
-			oaepParam.pSourceData = malloc(pOaepParams->ulSourceDataLen);
-			if (oaepParam.pSourceData == NULL)
+			// Allocate one contiguous block: struct + label data
+			size_t totalSize;
+			totalSize = sizeof(RSA_PKCS_OAEP_PARAMS) + pOaepParams->ulSourceDataLen;
+			RSA_PKCS_OAEP_PARAMS* pContiguousParam;
+			pContiguousParam = (RSA_PKCS_OAEP_PARAMS*)malloc(totalSize);
+			if (pContiguousParam == NULL)
 			{
 				return CKR_HOST_MEMORY;
 			}
-			memcpy((void*)oaepParam.pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
-			oaepParam.ulSourceDataLen = pOaepParams->ulSourceDataLen;
 
-			param = &oaepParam;
-			paramLen = sizeof(oaepParam);
+			// Copy the struct fields
+			pContiguousParam->hashAlg = oaepParam.hashAlg;
+			pContiguousParam->mgf = oaepParam.mgf;
+
+			// Copy label data (if any) immediately after the struct
+			if (pOaepParams->ulSourceDataLen > 0)
+			{
+				pContiguousParam->pSourceData = (CK_VOID_PTR)((CK_BYTE_PTR)pContiguousParam + sizeof(RSA_PKCS_OAEP_PARAMS));
+				pContiguousParam->ulSourceDataLen = pOaepParams->ulSourceDataLen;
+				memcpy(pContiguousParam->pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
+			}
+			else
+			{
+				pContiguousParam->pSourceData = NULL;
+				pContiguousParam->ulSourceDataLen = 0;
+			}
+
+			param = pContiguousParam;
+			paramLen = totalSize;
 			isRSA = true;
 			break;
 		default:
@@ -3380,16 +3399,35 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				return CKR_ARGUMENTS_BAD;
 			}
 
-			oaepParam.pSourceData = malloc(pOaepParams->ulSourceDataLen);
-			if (oaepParam.pSourceData == NULL)
+			// Allocate one contiguous block: struct + label data
+			size_t totalSize;
+		    totalSize = sizeof(RSA_PKCS_OAEP_PARAMS) + pOaepParams->ulSourceDataLen;
+			RSA_PKCS_OAEP_PARAMS* pContiguousParam;
+		    pContiguousParam = (RSA_PKCS_OAEP_PARAMS*)malloc(totalSize);
+			if (pContiguousParam == NULL)
 			{
 				return CKR_HOST_MEMORY;
 			}
-			memcpy((void*)oaepParam.pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
-			oaepParam.ulSourceDataLen = pOaepParams->ulSourceDataLen;
 
-			param = &oaepParam;
-			paramLen = sizeof(oaepParam);
+			// Copy the struct fields
+			pContiguousParam->hashAlg = oaepParam.hashAlg;
+			pContiguousParam->mgf = oaepParam.mgf;
+
+			// Copy label data (if any) immediately after the struct
+			if (pOaepParams->ulSourceDataLen > 0)
+			{
+				pContiguousParam->pSourceData = (CK_VOID_PTR)((CK_BYTE_PTR)pContiguousParam + sizeof(RSA_PKCS_OAEP_PARAMS));
+				pContiguousParam->ulSourceDataLen = pOaepParams->ulSourceDataLen;
+				memcpy(pContiguousParam->pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
+			}
+			else
+			{
+				pContiguousParam->pSourceData = NULL;
+				pContiguousParam->ulSourceDataLen = 0;
+			}
+
+			param = pContiguousParam;
+			paramLen = totalSize;
 			isRSA = true;
 			break;
 		default:
