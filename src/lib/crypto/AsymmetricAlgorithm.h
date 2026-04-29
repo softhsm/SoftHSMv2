@@ -122,20 +122,10 @@ struct RSA_PKCS_PSS_PARAMS
 	size_t sLen;
 };
 
-struct AsymOAEPSource
-{
-    enum Type
-    {
-        Unknown,
-        DATA_SPECIFIED,
-    };
-};
-
 struct RSA_PKCS_OAEP_PARAMS
 {
     HashAlgo::Type hashAlg;
 	AsymRSAMGF::Type mgf;
-	AsymOAEPSource::Type source;
 	void *pSourceData;
 	size_t ulSourceDataLen;
 };
