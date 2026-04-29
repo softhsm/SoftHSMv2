@@ -2606,6 +2606,18 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 			// Copy label data (if any) immediately after the struct
 			if (pOaepParams->ulSourceDataLen > 0)
 			{
+                if (pOaepParams->pSourceData == NULL_PTR)
+                {
+                    ERROR_MSG("OAEP label length is non-zero but pointer is NULL");
+                    return CKR_ARGUMENTS_BAD;
+                }
+
+                if (pOaepParams->ulSourceDataLen > SIZE_MAX - sizeof(RSA_PKCS_OAEP_PARAMS))
+                {
+                    ERROR_MSG("OAEP label length would cause integer overflow");
+                    return CKR_ARGUMENTS_BAD;
+                }
+
 				pContiguousParam->pSourceData = (CK_VOID_PTR)((CK_BYTE_PTR)pContiguousParam + sizeof(RSA_PKCS_OAEP_PARAMS));
 				pContiguousParam->ulSourceDataLen = pOaepParams->ulSourceDataLen;
 				memcpy(pContiguousParam->pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
@@ -3416,6 +3428,18 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 			// Copy label data (if any) immediately after the struct
 			if (pOaepParams->ulSourceDataLen > 0)
 			{
+                if (pOaepParams->pSourceData == NULL_PTR)
+                {
+                    ERROR_MSG("OAEP label length is non-zero but pointer is NULL");
+                    return CKR_ARGUMENTS_BAD;
+                }
+
+                if (pOaepParams->ulSourceDataLen > SIZE_MAX - sizeof(RSA_PKCS_OAEP_PARAMS))
+                {
+                    ERROR_MSG("OAEP label length would cause integer overflow");
+                    return CKR_ARGUMENTS_BAD;
+                }
+
 				pContiguousParam->pSourceData = (CK_VOID_PTR)((CK_BYTE_PTR)pContiguousParam + sizeof(RSA_PKCS_OAEP_PARAMS));
 				pContiguousParam->ulSourceDataLen = pOaepParams->ulSourceDataLen;
 				memcpy(pContiguousParam->pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
