@@ -77,6 +77,7 @@
 #include "HandleManager.h"
 #include "P11Objects.h"
 #include "odd.h"
+#include "pkcs11.h"
 
 #if defined(WITH_OPENSSL)
 #include "OSSLCryptoFactory.h"
@@ -2524,7 +2525,6 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	AsymMech::Type mechanism;
 	void* param = NULL;
 	size_t paramLen = 0;
-	MechanismParam* mechanismParam = NULL;
 	CK_RSA_PKCS_OAEP_PARAMS_PTR pOaepParams;
 	RSA_PKCS_OAEP_PARAMS oaepParam;
 	bool isRSA = false;
@@ -2559,6 +2559,29 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 					oaepParam.mgf = AsymRSAMGF::MGF1_SHA1;
 					allowedMgf = CKG_MGF1_SHA1;
 					break;
+			    case CKM_SHA224:
+					oaepParam.hashAlg = HashAlgo::SHA224;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA224;
+					allowedMgf = CKG_MGF1_SHA224;
+					break;
+			    case CKM_SHA256:
+					oaepParam.hashAlg = HashAlgo::SHA256;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA256;
+					allowedMgf = CKG_MGF1_SHA256;
+					break;
+			    case CKM_SHA384:
+					oaepParam.hashAlg = HashAlgo::SHA384;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA384;
+					allowedMgf = CKG_MGF1_SHA384;
+					break;
+			    case CKM_SHA512:
+					oaepParam.hashAlg = HashAlgo::SHA512;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA512;
+					allowedMgf = CKG_MGF1_SHA512;
+					break;
+				default:
+				ERROR_MSG("Invalid hashing algorithm");
+				return CKR_ARGUMENTS_BAD;
 			}
 
 			if (pOaepParams->mgf != allowedMgf) {
@@ -3292,6 +3315,10 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Get the asymmetric algorithm matching the mechanism
 	AsymMech::Type mechanism = AsymMech::Unknown;
+	void* param = NULL;
+	size_t paramLen = 0;
+	CK_RSA_PKCS_OAEP_PARAMS_PTR pOaepParams;
+	RSA_PKCS_OAEP_PARAMS oaepParam;
 	bool isRSA = false;
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
@@ -3314,6 +3341,55 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 				return rv;
 
 			mechanism = AsymMech::RSA_PKCS_OAEP;
+			unsigned long allowedMgf;
+			pOaepParams = CK_RSA_PKCS_OAEP_PARAMS_PTR(pMechanism->pParameter);
+
+			switch (pOaepParams->hashAlg) {
+			    case CKM_SHA_1:
+					oaepParam.hashAlg = HashAlgo::SHA1;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA1;
+					allowedMgf = CKG_MGF1_SHA1;
+					break;
+			    case CKM_SHA224:
+					oaepParam.hashAlg = HashAlgo::SHA224;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA224;
+					allowedMgf = CKG_MGF1_SHA224;
+					break;
+			    case CKM_SHA256:
+					oaepParam.hashAlg = HashAlgo::SHA256;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA256;
+					allowedMgf = CKG_MGF1_SHA256;
+					break;
+			    case CKM_SHA384:
+					oaepParam.hashAlg = HashAlgo::SHA384;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA384;
+					allowedMgf = CKG_MGF1_SHA384;
+					break;
+			    case CKM_SHA512:
+					oaepParam.hashAlg = HashAlgo::SHA512;
+					oaepParam.mgf = AsymRSAMGF::MGF1_SHA512;
+					allowedMgf = CKG_MGF1_SHA512;
+					break;
+				default:
+				ERROR_MSG("Invalid hashing algorithm");
+				return CKR_ARGUMENTS_BAD;
+			}
+
+			if (pOaepParams->mgf != allowedMgf) {
+				ERROR_MSG("Hash and MGF don't match");
+				return CKR_ARGUMENTS_BAD;
+			}
+
+			oaepParam.pSourceData = malloc(pOaepParams->ulSourceDataLen);
+			if (oaepParam.pSourceData == NULL)
+			{
+				return CKR_HOST_MEMORY;
+			}
+			memcpy((void*)oaepParam.pSourceData, pOaepParams->pSourceData, pOaepParams->ulSourceDataLen);
+			oaepParam.ulSourceDataLen = pOaepParams->ulSourceDataLen;
+
+			param = &oaepParam;
+			paramLen = sizeof(oaepParam);
 			isRSA = true;
 			break;
 		default:
@@ -3355,6 +3431,7 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 	session->setOpType(SESSION_OP_DECRYPT);
 	session->setAsymmetricCryptoOp(asymCrypto);
 	session->setMechanism(mechanism);
+	session->setParameters(param, paramLen);
 	session->setAllowMultiPartOp(false);
 	session->setAllowSinglePartOp(true);
 	session->setPrivateKey(privateKey);
