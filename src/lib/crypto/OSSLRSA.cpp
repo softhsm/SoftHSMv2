@@ -30,6 +30,8 @@
  OpenSSL RSA asymmetric algorithm implementation
  *****************************************************************************/
 
+#include "AsymmetricAlgorithm.h"
+#include "HashAlgorithm.h"
 #include "config.h"
 #include "log.h"
 #include "OSSLRSA.h"
@@ -1208,7 +1210,9 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
-		      ByteString& encryptedData, const AsymMech::Type padding)
+		      ByteString& encryptedData, const AsymMech::Type padding,
+			  const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+			  const MechanismParam* /* mechanismParam */)
 {
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(OSSLRSAPublicKey::type))
@@ -1223,6 +1227,10 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 	// Check the data and padding algorithm
 	int osslPadding = 0;
+	const EVP_MD* hash = NULL;
+	bool useEvp = false;
+	const unsigned char* oaepLabel = NULL;
+	size_t oaepLabelLen = 0;
 
 	if (padding == AsymMech::RSA_PKCS)
 	{
@@ -1239,16 +1247,47 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	}
 	else if (padding == AsymMech::RSA_PKCS_OAEP)
 	{
-		// The size of the input data cannot be more than the modulus
-		// length of the key - 41
-		if (data.size() > (size_t) (RSA_size(rsa) - 41))
+		const RSA_PKCS_OAEP_PARAMS *oaepParam = (const RSA_PKCS_OAEP_PARAMS*)param;
+
+		if (oaepParam == NULL || paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
 		{
-			ERROR_MSG("Too much data supplied for RSA OAEP encryption");
+			ERROR_MSG("Invalid parameters supplied for OAEP");
 
 			return false;
 		}
 
+		// Determine the hash algorithm
+		switch (oaepParam->hashAlg)
+		{
+		    case HashAlgo::SHA1:
+				hash = EVP_sha1();
+				break;
+		    case HashAlgo::SHA224:
+				hash = EVP_sha224();
+				break;
+		    case HashAlgo::SHA256:
+				hash = EVP_sha256();
+				break;
+		    case HashAlgo::SHA384:
+				hash = EVP_sha384();
+				break;
+		    case HashAlgo::SHA512:
+				hash = EVP_sha512();
+				break;
+			default:
+				ERROR_MSG("Unsupported hash algorithm for OAEP: %d", oaepParam->hashAlg);
+			    return false;
+		}
+
+		// Get the label if provided
+		if (oaepParam->pSourceData != NULL && oaepParam->ulSourceDataLen > 0)
+		{
+			oaepLabel = (const unsigned char*)oaepParam->pSourceData;
+			oaepLabelLen = oaepParam->ulSourceDataLen;
+		}
+
 		osslPadding = RSA_PKCS1_OAEP_PADDING;
+		useEvp = true;  // Use EVP API for custom hash
 	}
 	else if (padding == AsymMech::RSA)
 	{
@@ -1270,13 +1309,126 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 	}
 
 	// Perform the RSA operation
-	encryptedData.resize(RSA_size(rsa));
-
-	if (RSA_public_encrypt(data.size(), (unsigned char*) data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
+	if (useEvp && hash != NULL)
 	{
-		ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+		// Use EVP API for OAEP with custom hash
+		EVP_PKEY* pkey = EVP_PKEY_new();
+		if (!pkey)
+		{
+			ERROR_MSG("Could not create EVP_PKEY");
+			return false;
+		}
 
-		return false;
+		if (EVP_PKEY_set1_RSA(pkey, rsa) != 1)
+		{
+			ERROR_MSG("Could not set RSA key to EVP_PKEY (0x%08X)", ERR_get_error());
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pkey, NULL);
+		if (!ctx)
+		{
+			ERROR_MSG("Could not create EVP_PKEY_CTX (0x%08X)", ERR_get_error());
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		if (EVP_PKEY_encrypt_init(ctx) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_encrypt_init failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_CTX_set_rsa_padding failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_CTX_set_rsa_oaep_md failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		// Set MGF1 hash to the same as OAEP hash
+		if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_CTX_set_rsa_mgf1_md failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		// Set OAEP label if provided
+		if (oaepLabel != NULL && oaepLabelLen > 0)
+		{
+			// Make a copy of the label as EVP_PKEY_CTX_set0_rsa_oaep_label takes ownership
+			unsigned char* labelCopy = (unsigned char*)OPENSSL_malloc(oaepLabelLen);
+			if (!labelCopy)
+			{
+				ERROR_MSG("Could not allocate memory for OAEP label");
+				EVP_PKEY_CTX_free(ctx);
+				EVP_PKEY_free(pkey);
+				return false;
+			}
+			memcpy(labelCopy, oaepLabel, oaepLabelLen);
+
+			if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelCopy, oaepLabelLen) <= 0)
+			{
+				ERROR_MSG("EVP_PKEY_CTX_set0_rsa_oaep_label failed (0x%08X)", ERR_get_error());
+				OPENSSL_free(labelCopy);
+				EVP_PKEY_CTX_free(ctx);
+				EVP_PKEY_free(pkey);
+				return false;
+			}
+		}
+
+		// Determine output size
+		size_t outlen = 0;
+		if (EVP_PKEY_encrypt(ctx, NULL, &outlen,
+				 (const unsigned char*)data.const_byte_str(), data.size()) <= 0)
+		{
+			ERROR_MSG("Could not determine encrypted data size (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		encryptedData.resize(outlen);
+
+		// Perform encryption
+		if (EVP_PKEY_encrypt(ctx, &encryptedData[0], &outlen,
+				 (const unsigned char*)data.const_byte_str(), data.size()) <= 0)
+		{
+			ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		EVP_PKEY_CTX_free(ctx);
+		EVP_PKEY_free(pkey);
+		return true;
+	}
+	else
+	{
+		// Use legacy RSA API
+		encryptedData.resize(RSA_size(rsa));
+
+		if (RSA_public_encrypt(data.size(), (unsigned char*) data.const_byte_str(), &encryptedData[0], rsa, osslPadding) == -1)
+		{
+			ERROR_MSG("RSA public key encryption failed (0x%08X)", ERR_get_error());
+
+			return false;
+		}
 	}
 
 	return true;
@@ -1284,7 +1436,9 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 // Decryption functions
 bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
-		      ByteString& data, const AsymMech::Type padding)
+		      ByteString& data, const AsymMech::Type padding,
+			  const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+			  const MechanismParam* /* mechanismParam */)
 {
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(OSSLRSAPrivateKey::type))
@@ -1307,6 +1461,10 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 
 	// Determine the OpenSSL padding algorithm
 	int osslPadding = 0;
+	const EVP_MD* hash = NULL;
+	bool useEvp = false;
+	const unsigned char* oaepLabel = NULL;
+	size_t oaepLabelLen = 0;
 
 	switch (padding)
 	{
@@ -1314,8 +1472,50 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			osslPadding = RSA_PKCS1_PADDING;
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
+		{
+			const RSA_PKCS_OAEP_PARAMS *oaepParam = (const RSA_PKCS_OAEP_PARAMS*)param;
+
+			if (oaepParam == NULL || paramLen != sizeof(RSA_PKCS_OAEP_PARAMS))
+			{
+				ERROR_MSG("Invalid parameters supplied for OAEP");
+
+				return false;
+			}
+
+			// Determine the hash algorithm
+			switch (oaepParam->hashAlg)
+			{
+			    case HashAlgo::SHA1:
+					hash = EVP_sha1();
+					break;
+			    case HashAlgo::SHA224:
+					hash = EVP_sha224();
+					break;
+			    case HashAlgo::SHA256:
+					hash = EVP_sha256();
+					break;
+			    case HashAlgo::SHA384:
+					hash = EVP_sha384();
+					break;
+			    case HashAlgo::SHA512:
+					hash = EVP_sha512();
+					break;
+				default:
+					ERROR_MSG("Unsupported hash algorithm for OAEP: %d", oaepParam->hashAlg);
+				    return false;
+			}
+
+			// Get the label if provided
+			if (oaepParam->pSourceData != NULL && oaepParam->ulSourceDataLen > 0)
+			{
+				oaepLabel = (const unsigned char*)oaepParam->pSourceData;
+				oaepLabelLen = oaepParam->ulSourceDataLen;
+			}
+
 			osslPadding = RSA_PKCS1_OAEP_PADDING;
+			useEvp = true;  // Use EVP API for custom hash
 			break;
+		}
 		case AsymMech::RSA:
 			osslPadding = RSA_NO_PADDING;
 			break;
@@ -1325,21 +1525,137 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 	}
 
 	// Perform the RSA operation
-	data.resize(RSA_size(rsa));
-
-	int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char*) encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
-
-	if (decSize == -1)
+	if (useEvp && hash != NULL)
 	{
-		ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
+		// Use EVP API for OAEP with custom hash
+		EVP_PKEY* pkey = EVP_PKEY_new();
+		if (!pkey)
+		{
+			ERROR_MSG("Could not create EVP_PKEY");
+			return false;
+		}
 
-		return false;
+		if (EVP_PKEY_set1_RSA(pkey, rsa) != 1)
+		{
+			ERROR_MSG("Could not set RSA key to EVP_PKEY (0x%08X)", ERR_get_error());
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pkey, NULL);
+		if (!ctx)
+		{
+			ERROR_MSG("Could not create EVP_PKEY_CTX (0x%08X)", ERR_get_error());
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		if (EVP_PKEY_decrypt_init(ctx) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_decrypt_init failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_CTX_set_rsa_padding failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, hash) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_CTX_set_rsa_oaep_md failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		// Set MGF1 hash to the same as OAEP hash
+		if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, hash) <= 0)
+		{
+			ERROR_MSG("EVP_PKEY_CTX_set_rsa_mgf1_md failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		// Set OAEP label if provided
+		if (oaepLabel != NULL && oaepLabelLen > 0)
+		{
+			// Make a copy of the label as EVP_PKEY_CTX_set0_rsa_oaep_label takes ownership
+			unsigned char* labelCopy = (unsigned char*)OPENSSL_malloc(oaepLabelLen);
+			if (!labelCopy)
+			{
+				ERROR_MSG("Could not allocate memory for OAEP label");
+				EVP_PKEY_CTX_free(ctx);
+				EVP_PKEY_free(pkey);
+				return false;
+			}
+			memcpy(labelCopy, oaepLabel, oaepLabelLen);
+
+			if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, labelCopy, oaepLabelLen) <= 0)
+			{
+				ERROR_MSG("EVP_PKEY_CTX_set0_rsa_oaep_label failed (0x%08X)", ERR_get_error());
+				OPENSSL_free(labelCopy);
+				EVP_PKEY_CTX_free(ctx);
+				EVP_PKEY_free(pkey);
+				return false;
+			}
+		}
+
+		// Determine output size
+		size_t outlen = 0;
+		if (EVP_PKEY_decrypt(ctx, NULL, &outlen,
+				 (const unsigned char*)encryptedData.const_byte_str(),
+				 encryptedData.size()) <= 0)
+		{
+			ERROR_MSG("Could not determine decrypted data size (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		data.resize(outlen);
+
+		// Perform decryption
+		if (EVP_PKEY_decrypt(ctx, &data[0], &outlen,
+				 (const unsigned char*)encryptedData.const_byte_str(),
+				 encryptedData.size()) <= 0)
+		{
+			ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
+			EVP_PKEY_CTX_free(ctx);
+			EVP_PKEY_free(pkey);
+			return false;
+		}
+
+		EVP_PKEY_CTX_free(ctx);
+		EVP_PKEY_free(pkey);
+		return true;
 	}
+	else
+	{
+		// Use legacy RSA API
+		data.resize(RSA_size(rsa));
 
-	data.resize(decSize);
+		int decSize = RSA_private_decrypt(encryptedData.size(), (unsigned char*) encryptedData.const_byte_str(), &data[0], rsa, osslPadding);
+
+		if (decSize == -1)
+		{
+			ERROR_MSG("RSA private key decryption failed (0x%08X)", ERR_get_error());
+
+			return false;
+		}
+
+		data.resize(decSize);
+	}
 
 	return true;
 }
+
 
 // Key factory
 bool OSSLRSA::generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* /*rng = NULL */)
