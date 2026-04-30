@@ -152,36 +152,66 @@ int crypto_import_key_pair
 #ifdef WITH_EDDSA
 	EVP_PKEY* eddsa = NULL;
 #endif
+#ifdef WITH_ML_DSA
+	EVP_PKEY* mldsa = NULL;
+#endif
 
-	switch (EVP_PKEY_type(EVP_PKEY_id(pkey)))
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	int keyType = EVP_PKEY_get_id(pkey);
+	if (keyType != EVP_PKEY_KEYMGMT) 
 	{
-		case EVP_PKEY_RSA:
-		case EVP_PKEY_RSA_PSS:
-			rsa = EVP_PKEY_get1_RSA(pkey);
-			break;
-		case EVP_PKEY_DSA:
-			dsa = EVP_PKEY_get1_DSA(pkey);
-			break;
-#ifdef WITH_ECC
-		case EVP_PKEY_EC:
-			ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
-			break;
+		switch (keyType)
+#else
+	switch (EVP_PKEY_type(EVP_PKEY_id(pkey)))
 #endif
-#ifdef WITH_EDDSA
-		case NID_X25519:
-		case NID_ED25519:
-		case NID_X448:
-		case NID_ED448:
+	
+		{
+			case EVP_PKEY_RSA:
+			case EVP_PKEY_RSA_PSS:
+				rsa = EVP_PKEY_get1_RSA(pkey);
+				break;
+			case EVP_PKEY_DSA:
+				dsa = EVP_PKEY_get1_DSA(pkey);
+				break;
+	#ifdef WITH_ECC
+			case EVP_PKEY_EC:
+				ecdsa = EVP_PKEY_get1_EC_KEY(pkey);
+				break;
+	#endif
+	#ifdef WITH_EDDSA
+			case NID_X25519:
+			case NID_ED25519:
+			case NID_X448:
+			case NID_ED448:
+				EVP_PKEY_up_ref(pkey);
+				eddsa = pkey;
+				break;
+	#endif
+			default:
+				fprintf(stderr, "ERROR: Cannot handle this algorithm.\n");
+				EVP_PKEY_free(pkey);
+				return 1;
+				break;
+		}
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	} else {
+		// Provider Keys management
+		#ifdef WITH_ML_DSA
+			size_t len;
+			int rv = (EVP_PKEY_is_a(pkey, "ML-DSA-44") ||
+                     EVP_PKEY_is_a(pkey, "ML-DSA-65") ||
+                     EVP_PKEY_is_a(pkey, "ML-DSA-87"));
+			if (!rv) {
+				fprintf(stderr, "ERROR: Cannot handle this algorithm, rv: %d\n", rv);
+				EVP_PKEY_free(pkey);
+				return 1;
+			}
 			EVP_PKEY_up_ref(pkey);
-			eddsa = pkey;
-			break;
-#endif
-		default:
-			fprintf(stderr, "ERROR: Cannot handle this algorithm.\n");
-			EVP_PKEY_free(pkey);
-			return 1;
-			break;
+			mldsa = pkey;
+		#endif
+		
 	}
+#endif
 	EVP_PKEY_free(pkey);
 
 	int result = 0;
@@ -208,6 +238,13 @@ int crypto_import_key_pair
 	{
 		result = crypto_save_eddsa(hSession, label, objID, objIDLen, noPublicKey, eddsa);
 		EVP_PKEY_free(eddsa);
+	}
+#endif
+#ifdef WITH_ML_DSA
+	else if (mldsa)
+	{
+		result = crypto_save_mldsa(hSession, label, objID, objIDLen, noPublicKey, mldsa);
+		EVP_PKEY_free(mldsa);
 	}
 #endif
 	else
@@ -348,7 +385,7 @@ int crypto_import_certificate
 		}
 	}
 
-	printf("The certificate has been imported.\n");
+	printf("The certificate with label=%s has been imported.\n", label);
 
 	ret = 0;
 
@@ -505,7 +542,7 @@ int crypto_save_rsa
 		return 1;
 	}
 
-	printf("The key pair has been imported.\n");
+	printf("The RSA key pair with label=%s has been imported.\n", label);
 
 	return 0;
 }
@@ -674,7 +711,7 @@ int crypto_save_dsa
 		return 1;
 	}
 
-	printf("The key pair has been imported.\n");
+	printf("The DSA key pair with label=%s has been imported.\n", label);
 
 	return 0;
 }
@@ -815,7 +852,7 @@ int crypto_save_ecdsa
 		return 1;
 	}
 
-	printf("The key pair has been imported.\n");
+	printf("The ECDSA key pair with label=%s has been imported.\n", label);
 
 	return 0;
 }
@@ -1032,7 +1069,7 @@ int crypto_save_eddsa
 		return 1;
 	}
 
-	printf("The key pair has been imported.\n");
+	printf("The EDDSA key pair with label=%s has been imported.\n", label);
 
 	return 0;
 }
@@ -1135,6 +1172,214 @@ void crypto_free_eddsa(eddsa_key_material_t* keyMat)
 	if (keyMat->derOID) free(keyMat->derOID);
 	if (keyMat->bigK) free(keyMat->bigK);
 	if (keyMat->bigA) free(keyMat->bigA);
+	free(keyMat);
+}
+
+#endif
+
+#ifdef WITH_ML_DSA
+
+// Save the key data in PKCS#11
+int crypto_save_mldsa
+(
+	CK_SESSION_HANDLE hSession,
+	char* label,
+	char* objID,
+	size_t objIDLen,
+	int noPublicKey,
+	EVP_PKEY* mldsa
+)
+{
+	mldsa_key_material_t* keyMat = crypto_malloc_mldsa(mldsa);
+	if (keyMat == NULL)
+	{
+		fprintf(stderr, "ERROR: Could not convert the key material to binary information.\n");
+		return 1;
+	}
+
+	CK_OBJECT_CLASS pubClass = CKO_PUBLIC_KEY, privClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE keyType = CKK_ML_DSA;
+	CK_BBOOL ckTrue = CK_TRUE, ckFalse = CK_FALSE, ckToken = CK_TRUE;
+	if (noPublicKey)
+	{
+		ckToken = CK_FALSE;
+	}
+	CK_ATTRIBUTE pubTemplate[] = {
+		{ CKA_CLASS,          &pubClass,               sizeof(pubClass) },
+		{ CKA_KEY_TYPE,       &keyType,                sizeof(keyType) },
+		{ CKA_LABEL,          label,                   strlen(label) },
+		{ CKA_ID,             objID,                   objIDLen },
+		{ CKA_TOKEN,          &ckToken,                sizeof(ckToken) },
+		{ CKA_VERIFY,         &ckTrue,                 sizeof(ckTrue) },
+		{ CKA_ENCRYPT,        &ckFalse,                sizeof(ckFalse) },
+		{ CKA_WRAP,           &ckFalse,                sizeof(ckFalse) },
+		{ CKA_PARAMETER_SET,  &keyMat->parameterSet,   sizeof(CK_ULONG) },
+		{ CKA_VALUE,          keyMat->pubValue,        keyMat->sizePubValue },
+	};
+	CK_ATTRIBUTE privTemplate[] = {
+		{ CKA_CLASS,          &privClass,        sizeof(privClass) },
+		{ CKA_KEY_TYPE,       &keyType,          sizeof(keyType) },
+		{ CKA_LABEL,          label,             strlen(label) },
+		{ CKA_ID,             objID,             objIDLen },
+		{ CKA_SIGN,           &ckTrue,           sizeof(ckTrue) },
+		{ CKA_DECRYPT,        &ckFalse,          sizeof(ckFalse) },
+		{ CKA_UNWRAP,         &ckFalse,          sizeof(ckFalse) },
+		{ CKA_SENSITIVE,      &ckTrue,           sizeof(ckTrue) },
+		{ CKA_TOKEN,          &ckTrue,           sizeof(ckTrue) },
+		{ CKA_PRIVATE,        &ckTrue,           sizeof(ckTrue) },
+		{ CKA_EXTRACTABLE,    &ckFalse,          sizeof(ckFalse) },
+		{ CKA_PARAMETER_SET,  &keyMat->parameterSet,   sizeof(CK_ULONG) },
+		{ CKA_SEED,           keyMat->seed,            keyMat->sizeSeed },
+		{ CKA_VALUE,          keyMat->privValue,       keyMat->sizePrivValue },
+	};
+
+	CK_OBJECT_HANDLE hKey1, hKey2;
+	CK_RV rv = p11->C_CreateObject(hSession, privTemplate, 14, &hKey1);
+	if (rv != CKR_OK)
+	{
+		fprintf(stderr, "ERROR: Could not save the private key in the token. "
+				"Maybe the algorithm is not supported.\n");
+		crypto_free_mldsa(keyMat);
+		return 1;
+	}
+
+	rv = p11->C_CreateObject(hSession, pubTemplate, 10, &hKey2);
+	crypto_free_mldsa(keyMat);
+
+	if (rv != CKR_OK)
+	{
+		p11->C_DestroyObject(hSession, hKey1);
+		fprintf(stderr, "ERROR: Could not save the public key in the token.\n");
+		return 1;
+	}
+
+	printf("The MLDSA key pair with label=%s has been imported.\n", label);
+
+	return 0;
+}
+
+mldsa_key_material_t* crypto_malloc_mldsa(EVP_PKEY* pkey)
+{
+
+	if (pkey == NULL)
+	{
+		return NULL;
+	}
+
+	mldsa_key_material_t* keyMat = (mldsa_key_material_t*)calloc(1, sizeof(mldsa_key_material_t));
+	if (keyMat == NULL)
+	{
+		return NULL;
+	}
+
+	uint8_t seed[32];
+	size_t seed_len;
+	int rv = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_ML_DSA_SEED,
+								seed, sizeof(seed), &seed_len);
+
+	if(!rv)
+	{
+		fprintf(stderr, "ERROR: Could not get ML-DSA seed, rv: %d\n", rv);
+		memset(seed, 0, sizeof(seed));
+		crypto_free_mldsa(keyMat);
+		return NULL;
+	}
+
+	// let's use max priv length
+	uint8_t priv[MLDSAParameters::ML_DSA_87_PRIV_LENGTH];
+	size_t priv_len;
+	rv = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY,
+									priv, sizeof(priv), &priv_len);
+	if(!rv)
+	{
+		fprintf(stderr, "ERROR: Could not get ML-DSA private key, rv: %d\n", rv);
+		memset(seed, 0, sizeof(seed));
+		memset(priv, 0, sizeof(priv));
+		crypto_free_mldsa(keyMat);
+		return NULL;
+	}
+
+	if (priv_len != MLDSAParameters::ML_DSA_44_PRIV_LENGTH &&
+	    priv_len != MLDSAParameters::ML_DSA_65_PRIV_LENGTH &&
+	    priv_len != MLDSAParameters::ML_DSA_87_PRIV_LENGTH)
+	{
+		fprintf(stderr, "ERROR: Unsupported ML-DSA private key length: %zu\n", priv_len);
+		memset(seed, 0, sizeof(seed));
+		memset(priv, 0, sizeof(priv));
+		crypto_free_mldsa(keyMat);
+		return NULL;
+	}
+
+	uint8_t pub[MLDSAParameters::ML_DSA_87_PUB_LENGTH];
+    size_t pub_len;
+	rv = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY,
+                                    pub, sizeof(pub), &pub_len);
+
+	if(!rv)
+	{
+		fprintf(stderr, "ERROR: Could not get ML-DSA public key, rv: %d\n", rv);
+		memset(seed, 0, sizeof(seed));
+		memset(priv, 0, sizeof(priv));
+		memset(pub, 0, sizeof(pub));
+		crypto_free_mldsa(keyMat);
+		return NULL;
+	}
+
+	keyMat->sizeSeed = seed_len;
+	keyMat->sizePrivValue = priv_len;
+	keyMat->sizePubValue = pub_len;
+
+	if (keyMat->sizeSeed > 0) {
+		keyMat->seed = (CK_VOID_PTR)malloc(keyMat->sizeSeed);
+	}
+	if (keyMat->sizePrivValue > 0) {
+		keyMat->privValue = (CK_VOID_PTR)malloc(keyMat->sizePrivValue);
+	}
+	keyMat->pubValue = (CK_VOID_PTR)malloc(keyMat->sizePubValue);
+
+	if (!keyMat->seed || !keyMat->privValue || !keyMat->pubValue)
+	{
+		crypto_free_mldsa(keyMat);
+		return NULL;
+	}
+
+	switch (keyMat->sizePrivValue)
+	{
+		case MLDSAParameters::ML_DSA_44_PRIV_LENGTH:
+			keyMat->parameterSet = MLDSAParameters::ML_DSA_44_PARAMETER_SET;
+			break;
+		
+		case MLDSAParameters::ML_DSA_65_PRIV_LENGTH:
+			keyMat->parameterSet = MLDSAParameters::ML_DSA_65_PARAMETER_SET;
+			break;
+		
+		case MLDSAParameters::ML_DSA_87_PRIV_LENGTH:
+			keyMat->parameterSet = MLDSAParameters::ML_DSA_87_PARAMETER_SET;
+			break;
+		
+		default:
+			crypto_free_mldsa(keyMat);
+			return NULL;
+	}
+
+	if (keyMat->seed) {
+		memcpy(keyMat->seed, seed, keyMat->sizeSeed);
+	}
+	if (keyMat->privValue) {
+		memcpy(keyMat->privValue, priv, keyMat->sizePrivValue);
+	}
+	memcpy(keyMat->pubValue, pub, keyMat->sizePubValue);
+
+	return keyMat;
+}
+
+// Free the memory of the key
+void crypto_free_mldsa(mldsa_key_material_t* keyMat)
+{
+	if (keyMat == NULL) return;
+	if (keyMat->seed) free(keyMat->seed);
+	if (keyMat->privValue) free(keyMat->privValue);
+	if (keyMat->pubValue) free(keyMat->pubValue);
 	free(keyMat);
 }
 
