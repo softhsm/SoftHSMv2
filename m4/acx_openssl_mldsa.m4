@@ -20,6 +20,7 @@ AC_DEFUN([ACX_OPENSSL_MLDSA],[
     					EVP_PKEY_CTX_new_from_name(NULL, "ML-DSA-44", NULL);
 						if (pctx == NULL)
 							return 1;
+						EVP_PKEY_CTX_free(pctx);
 						return 0;
 				}
 			]])

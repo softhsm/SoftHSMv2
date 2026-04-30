@@ -200,10 +200,10 @@ void softHSMLog(const int loglevel, const char* functionName, const char* fileNa
 	std::vector<char> logMessage;
 	va_list args;
 
-	logMessage.resize(4096);
+	logMessage.resize(MAX_LOG_MESSAGE_SIZE);
 
 	va_start(args, format);
-	vsnprintf(&logMessage[0], 4096, format, args);
+	vsnprintf(&logMessage[0], MAX_LOG_MESSAGE_SIZE, format, args);
 	va_end(args);
 
 	const char* msgText = &logMessage[0];

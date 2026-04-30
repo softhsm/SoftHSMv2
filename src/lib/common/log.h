@@ -49,6 +49,8 @@
 /* Define this symbol (either here or in the build setup) to log to stderr */
 /* #define DEBUG_LOG_STDERR */
 
+constexpr int MAX_LOG_MESSAGE_SIZE = 4096;
+
 /* Logging errors */
 #ifndef _WIN32
 #define ERROR_MSG(...) softHSMLog(LOG_ERR, __func__, __FILE__, __LINE__, __VA_ARGS__);
