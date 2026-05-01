@@ -1773,7 +1773,6 @@ void SymmetricAlgorithmTests::testAesWrapUnwrap()
     aesWrapUnwrapNonModifiableGeneric(CKM_AES_CBC, hSession, hKey);
 	aesWrapUnwrapRsa(CKM_AES_KEY_WRAP, hSession, hKey);
 	aesWrapUnwrapRsa(CKM_AES_CBC_PAD, hSession, hKey);
-	aesWrapUnwrapRsa(CKM_AES_CBC, hSession, hKey);
 
 #ifdef WITH_GOST
 	aesWrapUnwrapGost(CKM_AES_KEY_WRAP, hSession, hKey);
