@@ -35,6 +35,7 @@
 
 #include "config.h"
 #include "AsymmetricAlgorithm.h"
+#include "HashAlgorithm.h"
 #include <botan/pubkey.h>
 
 class BotanECDSA : public AsymmetricAlgorithm
@@ -79,6 +80,7 @@ public:
 private:
 	Botan::PK_Signer* signer;
 	Botan::PK_Verifier* verifier;
+	HashAlgorithm* pCurrentHash;
 };
 
 #endif // !_SOFTHSM_V2_BOTANECDSA_H

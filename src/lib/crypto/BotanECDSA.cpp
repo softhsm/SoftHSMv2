@@ -51,6 +51,7 @@ BotanECDSA::BotanECDSA()
 {
 	signer = NULL;
 	verifier = NULL;
+	pCurrentHash = NULL;
 }
 
 // Destructor
@@ -58,6 +59,11 @@ BotanECDSA::~BotanECDSA()
 {
 	delete signer;
 	delete verifier;
+
+	if (pCurrentHash != NULL)
+	{
+		delete pCurrentHash;
+	}
 }
 
 // Signing functions
@@ -169,27 +175,162 @@ bool BotanECDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 	return true;
 }
 
-// Signing functions
-bool BotanECDSA::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-			  const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+bool BotanECDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
+		const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	ERROR_MSG("ECDSA does not support multi part signing");
+	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
+	{
+		return false;
+	}
 
-	return false;
+	// Check if the private key is the right type
+	if (!privateKey->isOfType(BotanECDSAPrivateKey::type))
+	{
+		ERROR_MSG("Invalid key type supplied");
+
+		ByteString dummy;
+		AsymmetricAlgorithm::signFinal(dummy);
+
+		return false;
+	}
+
+	HashAlgo::Type hash = HashAlgo::Unknown;
+
+	switch (mechanism)
+	{
+		case AsymMech::ECDSA_SHA1:
+			hash = HashAlgo::SHA1;
+			break;
+		case AsymMech::ECDSA_SHA224:
+			hash = HashAlgo::SHA224;
+			break;
+		case AsymMech::ECDSA_SHA256:
+			hash = HashAlgo::SHA256;
+			break;
+		case AsymMech::ECDSA_SHA384:
+			hash = HashAlgo::SHA384;
+			break;
+		case AsymMech::ECDSA_SHA512:
+			hash = HashAlgo::SHA512;
+			break;
+		default:
+			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
+
+			ByteString dummy;
+			AsymmetricAlgorithm::signFinal(dummy);
+
+			return false;
+	}
+
+	pCurrentHash = CryptoFactory::i()->getHashAlgorithm(hash);
+
+	if (pCurrentHash == NULL || !pCurrentHash->hashInit())
+	{
+		if (pCurrentHash != NULL)
+		{
+			delete pCurrentHash;
+			pCurrentHash = NULL;
+		}
+
+		ByteString dummy;
+		AsymmetricAlgorithm::signFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool BotanECDSA::signUpdate(const ByteString& /*dataToSign*/)
+bool BotanECDSA::signUpdate(const ByteString& dataToSign)
 {
-	ERROR_MSG("ECDSA does not support multi part signing");
+	if (!AsymmetricAlgorithm::signUpdate(dataToSign))
+	{
+		return false;
+	}
 
-	return false;
+	if (!pCurrentHash->hashUpdate(dataToSign))
+	{
+		delete pCurrentHash;
+		pCurrentHash = NULL;
+
+		ByteString dummy;
+		AsymmetricAlgorithm::signFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool BotanECDSA::signFinal(ByteString& /*signature*/)
+bool BotanECDSA::signFinal(ByteString& signature)
 {
-	ERROR_MSG("ECDSA does not support multi part signing");
+	// Save necessary state before calling super class signFinal
+	BotanECDSAPrivateKey* pk = (BotanECDSAPrivateKey*) currentPrivateKey;
 
-	return false;
+	if (!AsymmetricAlgorithm::signFinal(signature))
+	{
+		return false;
+	}
+
+	ByteString hash;
+
+	bool bResult = pCurrentHash->hashFinal(hash);
+
+	delete pCurrentHash;
+	pCurrentHash = NULL;
+
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Get the Botan key
+	Botan::ECDSA_PrivateKey* botanKey = pk->getBotanKey();
+
+	if (botanKey == NULL)
+	{
+		ERROR_MSG("Could not get the Botan private key");
+
+		return false;
+	}
+
+	try
+	{
+		BotanRNG* rng = (BotanRNG*)BotanCryptoFactory::i()->getRNG();
+		signer = new Botan::PK_Signer(*botanKey, *rng->getRNG(), "Raw");
+	}
+	catch (...)
+	{
+		ERROR_MSG("Could not create the signer token");
+
+		return false;
+	}
+
+	// Perform the signature operation
+	std::vector<uint8_t> signResult;
+	try
+	{
+		BotanRNG* rng = (BotanRNG*)BotanCryptoFactory::i()->getRNG();
+		signResult = signer->sign_message(hash.const_byte_str(), hash.size(), *rng->getRNG());
+	}
+	catch (...)
+	{
+		ERROR_MSG("Could not sign the data");
+
+		delete signer;
+		signer = NULL;
+
+		return false;
+	}
+
+	// Return the result
+	signature.resize(signResult.size());
+	memcpy(&signature[0], signResult.data(), signResult.size());
+
+	delete signer;
+	signer = NULL;
+
+	return true;
 }
 
 // Verification functions
@@ -298,27 +439,159 @@ bool BotanECDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 	return verResult;
 }
 
-// Verification functions
-bool BotanECDSA::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			    const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+bool BotanECDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
+		const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	ERROR_MSG("ECDSA does not support multi part verifying");
+	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
+	{
+		return false;
+	}
 
-	return false;
+	// Check if the public key is the right type
+	if (!publicKey->isOfType(BotanECDSAPublicKey::type))
+	{
+		ERROR_MSG("Invalid key type supplied");
+
+		ByteString dummy;
+		AsymmetricAlgorithm::verifyFinal(dummy);
+
+		return false;
+	}
+
+	HashAlgo::Type hash = HashAlgo::Unknown;
+
+	switch (mechanism)
+	{
+		case AsymMech::ECDSA_SHA1:
+			hash = HashAlgo::SHA1;
+			break;
+		case AsymMech::ECDSA_SHA224:
+			hash = HashAlgo::SHA224;
+			break;
+		case AsymMech::ECDSA_SHA256:
+			hash = HashAlgo::SHA256;
+			break;
+		case AsymMech::ECDSA_SHA384:
+			hash = HashAlgo::SHA384;
+			break;
+		case AsymMech::ECDSA_SHA512:
+			hash = HashAlgo::SHA512;
+			break;
+		default:
+			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
+
+			ByteString dummy;
+			AsymmetricAlgorithm::verifyFinal(dummy);
+
+			return false;
+	}
+
+	pCurrentHash = CryptoFactory::i()->getHashAlgorithm(hash);
+
+	if (pCurrentHash == NULL || !pCurrentHash->hashInit())
+	{
+		if (pCurrentHash != NULL)
+		{
+			delete pCurrentHash;
+			pCurrentHash = NULL;
+		}
+
+		ByteString dummy;
+		AsymmetricAlgorithm::verifyFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool BotanECDSA::verifyUpdate(const ByteString& /*originalData*/)
+bool BotanECDSA::verifyUpdate(const ByteString& originalData)
 {
-	ERROR_MSG("ECDSA does not support multi part verifying");
+	if (!AsymmetricAlgorithm::verifyUpdate(originalData))
+	{
+		return false;
+	}
 
-	return false;
+	if (!pCurrentHash->hashUpdate(originalData))
+	{
+		delete pCurrentHash;
+		pCurrentHash = NULL;
+
+		ByteString dummy;
+		AsymmetricAlgorithm::verifyFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool BotanECDSA::verifyFinal(const ByteString& /*signature*/)
+bool BotanECDSA::verifyFinal(const ByteString& signature)
 {
-	ERROR_MSG("ECDSA does not support multi part verifying");
+	// Save necessary state before calling super class verifyFinal
+	BotanECDSAPublicKey* pk = (BotanECDSAPublicKey*) currentPublicKey;
 
-	return false;
+	if (!AsymmetricAlgorithm::verifyFinal(signature))
+	{
+		return false;
+	}
+
+	ByteString hash;
+
+	bool bResult = pCurrentHash->hashFinal(hash);
+
+	delete pCurrentHash;
+	pCurrentHash = NULL;
+
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Get the Botan key
+	Botan::ECDSA_PublicKey* botanKey = pk->getBotanKey();
+
+	if (botanKey == NULL)
+	{
+		ERROR_MSG("Could not get the Botan public key");
+
+		return false;
+	}
+
+	try
+	{
+		verifier = new Botan::PK_Verifier(*botanKey, "Raw");
+	}
+	catch (...)
+	{
+		ERROR_MSG("Could not create the verifier token");
+
+		return false;
+	}
+
+	// Perform the verify operation
+	bool verResult;
+	try
+	{
+		verResult = verifier->verify_message(hash.const_byte_str(),
+							hash.size(),
+							signature.const_byte_str(),
+							signature.size());
+	}
+	catch (...)
+	{
+		ERROR_MSG("Could not check the signature");
+
+		delete verifier;
+		verifier = NULL;
+
+		return false;
+	}
+
+	delete verifier;
+	verifier = NULL;
+
+	return verResult;
 }
 
 // Encryption functions

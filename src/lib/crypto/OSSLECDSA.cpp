@@ -48,6 +48,21 @@
 #endif
 #include <string.h>
 
+// Constructor
+OSSLECDSA::OSSLECDSA()
+{
+	pCurrentHash = NULL;
+}
+
+// Destructor
+OSSLECDSA::~OSSLECDSA()
+{
+	if (pCurrentHash != NULL)
+	{
+		delete pCurrentHash;
+	}
+}
+
 // Signing functions
 bool OSSLECDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 		     ByteString& signature, const AsymMech::Type mechanism,
@@ -159,26 +174,168 @@ bool OSSLECDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 	return true;
 }
 
-bool OSSLECDSA::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-			 const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+bool OSSLECDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
+			 const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	ERROR_MSG("ECDSA does not support multi part signing");
+	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
+	{
+		return false;
+	}
 
-	return false;
+	// Check if the private key is the right type
+	if (!privateKey->isOfType(OSSLECPrivateKey::type))
+	{
+		ERROR_MSG("Invalid key type supplied");
+
+		ByteString dummy;
+		AsymmetricAlgorithm::signFinal(dummy);
+
+		return false;
+	}
+
+	HashAlgo::Type hash = HashAlgo::Unknown;
+
+	switch (mechanism)
+	{
+		case AsymMech::ECDSA_SHA1:
+			hash = HashAlgo::SHA1;
+			break;
+		case AsymMech::ECDSA_SHA224:
+			hash = HashAlgo::SHA224;
+			break;
+		case AsymMech::ECDSA_SHA256:
+			hash = HashAlgo::SHA256;
+			break;
+		case AsymMech::ECDSA_SHA384:
+			hash = HashAlgo::SHA384;
+			break;
+		case AsymMech::ECDSA_SHA512:
+			hash = HashAlgo::SHA512;
+			break;
+		default:
+			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
+
+			ByteString dummy;
+			AsymmetricAlgorithm::signFinal(dummy);
+
+			return false;
+	}
+
+	pCurrentHash = CryptoFactory::i()->getHashAlgorithm(hash);
+
+	if (pCurrentHash == NULL || !pCurrentHash->hashInit())
+	{
+		if (pCurrentHash != NULL)
+		{
+			delete pCurrentHash;
+			pCurrentHash = NULL;
+		}
+
+		ByteString dummy;
+		AsymmetricAlgorithm::signFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool OSSLECDSA::signUpdate(const ByteString& /*dataToSign*/)
+bool OSSLECDSA::signUpdate(const ByteString& dataToSign)
 {
-	ERROR_MSG("ECDSA does not support multi part signing");
+	if (!AsymmetricAlgorithm::signUpdate(dataToSign))
+	{
+		return false;
+	}
 
-	return false;
+	if (!pCurrentHash->hashUpdate(dataToSign))
+	{
+		delete pCurrentHash;
+		pCurrentHash = NULL;
+
+		ByteString dummy;
+		AsymmetricAlgorithm::signFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool OSSLECDSA::signFinal(ByteString& /*signature*/)
+bool OSSLECDSA::signFinal(ByteString& signature)
 {
-	ERROR_MSG("ECDSA does not support multi part signing");
+	// Save necessary state before calling super class signFinal
+	OSSLECPrivateKey* pk = (OSSLECPrivateKey*) currentPrivateKey;
 
-	return false;
+	if (!AsymmetricAlgorithm::signFinal(signature))
+	{
+		return false;
+	}
+
+	ByteString hash;
+
+	bool bResult = pCurrentHash->hashFinal(hash);
+
+	delete pCurrentHash;
+	pCurrentHash = NULL;
+
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Get the OpenSSL key
+	EC_KEY* eckey = pk->getOSSLKey();
+
+	if (eckey == NULL)
+	{
+		ERROR_MSG("Could not get the OpenSSL private key");
+
+		return false;
+	}
+
+	// Use the OpenSSL implementation and not any engine
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+
+#ifdef WITH_FIPS
+	if (FIPS_mode())
+		ECDSA_set_method(eckey, FIPS_ecdsa_openssl());
+	else
+		ECDSA_set_method(eckey, ECDSA_OpenSSL());
+#else
+	ECDSA_set_method(eckey, ECDSA_OpenSSL());
+#endif
+
+#else
+	EC_KEY_set_method(eckey, EC_KEY_OpenSSL());
+#endif
+
+	// Perform the signature operation
+	size_t len = pk->getOrderLength();
+	if (len == 0)
+	{
+		ERROR_MSG("Could not get the order length");
+		return false;
+	}
+
+	signature.resize(2 * len);
+	memset(&signature[0], 0, 2 * len);
+
+	ECDSA_SIG* sig = ECDSA_do_sign(hash.const_byte_str(), hash.size(), eckey);
+	if (sig == NULL)
+	{
+		ERROR_MSG("ECDSA sign failed (0x%08X)", ERR_get_error());
+		return false;
+	}
+
+	// Store the 2 values with padding
+	const BIGNUM* bn_r = NULL;
+	const BIGNUM* bn_s = NULL;
+	ECDSA_SIG_get0(sig, &bn_r, &bn_s);
+	BN_bn2bin(bn_r, &signature[len - BN_num_bytes(bn_r)]);
+	BN_bn2bin(bn_s, &signature[2 * len - BN_num_bytes(bn_s)]);
+	ECDSA_SIG_free(sig);
+
+	return true;
 }
 
 // Verification functions
@@ -309,26 +466,186 @@ bool OSSLECDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 	return true;
 }
 
-bool OSSLECDSA::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			   const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+bool OSSLECDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
+			   const void* param /* = NULL */, const size_t paramLen /* = 0 */)
 {
-	ERROR_MSG("ECDSA does not support multi part verifying");
+	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
+	{
+		return false;
+	}
 
-	return false;
+	// Check if the public key is the right type
+	if (!publicKey->isOfType(OSSLECPublicKey::type))
+	{
+		ERROR_MSG("Invalid key type supplied");
+
+		ByteString dummy;
+		AsymmetricAlgorithm::verifyFinal(dummy);
+
+		return false;
+	}
+
+	HashAlgo::Type hash = HashAlgo::Unknown;
+
+	switch (mechanism)
+	{
+		case AsymMech::ECDSA_SHA1:
+			hash = HashAlgo::SHA1;
+			break;
+		case AsymMech::ECDSA_SHA224:
+			hash = HashAlgo::SHA224;
+			break;
+		case AsymMech::ECDSA_SHA256:
+			hash = HashAlgo::SHA256;
+			break;
+		case AsymMech::ECDSA_SHA384:
+			hash = HashAlgo::SHA384;
+			break;
+		case AsymMech::ECDSA_SHA512:
+			hash = HashAlgo::SHA512;
+			break;
+		default:
+			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
+
+			ByteString dummy;
+			AsymmetricAlgorithm::verifyFinal(dummy);
+
+			return false;
+	}
+
+	pCurrentHash = CryptoFactory::i()->getHashAlgorithm(hash);
+
+	if (pCurrentHash == NULL || !pCurrentHash->hashInit())
+	{
+		if (pCurrentHash != NULL)
+		{
+			delete pCurrentHash;
+			pCurrentHash = NULL;
+		}
+
+		ByteString dummy;
+		AsymmetricAlgorithm::verifyFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool OSSLECDSA::verifyUpdate(const ByteString& /*originalData*/)
+bool OSSLECDSA::verifyUpdate(const ByteString& originalData)
 {
-	ERROR_MSG("ECDSA does not support multi part verifying");
+	if (!AsymmetricAlgorithm::verifyUpdate(originalData))
+	{
+		return false;
+	}
 
-	return false;
+	if (!pCurrentHash->hashUpdate(originalData))
+	{
+		delete pCurrentHash;
+		pCurrentHash = NULL;
+
+		ByteString dummy;
+		AsymmetricAlgorithm::verifyFinal(dummy);
+
+		return false;
+	}
+
+	return true;
 }
 
-bool OSSLECDSA::verifyFinal(const ByteString& /*signature*/)
+bool OSSLECDSA::verifyFinal(const ByteString& signature)
 {
-	ERROR_MSG("ECDSA does not support multi part verifying");
+	// Save necessary state before calling super class verifyFinal
+	OSSLECPublicKey* pk = (OSSLECPublicKey*) currentPublicKey;
 
-	return false;
+	if (!AsymmetricAlgorithm::verifyFinal(signature))
+	{
+		return false;
+	}
+
+	ByteString hash;
+
+	bool bResult = pCurrentHash->hashFinal(hash);
+
+	delete pCurrentHash;
+	pCurrentHash = NULL;
+
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Get the OpenSSL key
+	EC_KEY* eckey = pk->getOSSLKey();
+
+	if (eckey == NULL)
+	{
+		ERROR_MSG("Could not get the OpenSSL public key");
+
+		return false;
+	}
+
+	// Use the OpenSSL implementation and not any engine
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+
+#ifdef WITH_FIPS
+	if (FIPS_mode())
+		ECDSA_set_method(eckey, FIPS_ecdsa_openssl());
+	else
+		ECDSA_set_method(eckey, ECDSA_OpenSSL());
+#else
+	ECDSA_set_method(eckey, ECDSA_OpenSSL());
+#endif
+
+#else
+	EC_KEY_set_method(eckey, EC_KEY_OpenSSL());
+#endif
+
+	// Perform the verify operation
+	size_t len = pk->getOrderLength();
+	if (len == 0)
+	{
+		ERROR_MSG("Could not get the order length");
+		return false;
+	}
+	if (signature.size() != 2 * len)
+	{
+		ERROR_MSG("Invalid buffer length");
+		return false;
+	}
+
+	ECDSA_SIG* sig = ECDSA_SIG_new();
+	if (sig == NULL)
+	{
+		ERROR_MSG("Could not create an ECDSA_SIG object");
+		return false;
+	}
+
+	const unsigned char *s = signature.const_byte_str();
+	BIGNUM* bn_r = BN_bin2bn(s, len, NULL);
+	BIGNUM* bn_s = BN_bin2bn(s + len, len, NULL);
+	if (bn_r == NULL || bn_s == NULL ||
+	    !ECDSA_SIG_set0(sig, bn_r, bn_s))
+	{
+		ERROR_MSG("Could not add data to the ECDSA_SIG object");
+		BN_free(bn_r);
+		BN_free(bn_s);
+		ECDSA_SIG_free(sig);
+		return false;
+	}
+
+	int ret = ECDSA_do_verify(hash.const_byte_str(), hash.size(), sig, eckey);
+	if (ret != 1)
+	{
+		if (ret < 0)
+			ERROR_MSG("ECDSA verify failed (0x%08X)", ERR_get_error());
+
+		ECDSA_SIG_free(sig);
+		return false;
+	}
+
+	ECDSA_SIG_free(sig);
+	return true;
 }
 
 // Encryption functions
