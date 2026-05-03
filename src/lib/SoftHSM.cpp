@@ -6627,7 +6627,6 @@ CK_RV SoftHSM::WrapKeySym
 			break;
 
 		case CKM_DES3_CBC:
-			blocksize = 8;
 			algo = SymAlgo::DES3;
 			break;
 
