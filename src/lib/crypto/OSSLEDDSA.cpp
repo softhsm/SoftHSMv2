@@ -103,7 +103,8 @@ bool OSSLEDDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 }
 
 bool OSSLEDDSA::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-			 const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			 const void* /* param = NULL */, const size_t /* paramLen = 0 */,
+		     const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("EDDSA does not support multi part signing");
 
@@ -187,7 +188,8 @@ bool OSSLEDDSA::verify(PublicKey* publicKey, const ByteString& originalData,
 }
 
 bool OSSLEDDSA::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			   const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			   const void* /* param = NULL */, const size_t /* paramLen = 0 */,
+		       const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("EDDSA does not support multi part verifying");
 

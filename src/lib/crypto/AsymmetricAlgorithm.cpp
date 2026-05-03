@@ -55,7 +55,8 @@ bool AsymmetricAlgorithm::sign(PrivateKey* privateKey, const ByteString& dataToS
 }
 
 bool AsymmetricAlgorithm::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
-				   const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+				   const void* /* param = NULL */, const size_t /* paramLen = 0 */,
+				   const MechanismParam* /* mechanismParam = NULL */)
 {
 	if ((currentOperation != NONE) || (privateKey == NULL))
 	{
@@ -104,7 +105,8 @@ bool AsymmetricAlgorithm::verify(PublicKey* publicKey, const ByteString& origina
 }
 
 bool AsymmetricAlgorithm::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
-				     const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+				     const void* /* param = NULL */, const size_t /* paramLen = 0 */,
+				     const MechanismParam* /* mechanismParam = NULL */)
 {
 	if ((currentOperation != NONE) || (publicKey == NULL))
 	{

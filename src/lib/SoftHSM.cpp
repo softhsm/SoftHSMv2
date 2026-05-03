@@ -4487,7 +4487,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 #ifdef WITH_ML_DSA
 		case CKM_ML_DSA:
 			mechanism = AsymMech::MLDSA;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isMLDSA = true;
 			if (pMechanism->pParameter == NULL_PTR)
 			{
@@ -4520,6 +4520,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 						return CKR_ARGUMENTS_BAD;
 					}
 					mldsaParam.additionalContext = ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
+					DEBUG_MSG("Sign MLDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)mldsaParam.additionalContext.size(), mldsaParam.hedgeType);
 				}
 				mechanismParam = &mldsaParam;
 			}
@@ -4677,7 +4678,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 	}
 
 	// Initialize signing
-	if (bAllowMultiPartOp && !asymCrypto->signInit(privateKey,mechanism,param,paramLen))
+	if (bAllowMultiPartOp && !asymCrypto->signInit(privateKey,mechanism,param,paramLen,mechanismParam))
 	{
 		asymCrypto->recyclePrivateKey(privateKey);
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
@@ -5618,6 +5619,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 						return CKR_ARGUMENTS_BAD;
 					}
 					mldsaParam.additionalContext = ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
+					DEBUG_MSG("Verify MLDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)mldsaParam.additionalContext.size(), mldsaParam.hedgeType);
 				}
 				mechanismParam = &mldsaParam;
 			}
@@ -5775,7 +5777,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	}
 
 	// Initialize verifying
-	if (bAllowMultiPartOp && !asymCrypto->verifyInit(publicKey,mechanism,param,paramLen))
+	if (bAllowMultiPartOp && !asymCrypto->verifyInit(publicKey,mechanism,param,paramLen,mechanismParam))
 	{
 		asymCrypto->recyclePublicKey(publicKey);
 		CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);

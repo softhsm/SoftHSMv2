@@ -206,7 +206,7 @@ void MLDSATests::testSigningTestVector()
 	CPPUNIT_ASSERT(dPriv != NULL);
 
 	CPPUNIT_ASSERT(pk.size() != 0);
-	
+
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED);
@@ -230,7 +230,7 @@ void MLDSATests::testSigningTestVectorEmptyContext()
 	CPPUNIT_ASSERT(dPriv != NULL);
 
 	CPPUNIT_ASSERT(pk.size() != 0);
-	
+
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	std::string contextStr = std::string("");
@@ -256,7 +256,7 @@ void MLDSATests::testSigningTestVectorNonEmptyContext()
 	CPPUNIT_ASSERT(dPriv != NULL);
 
 	CPPUNIT_ASSERT(pk.size() != 0);
-	
+
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	ByteString contextStr = ByteString("436f6e74657874");
@@ -281,7 +281,7 @@ void MLDSATests::testSigningTestVectorLongestContext()
 	CPPUNIT_ASSERT(dPriv != NULL);
 
 	CPPUNIT_ASSERT(pk.size() != 0);
-	
+
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	ByteString contextStr = ByteString("414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
@@ -305,7 +305,7 @@ void MLDSATests::testSigningTestVectorContextTooLong()
 	CPPUNIT_ASSERT(dPriv != NULL);
 
 	CPPUNIT_ASSERT(pk.size() != 0);
-	
+
 	CPPUNIT_ASSERT(dPriv->PKCS8Decode(pk));
 
 	ByteString* contextStr = new ByteString("41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141");
@@ -424,6 +424,257 @@ void MLDSATests::testVerifyingTestVectorContextTooLong()
 	CPPUNIT_ASSERT(!mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
 
 	mldsa->recyclePublicKey(dPub);
+}
+
+void MLDSATests::testSigningMultiPartVerifying()
+{
+	for (const unsigned long parameterSet : allParameterSets)
+	{
+		// Get domain parameters
+		MLDSAParameters *p = new MLDSAParameters();
+		CPPUNIT_ASSERT(p != NULL);
+		p->setParameterSet(parameterSet);
+
+		// Generate key-pair
+		AsymmetricKeyPair *kp;
+		CPPUNIT_ASSERT(mldsa->generateKeyPair(&kp, p));
+
+		// Generate some data to sign
+		ByteString dataToSign;
+		ByteString dataToSignMultipart;
+
+		RNG *rng = CryptoFactory::i()->getRNG();
+		CPPUNIT_ASSERT(rng != NULL);
+
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSignMultipart, 890));
+
+		ByteString all = dataToSign + dataToSignMultipart;
+
+		ByteString sigMultiPart;
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
+
+		CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), all, sigMultiPart, AsymMech::MLDSA));
+
+		mldsa->recycleKeyPair(kp);
+		mldsa->recycleParameters(p);
+	}
+}
+
+void MLDSATests::testSigningMultiPartVerifyingWithContext()
+{
+	for (const unsigned long parameterSet : allParameterSets)
+	{
+		// Get domain parameters
+		MLDSAParameters *p = new MLDSAParameters();
+		CPPUNIT_ASSERT(p != NULL);
+		p->setParameterSet(parameterSet);
+
+		// Generate key-pair
+		AsymmetricKeyPair *kp;
+		CPPUNIT_ASSERT(mldsa->generateKeyPair(&kp, p));
+
+		// Generate some data to sign
+		ByteString dataToSign;
+		ByteString dataToSignMultipart;
+
+		RNG *rng = CryptoFactory::i()->getRNG();
+		CPPUNIT_ASSERT(rng != NULL);
+
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSignMultipart, 890));
+
+		ByteString all = dataToSign + dataToSignMultipart;
+
+		const std::string contextStr("HEDGE_PREFERRED");
+		const ByteString contextBS((const unsigned char*)contextStr.data(), contextStr.size());
+
+		MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
+
+		ByteString sigMultiPart;
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
+
+		CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), all, sigMultiPart, AsymMech::MLDSA, NULL, 0, &context));
+
+		mldsa->recycleKeyPair(kp);
+		mldsa->recycleParameters(p);
+	}
+}
+
+void MLDSATests::testSigningVerifyingMultiPart()
+{
+	for (const unsigned long parameterSet : allParameterSets)
+	{
+		// Get domain parameters
+		MLDSAParameters *p = new MLDSAParameters();
+		CPPUNIT_ASSERT(p != NULL);
+		p->setParameterSet(parameterSet);
+
+		// Generate key-pair
+		AsymmetricKeyPair *kp;
+		CPPUNIT_ASSERT(mldsa->generateKeyPair(&kp, p));
+
+		// Generate some data to sign
+		ByteString dataToSign;
+		ByteString dataToSignMultipart;
+
+		RNG *rng = CryptoFactory::i()->getRNG();
+		CPPUNIT_ASSERT(rng != NULL);
+
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSignMultipart, 890));
+
+		ByteString all = dataToSign + dataToSignMultipart;
+
+		ByteString sig;
+		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sig, AsymMech::MLDSA, NULL, 0, NULL));
+
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->verifyFinal(sig));
+
+		mldsa->recycleKeyPair(kp);
+		mldsa->recycleParameters(p);
+	}
+}
+
+void MLDSATests::testSigningVerifyingMultiPartWithContext()
+{
+	for (const unsigned long parameterSet : allParameterSets)
+	{
+		// Get domain parameters
+		MLDSAParameters *p = new MLDSAParameters();
+		CPPUNIT_ASSERT(p != NULL);
+		p->setParameterSet(parameterSet);
+
+		// Generate key-pair
+		AsymmetricKeyPair *kp;
+		CPPUNIT_ASSERT(mldsa->generateKeyPair(&kp, p));
+
+		// Generate some data to sign
+		ByteString dataToSign;
+		ByteString dataToSignMultipart;
+
+		RNG *rng = CryptoFactory::i()->getRNG();
+		CPPUNIT_ASSERT(rng != NULL);
+
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSignMultipart, 890));
+
+		ByteString all = dataToSign + dataToSignMultipart;
+
+		const std::string contextStr("HEDGE_PREFERRED");
+		const ByteString contextBS((const unsigned char*)contextStr.data(), contextStr.size());
+
+		MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
+
+		ByteString sigMultiPart;
+
+		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sigMultiPart, AsymMech::MLDSA, NULL, 0, &context));
+
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
+
+		mldsa->recycleKeyPair(kp);
+		mldsa->recycleParameters(p);
+	}
+}
+
+void MLDSATests::testSigningMultiPartVerifyingMultiPart()
+{
+	for (const unsigned long parameterSet : allParameterSets)
+	{
+		// Get domain parameters
+		MLDSAParameters *p = new MLDSAParameters();
+		CPPUNIT_ASSERT(p != NULL);
+		p->setParameterSet(parameterSet);
+
+		// Generate key-pair
+		AsymmetricKeyPair *kp;
+		CPPUNIT_ASSERT(mldsa->generateKeyPair(&kp, p));
+
+		// Generate some data to sign
+		ByteString dataToSign;
+		ByteString dataToSignMultipart;
+
+		RNG *rng = CryptoFactory::i()->getRNG();
+		CPPUNIT_ASSERT(rng != NULL);
+
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSignMultipart, 890));
+
+		ByteString all = dataToSign + dataToSignMultipart;
+
+		ByteString sigMultiPart;
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
+
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
+
+		mldsa->recycleKeyPair(kp);
+		mldsa->recycleParameters(p);
+	}
+}
+
+void MLDSATests::testSigningMultiPartVerifyingMultiPartWithContext()
+{
+	for (const unsigned long parameterSet : allParameterSets)
+	{
+		// Get domain parameters
+		MLDSAParameters *p = new MLDSAParameters();
+		CPPUNIT_ASSERT(p != NULL);
+		p->setParameterSet(parameterSet);
+
+		// Generate key-pair
+		AsymmetricKeyPair *kp;
+		CPPUNIT_ASSERT(mldsa->generateKeyPair(&kp, p));
+
+		// Generate some data to sign
+		ByteString dataToSign;
+		ByteString dataToSignMultipart;
+
+		RNG *rng = CryptoFactory::i()->getRNG();
+		CPPUNIT_ASSERT(rng != NULL);
+
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
+		CPPUNIT_ASSERT(rng->generateRandom(dataToSignMultipart, 890));
+
+		ByteString all = dataToSign + dataToSignMultipart;
+
+		const std::string contextStr("HEDGE_PREFERRED");
+		const ByteString contextBS((const unsigned char*)contextStr.data(), contextStr.size());
+
+		MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
+
+		ByteString sigMultiPart;
+
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
+
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
+		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
+		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
+
+		mldsa->recycleKeyPair(kp);
+		mldsa->recycleParameters(p);
+	}
 }
 
 void MLDSATests::testSigningVerifyingHedgePreferred()
