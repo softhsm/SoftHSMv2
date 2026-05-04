@@ -219,6 +219,10 @@ if(WITH_CRYPTO_BACKEND STREQUAL "botan")
         message(STATUS "Botan: Support for EDDSA is disabled")
     endif(ENABLE_EDDSA)
 
+    if(ENABLE_MLDSA)
+        set(WITH_ML_DSA 1)
+    endif(ENABLE_MLDSA)
+
     # acx_botan_gost.m4
     if(ENABLE_GOST)
         set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_botan_gost.cpp)
@@ -369,6 +373,10 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
     else(ENABLE_EDDSA)
         message(STATUS "OpenSSL: Support for EDDSA is disabled")
     endif(ENABLE_EDDSA)
+
+    if(ENABLE_MLDSA)
+        set(WITH_ML_DSA 1)
+    endif(ENABLE_MLDSA)
 
     # acx_openssl_gost.m4
     if(ENABLE_GOST)

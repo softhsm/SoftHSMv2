@@ -122,6 +122,8 @@ enable_testing()
 
 # config.h include path
 include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/src/lib/slot_mgr)
+include_directories(${CMAKE_SOURCE_DIR}/src/lib/object_store)
 
 add_subdirectory(src)
 
