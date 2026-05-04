@@ -58,10 +58,10 @@ public:
 	SLHDSAMechanismParam(Hedge::Type hedgeType);
 
  /** \brief Constructor with Hedge Type and Additional Context */
-	SLHDSAMechanismParam(Hedge::Type hedgeType, ByteString additionalContext);
+	SLHDSAMechanismParam(Hedge::Type hedgeType, const ByteString& additionalContext);
 	
  /** \brief Clone */
-	SLHDSAMechanismParam* clone() const;
+	virtual SLHDSAMechanismParam* clone() const override;
 
  /** \brief Check if the mechanism param is of the given type */
 	virtual bool isOfType(const char* inType) const;

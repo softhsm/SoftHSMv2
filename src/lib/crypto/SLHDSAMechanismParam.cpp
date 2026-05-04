@@ -21,7 +21,7 @@ SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType) {
 }
 
 /** \brief SLHDSAMechanismParam */
-SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, ByteString additionalContext) {
+SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, const ByteString& additionalContext) {
     this->hedgeType = hedgeType;
     this->additionalContext = additionalContext;
 }

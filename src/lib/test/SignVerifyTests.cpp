@@ -1010,7 +1010,7 @@ void SignVerifyTests::testSLHDSASignVerify(CK_ULONG parameterSet)
 
 	// Login USER into the sessions so we can create a private objects
 	rv = CRYPTOKI_F_PTR( C_Login(hSessionRO,CKU_USER,m_userPin1,m_userPin1Length) );
-	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+	CPPUNIT_ASSERT(rv == CKR_OK);
 
 	CK_OBJECT_HANDLE hPuk = CK_INVALID_HANDLE;
 	CK_OBJECT_HANDLE hPrk = CK_INVALID_HANDLE;

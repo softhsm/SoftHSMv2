@@ -68,13 +68,15 @@ public:
 	virtual bool checkEncryptedDataSize(PrivateKey* privateKey, const ByteString& encryptedData, int* errorCode);
  /** \brief Decrypt data */
 	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+
+
+ // Key factory
+ /** \brief Generate key pair */
+	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL);
  /** \brief Get minimum key size */
 	virtual unsigned long getMinKeySize();
  /** \brief Get maximum key size */
 	virtual unsigned long getMaxKeySize();
-
- /** \brief Generate key pair */
-	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL);
  /** \brief Reconstruct key pair */
 	virtual bool reconstructKeyPair(AsymmetricKeyPair** ppKeyPair, ByteString& serialisedData);
  /** \brief Reconstruct public key */
@@ -90,11 +92,6 @@ public:
  /** \brief Create new parameters */
 	virtual AsymmetricParameters* newParameters();
 
-private:
- /** \brief Random flag */
-	static int OSSL_RANDOM;
- /** \brief Deterministic flag */
-	static int OSSL_DETERMINISTIC;
 };
 
 #endif // WITH_SLH_DSA

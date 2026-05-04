@@ -21,8 +21,6 @@
 #include <openssl/err.h>
 #include <string.h>
 
-int OSSLSLHDSA::OSSL_RANDOM = 0;
-int OSSLSLHDSA::OSSL_DETERMINISTIC = 1;
 
 // Signing functions
 /** \brief sign */
@@ -74,6 +72,8 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 
 	OSSL_PARAM params[4], *p = params;
 	
+	int local_deterministic = 1;
+	int local_random = 0;
 	const SLHDSAMechanismParam* slhdsaSignatureParam = dynamic_cast<const SLHDSAMechanismParam*>(mechanismParam);
 	ByteString context;
 	if (slhdsaSignatureParam != NULL) {
@@ -89,11 +89,11 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 		}
 		switch (type) {
 			case Hedge::Type::DETERMINISTIC_REQUIRED:
-				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &OSSL_DETERMINISTIC);
+				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_deterministic);
 				break;
 			case Hedge::Type::HEDGE_REQUIRED:
 			default:
-				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &OSSL_RANDOM);
+				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_random);
 				break;
 		}
 		*p = OSSL_PARAM_construct_end();
