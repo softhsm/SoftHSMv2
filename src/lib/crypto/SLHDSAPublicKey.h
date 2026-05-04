@@ -25,63 +25,58 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ SLHDSAPublicKey.h
 
- OpenSSL convenience functions
+ SLH-DSA public key class
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#ifndef _SOFTHSM_V2_SLHDSAPUBLICKEY_H
+#define _SOFTHSM_V2_SLHDSAPUBLICKEY_H
 
 #include "config.h"
+#include "PublicKey.h"
 #include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#ifdef WITH_EDDSA
-#include <openssl/objects.h>
-#endif
 
-namespace OSSL
+class SLHDSAPublicKey : public PublicKey
 {
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
+public:
+ /** \brief The type */
+	static const char* type;
 
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
+ /** \brief Constructor */
+	SLHDSAPublicKey();
 
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
+ /** \brief Check if the key is of the given type */
+	virtual bool isOfType(const char* inType);
 
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
+ /** \brief Get the parameter set */
+	virtual unsigned long getParameterSet() const;
 
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
+ /** \brief Get the signature length */
+	virtual unsigned long getOutputLength() const;
 
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
+ /** \brief Get the bit length */
+	virtual unsigned long getBitLength() const;
 
-#ifdef WITH_EDDSA
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
+ /** \brief Setters for the SLH-DSA public key components */
+	virtual void setValue(const ByteString& value);
+	virtual void setParameterSet(unsigned long inParameterSet);
 
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
+ /** \brief Getters for the SLH-DSA public key components */
+	virtual const ByteString& getValue() const;
 
-#ifdef WITH_ML_DSA
-	const char* mldsaParameterSet2Name(unsigned long parameterSet);
-#endif
+ /** \brief Serialisation */
+	virtual ByteString serialise() const;
+	virtual bool deserialise(ByteString& serialised);
 
-#ifdef WITH_SLH_DSA
-	const char* slhdsaParameterSet2Name(unsigned long parameterSet);
-	unsigned long name2slhdsaParameterSet(const char* name);
-#endif
-}
+protected:
+    
+ /** \brief Public components */
+	ByteString value;
+ /** \brief Parameter set */
+	unsigned long parameterSet;
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+};
+
+#endif // !_SOFTHSM_V2_SLHDSAPUBLICKEY_H
 

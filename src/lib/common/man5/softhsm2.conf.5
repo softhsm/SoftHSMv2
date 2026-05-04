@@ -1,0 +1,124 @@
+.TH softhsm2.conf 5 "30 October 2014" "SoftHSM"
+.SH NAME
+softhsm2.conf \- SoftHSM configuration file
+.SH SYNOPSIS
+.B softhsm2.conf
+.SH DESCRIPTION
+This is the configuration file for SoftHSM. It can be found on a
+default location, but can also be relocated by using the
+environment variable. Any configuration must be done according
+to the file format found in this document.
+.SH FILE FORMAT
+Each configuration option is a pair of name and value separated by
+a equality sign. The configuration option must be located on a single line.
+.LP
+.RS
+.nf
+<name> = <value>
+.fi
+.RE
+.LP
+It is also possible to add comments in the file by using the hash sign.
+Anything after the hash sign will be ignored.
+.LP
+.RS
+.nf
+# A comment
+.RE
+.LP
+Any empty lines or lines that does not have the correct format will be ignored.
+.SH DIRECTORIES.TOKENDIR
+The location where SoftHSM can store the tokens.
+.LP
+.RS
+.nf
+directories.tokendir = /var/lib/softhsm/tokens/
+.fi
+.RE
+.LP
+.SH OBJECTSTORE.BACKEND
+The backend to use by SoftHSM to store token objects. Either "file" or "db" is supported.
+In order to use the "db" backend, the SoftHSM build needs to be configured with "configure --with-objectstore-backend-db"
+.LP
+.RS
+.nf
+objectstore.backend = file
+.fi
+.RE
+.LP
+.SH OBJECTSTORE.UMASK
+The file mode creation mask used by SoftHSM when creating files or directories. This value is in octal.
+This is applied in addition to the process umask and cannot override it.
+.LP
+.RS
+.nf
+objectstore.umask = 0077
+.fi
+.RE
+.LP
+.SH LOG.LEVEL
+The log level which can be set to ERROR, WARNING, INFO or DEBUG.
+.LP
+.RS
+.nf
+log.level = INFO
+.fi
+.RE
+.LP
+.SH SLOTS.REMOVABLE
+If set to true CKF_REMOVABLE_DEVICE is set in the flags returned by C_GetSlotInfo. Default is false.
+.LP
+.RS
+.nf
+slots.removable = true
+.fi
+.RE
+.LP
+.SH SLOTS.MECHANISMS
+Allows to enable and disable any of the PKCS#11 mechanisms reported in the
+C_GetMechanismList().
+The option accepts string argument containing the comma separated list of all
+algorithms that should be enabled (do not forget about the keygen mechanisms).
+The list can be prefixed with minus sign "-" to list only the disabled
+mechanisms.
+Additionally, special keyword ALL can be used to enable all the known
+mechanisms (default). Unknown mechanisms are ignored.
+This option has higher priority than the CKA_ALLOWED_MECHANISMS attribute
+on the key objects.
+.LP
+.RS
+.nf
+slots.mechanisms = ALL
+.fi
+.RE
+.LP
+.SH LIBRARY.RESET_ON_FORK
+If set to true, the library will reset the state on fork.
+Default is false.
+.LP
+.RS
+.nf
+library.reset_on_fork = true
+.fi
+.RE
+.LP
+.SH ENVIRONMENT
+.TP
+SOFTHSM2_CONF
+When defined, the value will be used as path to the configuration file.
+.SH FILES
+.TP
+.I ~/.config/softhsm2/softhsm2.conf
+default user-specific location of the SoftHSM configuration file; if it exists it will override the system wide configuration
+.TP
+.I /etc/softhsm2.conf
+default system-wide location of the SoftHSM configuration file
+.TP
+.I /etc/softhsm2.conf.sample
+an example of a SoftHSM configuration file
+.SH AUTHOR
+Written by Rickard Bellgrim, Francis Dupont, René Post, and Roland van Rijswijk.
+.SH "SEE ALSO"
+.IR softhsm2-keyconv (1),
+.IR softhsm2-migrate (1),
+.IR softhsm2-util (1)

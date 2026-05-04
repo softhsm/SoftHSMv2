@@ -1,0 +1,8 @@
+ 	/* First check if the algorithm is enabled in the global configuration */
+ 	auto it = std::find(mechs.begin(), mechs.end(), mechanism);
+ 	if (it == mechs.end()) {
+-		printf("isMechanismPermitted: Mechanism %lu is NOT in supportedMechanisms\n", mechanism);
++		INFO_MSG("isMechanismPermitted: Mechanism %lu is NOT in supportedMechanisms", mechanism);
+ 		return false;
+ 	}
+ 

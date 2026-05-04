@@ -25,63 +25,42 @@
  */
 
 /*****************************************************************************
- OSSLUtil.h
+ SLHDSAUtil.h
 
- OpenSSL convenience functions
+ SLH-DSA convenience functions
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OSSLUTIL_H
-#define _SOFTHSM_V2_OSSLUTIL_H
+#ifndef _SOFTHSM_V2_SLHDSAUTIL_H
+#define _SOFTHSM_V2_SLHDSAUTIL_H
 
 #include "config.h"
-#include "ByteString.h"
-#include <openssl/bn.h>
-#ifdef WITH_ECC
-#include <openssl/ec.h>
-#endif
-#ifdef WITH_EDDSA
-#include <openssl/objects.h>
-#endif
-
-namespace OSSL
-{
-	// Convert an OpenSSL BIGNUM to a ByteString
-	ByteString bn2ByteString(const BIGNUM* bn);
-
-	// Convert a ByteString to an OpenSSL BIGNUM
-	BIGNUM* byteString2bn(const ByteString& byteString);
-
-#ifdef WITH_ECC
-	// Convert an OpenSSL EC GROUP to a ByteString
-	ByteString grp2ByteString(const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC GROUP
-	EC_GROUP* byteString2grp(const ByteString& byteString);
-
-	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
-
-	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
-#endif
-
-#ifdef WITH_EDDSA
-	// Convert an OpenSSL NID to a ByteString
-	ByteString oid2ByteString(int nid);
-
-	// Convert a ByteString to an OpenSSL NID
-	int byteString2oid(const ByteString& byteString);
-#endif
-
-#ifdef WITH_ML_DSA
-	const char* mldsaParameterSet2Name(unsigned long parameterSet);
-#endif
-
 #ifdef WITH_SLH_DSA
-	const char* slhdsaParameterSet2Name(unsigned long parameterSet);
-	unsigned long name2slhdsaParameterSet(const char* name);
-#endif
-}
+#include "SLHDSAPrivateKey.h"
+#include "SLHDSAPublicKey.h"
+#include "SLHDSAParameters.h"
+#include "SLHDSAMechanismParam.h"
+#include "CryptoFactory.h"
+#include "ByteString.h"
+#include "Token.h"
+#include "OSObject.h"
 
-#endif // !_SOFTHSM_V2_OSSLUTIL_H
+class SLHDSAUtil
+{
+public:
+ /** \brief Delete constructor */
+	SLHDSAUtil() = delete;
+ /** \brief Get the private key */
+	static CK_RV getSLHDSAPrivateKey(SLHDSAPrivateKey* privateKey, Token* token, OSObject* key);
+ /** \brief Get the public key */
+	static CK_RV getSLHDSAPublicKey(SLHDSAPublicKey* publicKey, Token* token, OSObject* key);
 
+ /** \brief Set the private key */
+	static CK_RV setSLHDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate);
+
+ /** \brief Set the hedge type */
+	static CK_RV setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType);
+
+};
+
+#endif // WITH_SLH_DSA
+#endif // !_SOFTHSM_V2_SLHDSAUTIL_H
