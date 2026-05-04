@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(softhsm2 C CXX)
 
+# Compiler commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Build Options
 option(BUILD_TESTS "Compile tests along with libraries" OFF)
 option(DISABLE_NON_PAGED_MEMORY "Disable non-paged memory for secure storage" OFF)
