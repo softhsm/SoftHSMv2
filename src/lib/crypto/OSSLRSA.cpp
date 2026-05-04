@@ -285,7 +285,8 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 }
 
 bool OSSLRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
-		       const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+		       const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		       const MechanismParam* /* mechanismParam */)
 {
 	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
 	{
@@ -843,7 +844,8 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 }
 
 bool OSSLRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
-			 const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+			 const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		     const MechanismParam* /* mechanismParam */)
 {
 	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
 	{

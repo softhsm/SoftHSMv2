@@ -62,7 +62,8 @@ BotanGOST::~BotanGOST()
 
 // Signing functions
 bool BotanGOST::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
-			 const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+			 const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		     const MechanismParam* /* mechanismParam */)
 {
 	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
 	{
@@ -197,7 +198,8 @@ bool BotanGOST::signFinal(ByteString& signature)
 
 // Verification functions
 bool BotanGOST::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
-			   const void* param /* = NULL */, const size_t paramLen /* = 0 */)
+			   const void* param /* = NULL */, const size_t paramLen /* = 0 */,
+		       const MechanismParam* /* mechanismParam */)
 {
 	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
 	{

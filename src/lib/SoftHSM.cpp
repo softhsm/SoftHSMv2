@@ -4519,7 +4519,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession,
 #ifdef WITH_ML_DSA
   case CKM_ML_DSA:
     mechanism = AsymMech::MLDSA;
-    bAllowMultiPartOp = false;
+    bAllowMultiPartOp = true;
     isMLDSA = true;
     if (pMechanism->pParameter == NULL_PTR) {
       if (pMechanism->ulParameterLen != 0) {
@@ -4551,6 +4551,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession,
         mldsaParam.additionalContext =
             ByteString(ckSignAdditionalContext->pContext,
                        ckSignAdditionalContext->ulContextLen);
+        DEBUG_MSG("Sign MLDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)mldsaParam.additionalContext.size(), mldsaParam.hedgeType);
       }
       mechanismParam = &mldsaParam;
     }
@@ -4759,7 +4760,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession,
 
   // Initialize signing
   if (bAllowMultiPartOp &&
-      !asymCrypto->signInit(privateKey, mechanism, param, paramLen)) {
+      !asymCrypto->signInit(privateKey, mechanism, param, paramLen, mechanismParam)) {
     asymCrypto->recyclePrivateKey(privateKey);
     CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
     return CKR_MECHANISM_INVALID;
@@ -5711,6 +5712,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession,
         mldsaParam.additionalContext =
             ByteString(ckSignAdditionalContext->pContext,
                        ckSignAdditionalContext->ulContextLen);
+        DEBUG_MSG("Verify MLDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)mldsaParam.additionalContext.size(), mldsaParam.hedgeType);
       }
       mechanismParam = &mldsaParam;
     }
@@ -5919,7 +5921,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession,
 
   // Initialize verifying
   if (bAllowMultiPartOp &&
-      !asymCrypto->verifyInit(publicKey, mechanism, param, paramLen)) {
+      !asymCrypto->verifyInit(publicKey, mechanism, param, paramLen, mechanismParam)) {
     asymCrypto->recyclePublicKey(publicKey);
     CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
     return CKR_MECHANISM_INVALID;

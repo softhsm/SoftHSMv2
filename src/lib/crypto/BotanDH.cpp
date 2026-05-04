@@ -47,7 +47,8 @@
 
 // Signing functions
 bool BotanDH::signInit(PrivateKey* /*privateKey*/, const AsymMech::Type /*mechanism*/,
-		       const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+		       const void* /* param = NULL */, const size_t /* paramLen = 0 */,
+		       const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("DH does not support signing");
 
@@ -70,7 +71,8 @@ bool BotanDH::signFinal(ByteString& /*signature*/)
 
 // Verification functions
 bool BotanDH::verifyInit(PublicKey* /*publicKey*/, const AsymMech::Type /*mechanism*/,
-			 const void* /* param = NULL */, const size_t /* paramLen = 0 */)
+			 const void* /* param = NULL */, const size_t /* paramLen = 0 */,
+		     const MechanismParam* /* mechanismParam */)
 {
 	ERROR_MSG("DH does not support verifying");
 

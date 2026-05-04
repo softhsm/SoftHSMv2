@@ -120,7 +120,8 @@ public:
                     const void *param = NULL, const size_t paramLen = 0,
                     const MechanismParam *mechanismParam = NULL);
   virtual bool signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
-                        const void *param = NULL, const size_t paramLen = 0);
+                        const void *param = NULL, const size_t paramLen = 0,
+                        const MechanismParam *mechanismParam = NULL);
   virtual bool signUpdate(const ByteString &dataToSign);
   virtual bool signFinal(ByteString &signature);
 
@@ -131,7 +132,8 @@ public:
                       const size_t paramLen = 0,
                       const MechanismParam *mechanismParam = NULL);
   virtual bool verifyInit(PublicKey *publicKey, const AsymMech::Type mechanism,
-                          const void *param = NULL, const size_t paramLen = 0);
+                          const void *param = NULL, const size_t paramLen = 0,
+                          const MechanismParam *mechanismParam = NULL);
   virtual bool verifyUpdate(const ByteString &originalData);
   virtual bool verifyFinal(const ByteString &signature);
 
