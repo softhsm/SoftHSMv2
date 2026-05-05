@@ -1335,7 +1335,8 @@ std::string BotanRSA::getCipherOaep(size_t bitLength, size_t dataSize, const Mec
 	request << "OAEP(" << hashStr << ",MGF1(" << mgfStr << ")";
 	if (rsaOaepMecahnismParam->label.size() != 0)
 	{
-		request <<"," << rsaOaepMecahnismParam->label.const_byte_str();
+		request <<"," << std::string(rsaOaepMecahnismParam->label.const_byte_str(),
+			rsaOaepMecahnismParam->label.const_byte_str() + rsaOaepMecahnismParam->label.size());
 	}
 	request << ")";
 	return request.str();
