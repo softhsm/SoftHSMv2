@@ -108,7 +108,7 @@ bool Directory::refresh()
 
 	if (dir == NULL)
 	{
-		ERROR_MSG("Failed to open directory %s (%s)", path.c_str(), strerror(errno));
+		DEBUG_MSG("Failed to open directory %s", path.c_str());
 
 		return false;
 	}
@@ -168,10 +168,6 @@ bool Directory::refresh()
 					DEBUG_MSG("File not used %s", name.c_str());
 				}
 			}
-			else
-			{
-				WARNING_MSG("Failed to stat %s (%s)", fullPath.c_str(), strerror(errno));
-			}
 		}
 	}
 
@@ -196,7 +192,7 @@ bool Directory::refresh()
 		if (errno == ENOENT)
 			goto finished;
 
-		ERROR_MSG("Failed to open directory %s (%s)", path.c_str(), strerror(errno));
+		DEBUG_MSG("Failed to open directory %s", path.c_str());
 
 		return false;
 	}
@@ -221,8 +217,6 @@ bool Directory::refresh()
 #endif
 
 	valid = true;
-
-	DEBUG_MSG("Directory %s refreshed: %zu files, %zu subdirs", path.c_str(), files.size(), subDirs.size());
 
 	return true;
 }
@@ -261,16 +255,10 @@ bool Directory::rmdir(std::string name, bool doRefresh /* = false */)
 
 #ifndef _WIN32
 	if (::rmdir(fullPath.c_str()) != 0)
-	{
-		ERROR_MSG("Failed to remove directory %s (%s)", fullPath.c_str(), strerror(errno));
 		return false;
-	}
 #else
 	if (_rmdir(fullPath.c_str()) != 0)
-	{
-		ERROR_MSG("Failed to remove directory %s (%s)", fullPath.c_str(), strerror(errno));
 		return false;
-	}
 #endif
 	if (doRefresh)
 		return refresh();
@@ -283,19 +271,9 @@ bool Directory::remove(std::string name)
 	std::string fullPath = path + OS_PATHSEP + name;
 
 #ifndef _WIN32
-	if (::remove(fullPath.c_str()) != 0)
-	{
-		ERROR_MSG("Failed to remove file %s (%s)", fullPath.c_str(), strerror(errno));
-		return false;
-	}
-	return refresh();
+	return (!::remove(fullPath.c_str()) && refresh());
 #else
-	if (_unlink(fullPath.c_str()) != 0)
-	{
-		ERROR_MSG("Failed to remove file %s (%s)", fullPath.c_str(), strerror(errno));
-		return false;
-	}
-	return refresh();
+	return (!_unlink(fullPath.c_str()) && refresh());
 #endif
 }
 

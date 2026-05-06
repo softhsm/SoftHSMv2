@@ -62,10 +62,9 @@ BotanGOST::~BotanGOST()
 
 // Signing functions
 bool BotanGOST::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
-			 const void* param /* = NULL */, const size_t paramLen /* = 0 */,
-		     const MechanismParam* /* mechanismParam */)
+			 const MechanismParam*  mechanismParam /* = NULL */)
 {
-	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -198,10 +197,9 @@ bool BotanGOST::signFinal(ByteString& signature)
 
 // Verification functions
 bool BotanGOST::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
-			   const void* param /* = NULL */, const size_t paramLen /* = 0 */,
-		       const MechanismParam* /* mechanismParam */)
+			   const MechanismParam* mechanismParam /* = NULL */)
 {
-	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -328,7 +326,8 @@ bool BotanGOST::verifyFinal(const ByteString& signature)
 
 // Encryption functions
 bool BotanGOST::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
-			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/)
+			ByteString& /*encryptedData*/, const AsymMech::Type /*padding*/,
+		    const MechanismParam* /* param = NULL */)
 {
 	ERROR_MSG("GOST does not support encryption");
 
@@ -337,7 +336,8 @@ bool BotanGOST::encrypt(PublicKey* /*publicKey*/, const ByteString& /*data*/,
 
 // Decryption functions
 bool BotanGOST::decrypt(PrivateKey* /*privateKey*/, const ByteString& /*encryptedData*/,
-			ByteString& /*data*/, const AsymMech::Type /*padding*/)
+			ByteString& /*data*/, const AsymMech::Type /*padding*/,
+		    const MechanismParam* /* param = NULL */)
 {
 	ERROR_MSG("GOST does not support decryption");
 

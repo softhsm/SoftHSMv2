@@ -47,22 +47,24 @@ public:
 	virtual ~BotanEDDSA();
 
 	// Signing functions
-	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
-	virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const MechanismParam* mechanismParam = NULL);
+	virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const MechanismParam* mechanismParam = NULL);
 	virtual bool signUpdate(const ByteString& dataToSign);
 	virtual bool signFinal(ByteString& signature);
 
 	// Verification functions
-	virtual bool verify(PublicKey* publicKey, const ByteString& originalData, const ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
-	virtual bool verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool verify(PublicKey* publicKey, const ByteString& originalData, const ByteString& signature, const AsymMech::Type mechanism, const MechanismParam* mechanismParam = NULL);
+	virtual bool verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism, const MechanismParam* mechanismParam = NULL);
 	virtual bool verifyUpdate(const ByteString& originalData);
 	virtual bool verifyFinal(const ByteString& signature);
 
 	// Encryption functions
-	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
+	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding,
+		 const MechanismParam* mechanismParam = NULL);
 
 	// Decryption functions
-	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
+	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding,
+		 const MechanismParam* mechanismParam = NULL);
 
 	// Key factory
 	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL);
