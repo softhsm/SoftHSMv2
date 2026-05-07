@@ -370,6 +370,27 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
         message(STATUS "OpenSSL: Support for EDDSA is disabled")
     endif(ENABLE_EDDSA)
 
+    # acx_openssl_mldsa.m4
+    if(ENABLE_MLDSA)
+        # ML-DSA
+        set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_mldsa.c)
+        try_run(RUN_MLDSA COMPILE_RESULT
+                "${CMAKE_BINARY_DIR}/prebuild_santity_tests" ${testfile}
+                LINK_LIBRARIES ${CRYPTO_LIBS}
+                CMAKE_FLAGS
+                    "-DINCLUDE_DIRECTORIES=${CRYPTO_INCLUDES}"
+                )
+        if(COMPILE_RESULT AND RUN_MLDSA EQUAL 0)
+            set(WITH_ML_DSA 1)
+            message(STATUS "OpenSSL: Found ML-DSA")
+        else()
+            set(error_msg "OpenSSL: Cannot find ML-DSA! OpenSSL library has no ML-DSA support!")
+            message(FATAL_ERROR ${error_msg})
+        endif()
+    else(ENABLE_MLDSA)
+        message(STATUS "OpenSSL: Support for MLDSA is disabled")
+    endif(ENABLE_MLDSA)
+
     # acx_openssl_gost.m4
     if(ENABLE_GOST)
         set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_gost.c)
