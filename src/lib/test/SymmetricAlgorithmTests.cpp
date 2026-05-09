@@ -1099,7 +1099,7 @@ void SymmetricAlgorithmTests::aesWrapUnwrapGeneric(CK_MECHANISM_TYPE mechanismTy
 
 	CK_RV rv;
 	CK_BYTE ivPtr[16];
-	if( mechanismType == CKM_AES_CBC_PAD ) {
+	if( mechanismType == CKM_AES_CBC_PAD || mechanismType == CKM_AES_CBC ) {
 		rv = CRYPTOKI_F_PTR( C_GenerateRandom(hSession, ivPtr, sizeof ivPtr) );
 		CPPUNIT_ASSERT(rv == CKR_OK);
 		mechanism.pParameter = ivPtr;
@@ -1148,7 +1148,12 @@ void SymmetricAlgorithmTests::aesWrapUnwrapGeneric(CK_MECHANISM_TYPE mechanismTy
 	CPPUNIT_ASSERT(rv == CKR_OK);
 
 	auto wrapOverhead = [mechanismType]() {
-		return (mechanismType == CKM_AES_KEY_WRAP || mechanismType == CKM_AES_KEY_WRAP_PAD) ? 8 : 16;
+		if (mechanismType == CKM_AES_KEY_WRAP || mechanismType == CKM_AES_KEY_WRAP_PAD)
+			return 8;
+		else if (mechanismType == CKM_AES_CBC)
+			return 0;  // No padding overhead for CKM_AES_CBC
+		else
+			return 16;  // CKM_AES_CBC_PAD adds padding
 	};
 	CPPUNIT_ASSERT(wrappedLen == rndKeyLen + wrapOverhead() );
 
@@ -1199,7 +1204,7 @@ void SymmetricAlgorithmTests::aesWrapUnwrapNonModifiableGeneric(CK_MECHANISM_TYP
 
 	CK_RV rv;
 	CK_BYTE ivPtr[16];
-	if( mechanismType == CKM_AES_CBC_PAD ) {
+	if( mechanismType == CKM_AES_CBC_PAD || mechanismType == CKM_AES_CBC ) {
 		rv = CRYPTOKI_F_PTR( C_GenerateRandom(hSession, ivPtr, sizeof ivPtr) );
 		CPPUNIT_ASSERT(rv == CKR_OK);
 		mechanism.pParameter = ivPtr;
@@ -1248,7 +1253,12 @@ void SymmetricAlgorithmTests::aesWrapUnwrapNonModifiableGeneric(CK_MECHANISM_TYP
 	CPPUNIT_ASSERT(rv == CKR_OK);
 
 	auto wrapOverhead = [mechanismType]() {
-		return (mechanismType == CKM_AES_KEY_WRAP || mechanismType == CKM_AES_KEY_WRAP_PAD) ? 8 : 16;
+		if (mechanismType == CKM_AES_KEY_WRAP || mechanismType == CKM_AES_KEY_WRAP_PAD)
+			return 8;
+		else if (mechanismType == CKM_AES_CBC)
+			return 0;  // No padding overhead for CKM_AES_CBC
+		else
+			return 16;  // CKM_AES_CBC_PAD adds padding
 	};
 	CPPUNIT_ASSERT(wrappedLen == rndKeyLen + wrapOverhead() );
 
@@ -1322,13 +1332,14 @@ void SymmetricAlgorithmTests::wrapUnwrapRsa(CK_MECHANISM_TYPE mechanismType, CK_
 
 	CK_BYTE ivPtr[16];
 	switch(mechanismType) {
+		case CKM_AES_CBC:
 		case CKM_AES_CBC_PAD:
 		case CKM_DES_CBC_PAD:
 		case CKM_DES3_CBC_PAD:
 			rv = CRYPTOKI_F_PTR( C_GenerateRandom(hSession, ivPtr, sizeof ivPtr) );
 			CPPUNIT_ASSERT(rv == CKR_OK);
 			mechanism.pParameter = ivPtr;
-			mechanism.ulParameterLen = mechanismType == CKM_AES_CBC_PAD ? 16 : 8;
+			mechanism.ulParameterLen = (mechanismType == CKM_AES_CBC_PAD || mechanismType == CKM_AES_CBC) ? 16 : 8;
 			// falls through
 	}
 		
@@ -1756,8 +1767,10 @@ void SymmetricAlgorithmTests::testAesWrapUnwrap()
 
 	aesWrapUnwrapGeneric(CKM_AES_KEY_WRAP, hSession, hKey);
 	aesWrapUnwrapGeneric(CKM_AES_CBC_PAD, hSession, hKey);
+	aesWrapUnwrapGeneric(CKM_AES_CBC, hSession, hKey);
 	aesWrapUnwrapNonModifiableGeneric(CKM_AES_KEY_WRAP, hSession, hKey);
     aesWrapUnwrapNonModifiableGeneric(CKM_AES_CBC_PAD, hSession, hKey);
+    aesWrapUnwrapNonModifiableGeneric(CKM_AES_CBC, hSession, hKey);
 	aesWrapUnwrapRsa(CKM_AES_KEY_WRAP, hSession, hKey);
 	aesWrapUnwrapRsa(CKM_AES_CBC_PAD, hSession, hKey);
 

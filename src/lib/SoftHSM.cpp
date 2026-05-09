@@ -1212,7 +1212,7 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			pInfo->flags = CKF_UNWRAP | CKF_WRAP;
 			/* FALLTHROUGH */
 		case CKM_AES_CBC:
-			pInfo->flags |= CKF_WRAP;
+			pInfo->flags |= CKF_WRAP | CKF_UNWRAP;
 			/* FALLTHROUGH */
 		case CKM_AES_ECB:
 		case CKM_AES_CTR:
@@ -6618,6 +6618,7 @@ CK_RV SoftHSM::WrapKeySym
 			break;
 #endif
 		case CKM_AES_CBC:
+			blocksize = 16;
 			algo = SymAlgo::AES;
 			break;
 
@@ -7219,6 +7220,7 @@ CK_RV SoftHSM::UnwrapKeySym
 			mode = SymWrap::AES_KEYWRAP_PAD;
 			break;
 #endif
+	        case CKM_AES_CBC:
 	        case CKM_AES_CBC_PAD:
 			algo = SymAlgo::AES;
 			blocksize = 16;
@@ -7251,8 +7253,35 @@ CK_RV SoftHSM::UnwrapKeySym
 	ByteString iv;
 	ByteString decryptedFinal;
 	CK_RV rv = CKR_OK;
-	
+
 	switch(pMechanism->mechanism) {
+
+	case CKM_AES_CBC:
+		iv.resize(blocksize);
+		memcpy(&iv[0], pMechanism->pParameter, blocksize);
+
+		if (!cipher->decryptInit(unwrappingkey, SymMode::CBC, iv, false))
+		{
+			cipher->recycleKey(unwrappingkey);
+			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+			return CKR_MECHANISM_INVALID;
+		}
+		if (!cipher->decryptUpdate(wrapped, keydata))
+		{
+			cipher->recycleKey(unwrappingkey);
+			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+			return CKR_GENERAL_ERROR;
+		}
+		// Finalize decryption
+		if (!cipher->decryptFinal(decryptedFinal))
+		{
+			cipher->recycleKey(unwrappingkey);
+			CryptoFactory::i()->recycleSymmetricAlgorithm(cipher);
+			return CKR_GENERAL_ERROR;
+		}
+		keydata += decryptedFinal;
+		// No unpadding for CKM_AES_CBC - returns raw decrypted data
+		break;
 
 	case CKM_AES_CBC_PAD:
 	case CKM_DES3_CBC_PAD:
@@ -7565,6 +7594,7 @@ CK_RV SoftHSM::C_UnwrapKey
 				return rv;
 			break;
 
+	        case CKM_AES_CBC:
 	        case CKM_AES_CBC_PAD:
 			// TODO check block length
 			if (pMechanism->pParameter == NULL_PTR ||
