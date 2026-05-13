@@ -827,16 +827,25 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 
 		return false;
 	}
+	BotanRSAPublicKey* pk = (BotanRSAPublicKey*) publicKey;
+	Botan::RSA_PublicKey* botanKey = pk->getBotanKey();
 
+	if (!botanKey)
+	{
+		ERROR_MSG("Could not get the Botan public key");
+
+		return false;
+	}
 	std::string eme;
-
 	switch (padding)
 	{
 		case AsymMech::RSA_PKCS:
 			eme = "PKCS1v15";
 			break;
 		case AsymMech::RSA_PKCS_OAEP:
-		    // eme will be set later
+		    eme = getCipherOaep(publicKey->getBitLength(), data.size(), mechanismParam);
+			if (eme.empty())
+				return false;
 			break;
 		case AsymMech::RSA:
 			eme = "Raw";
@@ -844,22 +853,6 @@ bool BotanRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 		default:
 			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
 
-			return false;
-	}
-
-	BotanRSAPublicKey* pk = (BotanRSAPublicKey*) publicKey;
-	Botan::RSA_PublicKey* botanKey = pk->getBotanKey();
-	
-	if (!botanKey)
-	{
-		ERROR_MSG("Could not get the Botan public key");
-
-		return false;
-	}
-	if (padding == AsymMech::RSA_PKCS_OAEP)
-	{
-		eme = getCipherOaep(publicKey->getBitLength(), data.size(), mechanismParam);
-		if (eme.empty())
 			return false;
 	}
 	Botan::PK_Encryptor_EME* encryptor = NULL;
@@ -911,26 +904,6 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 
 		return false;
 	}
-
-	std::string eme;
-
-	switch (padding)
-	{
-		case AsymMech::RSA_PKCS:
-			eme = "PKCS1v15";
-			break;
-		case AsymMech::RSA_PKCS_OAEP:
-			// eme will be set later
-			break;
-		case AsymMech::RSA:
-			eme = "Raw";
-			break;
-		default:
-			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
-
-			return false;
-	}
-
 	BotanRSAPrivateKey* pk = (BotanRSAPrivateKey*) privateKey;
 	Botan::RSA_PrivateKey* botanKey = pk->getBotanKey();
 
@@ -941,10 +914,23 @@ bool BotanRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 		return false;
 	}
 
-	if (padding == AsymMech::RSA_PKCS_OAEP)
+	std::string eme;
+	switch (padding)
 	{
-		eme = getCipherOaep(privateKey->getBitLength(), 0 ,mechanismParam);
-		if (eme.empty())
+		case AsymMech::RSA_PKCS:
+			eme = "PKCS1v15";
+			break;
+		case AsymMech::RSA_PKCS_OAEP:
+			eme = getCipherOaep(privateKey->getBitLength(), 0 ,mechanismParam);
+			if (eme.empty())
+				return false;
+			break;
+		case AsymMech::RSA:
+			eme = "Raw";
+			break;
+		default:
+			ERROR_MSG("Invalid padding mechanism supplied (%i)", padding);
+
 			return false;
 	}
 
@@ -1193,7 +1179,7 @@ bool BotanRSA::reconstructParameters(AsymmetricParameters** ppParams, ByteString
 }
 
 #ifdef WITH_RAW_PSS
-std::string BotanRSA::getCipherRawPss(size_t bitLength, size_t dataSize,  const MechanismParam* mechanismParam)
+std::string BotanRSA::getCipherRawPss(size_t bitLength, size_t dataSize, const MechanismParam* mechanismParam)
 {
 	if (mechanismParam == NULL)
 	{
