@@ -155,10 +155,10 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	return true;
 }
 
-bool OSSLMLDSA::signInit(PrivateKey * /*privateKey*/, const AsymMech::Type /*mechanism*/,
-						 const MechanismParam* /* mechanismParam */)
+bool OSSLMLDSA::signInit(PrivateKey * privateKey, const AsymMech::Type mechanism,
+						 const MechanismParam* mechanismParam )
 {
-	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -216,7 +216,7 @@ bool OSSLMLDSA::signUpdate(const ByteString & dataToSign)
 bool OSSLMLDSA::signFinal(ByteString & signature)
 {
 	DEBUG_MSG("signFinal mechanismParameters != NULL: %d", mechanismParameters != NULL);
-	int rv = OSSLMLDSA::sign(currentPrivateKey, message, signature, currentMechanism, NULL, 0, mechanismParameters);
+	int rv = OSSLMLDSA::sign(currentPrivateKey, message, signature, currentMechanism, mechanismParameters);
 	DEBUG_MSG("rv=%d", rv);
 
 	delete mechanismParameters;
@@ -361,10 +361,10 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	return true;
 }
 
-bool OSSLMLDSA::verifyInit(PublicKey * /*publicKey*/, const AsymMech::Type /*mechanism*/,
-						   const MechanismParam* /* mechanismParam */)
+bool OSSLMLDSA::verifyInit(PublicKey * publicKey, const AsymMech::Type mechanism,
+						   const MechanismParam* mechanismParam )
 {
-	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -422,7 +422,7 @@ bool OSSLMLDSA::verifyUpdate(const ByteString & originalData)
 bool OSSLMLDSA::verifyFinal(const ByteString & signature)
 {
 	DEBUG_MSG("verifyFinal mechanismParameters != NULL: %d", mechanismParameters != NULL);
-	int rv = OSSLMLDSA::verify(currentPublicKey, message, signature, currentMechanism, NULL, 0, mechanismParameters);
+	int rv = OSSLMLDSA::verify(currentPublicKey, message, signature, currentMechanism, mechanismParameters);
 	DEBUG_MSG("rv=%d", rv);
 
 	delete mechanismParameters;

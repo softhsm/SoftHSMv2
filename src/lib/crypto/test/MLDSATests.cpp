@@ -495,12 +495,12 @@ void MLDSATests::testSigningMultiPartVerifyingWithContext()
 		MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
 
 		ByteString sigMultiPart;
-		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
 
-		CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), all, sigMultiPart, AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), all, sigMultiPart, AsymMech::MLDSA, &context));
 
 		mldsa->recycleKeyPair(kp);
 		mldsa->recycleParameters(p);
@@ -533,9 +533,9 @@ void MLDSATests::testSigningVerifyingMultiPart()
 		ByteString all = dataToSign + dataToSignMultipart;
 
 		ByteString sig;
-		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sig, AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sig, AsymMech::MLDSA, NULL));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sig));
@@ -577,9 +577,9 @@ void MLDSATests::testSigningVerifyingMultiPartWithContext()
 
 		ByteString sigMultiPart;
 
-		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sigMultiPart, AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sigMultiPart, AsymMech::MLDSA, &context));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
@@ -615,12 +615,12 @@ void MLDSATests::testSigningMultiPartVerifyingMultiPart()
 		ByteString all = dataToSign + dataToSignMultipart;
 
 		ByteString sigMultiPart;
-		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
@@ -662,12 +662,12 @@ void MLDSATests::testSigningMultiPartVerifyingMultiPartWithContext()
 
 		ByteString sigMultiPart;
 
-		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
