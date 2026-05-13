@@ -96,6 +96,7 @@ bool Generation::wasUpdated()
 
 		if (!genFile.isValid())
 		{
+			WARNING_MSG("Generation::wasUpdated: could not open %s; assuming updated", path.c_str());
 			return true;
 		}
 
@@ -105,11 +106,13 @@ bool Generation::wasUpdated()
 
 		if (!genFile.readULong(onDisk))
 		{
+			WARNING_MSG("Generation::wasUpdated: could not read %s; assuming updated", path.c_str());
 			return true;
 		}
 
 		if (onDisk != currentValue)
 		{
+			DEBUG_MSG("Generation::wasUpdated: %s changed %lu -> %lu", path.c_str(), currentValue, onDisk);
 			currentValue = onDisk;
 			return true;
 		}
@@ -122,6 +125,7 @@ bool Generation::wasUpdated()
 
 		if (!objectFile.isValid())
 		{
+			WARNING_MSG("Generation::wasUpdated: could not open %s; assuming updated", path.c_str());
 			return true;
 		}
 
@@ -131,7 +135,13 @@ bool Generation::wasUpdated()
 
 		if (!objectFile.readULong(onDisk))
 		{
+			WARNING_MSG("Generation::wasUpdated: could not read %s; assuming updated", path.c_str());
 			return true;
+		}
+
+		if (onDisk != currentValue)
+		{
+			DEBUG_MSG("Generation::wasUpdated: %s changed %lu -> %lu", path.c_str(), currentValue, onDisk);
 		}
 
 		return (onDisk != currentValue);
@@ -155,6 +165,7 @@ void Generation::commit()
 
 		if (!genFile.isValid())
 		{
+			WARNING_MSG("Generation::commit: could not open %s for writing", path.c_str());
 			return;
 		}
 
@@ -174,6 +185,8 @@ void Generation::commit()
 			(void) genFile.writeULong(currentValue);
 
 			genFile.unlock();
+
+			DEBUG_MSG("Generation::commit: initialized %s to %lu", path.c_str(), currentValue);
 
 			return;
 		}
@@ -202,6 +215,12 @@ void Generation::commit()
 			currentValue = onDisk;
 
 			pendingUpdate = false;
+
+			DEBUG_MSG("Generation::commit: %s committed generation %lu", path.c_str(), currentValue);
+		}
+		else
+		{
+			WARNING_MSG("Generation::commit: failed to update %s", path.c_str());
 		}
 
 		genFile.unlock();

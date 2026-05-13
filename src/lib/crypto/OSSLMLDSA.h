@@ -15,6 +15,8 @@
 class OSSLMLDSA : public AsymmetricAlgorithm
 {
 public:
+	OSSLMLDSA() : message(), parameters(NULL), paramLength(0), mechanismParameters(NULL) { }
+	
 	// Destructor
 	virtual ~OSSLMLDSA() { }
 
@@ -54,6 +56,10 @@ public:
 private:
 	static int OSSL_RANDOM;
 	static int OSSL_DETERMINISTIC;
+	ByteString message;
+	void* parameters;
+	size_t paramLength;
+	const MechanismParam* mechanismParameters;
 };
 
 #endif // !WITH_ML_DSA

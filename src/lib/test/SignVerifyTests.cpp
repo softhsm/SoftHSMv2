@@ -1285,3 +1285,191 @@ void SignVerifyTests::testMacSignVerify()
 	macSignVerify(CKM_AES_CMAC, hSessionRO, hKey);
 }
 
+// C_SignInit with mismatched key type must return CKR_KEY_TYPE_INCONSISTENT,
+// not accept the key and crash during C_Sign.
+void SignVerifyTests::testSignInitWrongKeyType()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_Login(hSession, CKU_USER, m_userPin1, m_userPin1Length) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// EC private key with RSA/DSA mechanisms
+	CK_OBJECT_HANDLE hEcPub = CK_INVALID_HANDLE, hEcPriv = CK_INVALID_HANDLE;
+#ifdef WITH_ECC
+	rv = generateEC("P-256", hSession, IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, hEcPub, hEcPriv);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// RSA mechanisms with EC key
+	CK_MECHANISM_TYPE rsaMechs[] = {
+		CKM_RSA_PKCS, CKM_RSA_X_509,
+		CKM_SHA1_RSA_PKCS, CKM_SHA256_RSA_PKCS,
+		CKM_SHA384_RSA_PKCS, CKM_SHA512_RSA_PKCS
+	};
+	for (size_t i = 0; i < sizeof(rsaMechs)/sizeof(rsaMechs[0]); i++)
+	{
+		CK_MECHANISM mechanism = { rsaMechs[i], NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &mechanism, hEcPriv) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+
+	// DSA mechanisms with EC key
+	CK_MECHANISM_TYPE dsaMechs[] = { CKM_DSA, CKM_DSA_SHA1, CKM_DSA_SHA256 };
+	for (size_t i = 0; i < sizeof(dsaMechs)/sizeof(dsaMechs[0]); i++)
+	{
+		CK_MECHANISM mechanism = { dsaMechs[i], NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &mechanism, hEcPriv) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+	// RSA private key with ECDSA/EdDSA mechanisms
+	CK_OBJECT_HANDLE hRsaPub = CK_INVALID_HANDLE, hRsaPriv = CK_INVALID_HANDLE;
+	rv = generateRSA(hSession, IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, hRsaPub, hRsaPriv);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+#ifdef WITH_ECC
+	// ECDSA mechanisms with RSA key
+	CK_MECHANISM_TYPE ecdsaMechs[] = { CKM_ECDSA, CKM_ECDSA_SHA1, CKM_ECDSA_SHA256 };
+	for (size_t i = 0; i < sizeof(ecdsaMechs)/sizeof(ecdsaMechs[0]); i++)
+	{
+		CK_MECHANISM mechanism = { ecdsaMechs[i], NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &mechanism, hRsaPriv) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+#ifdef WITH_EDDSA
+	// EdDSA mechanism with RSA key
+	{
+		CK_MECHANISM mechanism = { CKM_EDDSA, NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &mechanism, hRsaPriv) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+#ifdef WITH_GOST
+	// GOST mechanism with RSA key
+	{
+		CK_MECHANISM mechanism = { CKM_GOSTR3410, NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &mechanism, hRsaPriv) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+#ifdef WITH_ML_DSA
+	// ML-DSA mechanism with RSA key
+	{
+		CK_MECHANISM mechanism = { CKM_ML_DSA, NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_SignInit(hSession, &mechanism, hRsaPriv) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+	C_Logout(hSession);
+	C_CloseSession(hSession);
+}
+
+// Same as above but for C_VerifyInit.
+void SignVerifyTests::testVerifyInitWrongKeyType()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_Login(hSession, CKU_USER, m_userPin1, m_userPin1Length) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// EC public key with RSA/DSA mechanisms
+	CK_OBJECT_HANDLE hEcPub = CK_INVALID_HANDLE, hEcPriv = CK_INVALID_HANDLE;
+#ifdef WITH_ECC
+	rv = generateEC("P-256", hSession, IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, hEcPub, hEcPriv);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// RSA mechanisms with EC key
+	CK_MECHANISM_TYPE rsaMechs[] = {
+		CKM_RSA_PKCS, CKM_RSA_X_509,
+		CKM_SHA1_RSA_PKCS, CKM_SHA256_RSA_PKCS,
+		CKM_SHA384_RSA_PKCS, CKM_SHA512_RSA_PKCS
+	};
+	for (size_t i = 0; i < sizeof(rsaMechs)/sizeof(rsaMechs[0]); i++)
+	{
+		CK_MECHANISM mechanism = { rsaMechs[i], NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &mechanism, hEcPub) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+
+	// DSA mechanisms with EC key
+	CK_MECHANISM_TYPE dsaMechs[] = { CKM_DSA, CKM_DSA_SHA1, CKM_DSA_SHA256 };
+	for (size_t i = 0; i < sizeof(dsaMechs)/sizeof(dsaMechs[0]); i++)
+	{
+		CK_MECHANISM mechanism = { dsaMechs[i], NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &mechanism, hEcPub) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+	// RSA public key with ECDSA/EdDSA mechanisms
+	CK_OBJECT_HANDLE hRsaPub = CK_INVALID_HANDLE, hRsaPriv = CK_INVALID_HANDLE;
+	rv = generateRSA(hSession, IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, hRsaPub, hRsaPriv);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+#ifdef WITH_ECC
+	// ECDSA mechanisms with RSA key
+	CK_MECHANISM_TYPE ecdsaMechs[] = { CKM_ECDSA, CKM_ECDSA_SHA1, CKM_ECDSA_SHA256 };
+	for (size_t i = 0; i < sizeof(ecdsaMechs)/sizeof(ecdsaMechs[0]); i++)
+	{
+		CK_MECHANISM mechanism = { ecdsaMechs[i], NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &mechanism, hRsaPub) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+#ifdef WITH_EDDSA
+	// EdDSA mechanism with RSA key
+	{
+		CK_MECHANISM mechanism = { CKM_EDDSA, NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &mechanism, hRsaPub) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+#ifdef WITH_GOST
+	// GOST mechanism with RSA key
+	{
+		CK_MECHANISM mechanism = { CKM_GOSTR3410, NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &mechanism, hRsaPub) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+#ifdef WITH_ML_DSA
+	// ML-DSA mechanism with RSA key
+	{
+		CK_MECHANISM mechanism = { CKM_ML_DSA, NULL_PTR, 0 };
+		rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession, &mechanism, hRsaPub) );
+		CPPUNIT_ASSERT(rv == CKR_KEY_TYPE_INCONSISTENT);
+	}
+#endif
+
+	C_Logout(hSession);
+	C_CloseSession(hSession);
+}

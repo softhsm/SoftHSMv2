@@ -165,6 +165,11 @@ OSSLCryptoFactory::OSSLCryptoFactory()
 			WARNING_MSG("ENGINE_set_default returned %lu\n", ERR_get_error());
 		}
 	}
+	else
+	{
+		// Clear OpenSSL error queue if rdrand engine is unavailable
+		ERR_clear_error();
+	}
 #endif
 
 	// Initialise the one-and-only RNG
