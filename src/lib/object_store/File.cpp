@@ -143,6 +143,20 @@ File::~File()
 	}
 }
 
+// Check if a file exists without trying to open it
+// May be used when a routine just wants to check file existence,
+// and does not want to throw an error by trying to open it.
+bool File::exists(const std::string& path)
+{
+#ifndef _WIN32
+	struct stat buf;
+	return stat(path.c_str(), &buf) == 0;
+#else
+	return _access(path.c_str(), 0) == 0;
+#endif
+}
+
+
 // Check if the file is valid
 bool File::isValid()
 {
