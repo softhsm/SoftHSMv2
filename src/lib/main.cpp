@@ -53,7 +53,7 @@
 static CK_FUNCTION_LIST functionList =
 {
 	// Version information
-	{ CRYPTOKI_VERSION_MAJOR, CRYPTOKI_VERSION_MINOR },
+	{ CRYPTOKI_LEGACY_VERSION_MAJOR, CRYPTOKI_LEGACY_VERSION_MINOR },
 	// Function pointers
 	C_Initialize,
 	C_Finalize,
@@ -124,6 +124,124 @@ static CK_FUNCTION_LIST functionList =
 	C_CancelFunction,
 	C_WaitForSlotEvent
 };
+
+static CK_FUNCTION_LIST_3_2 function32List =
+{
+	// Version information
+    { CRYPTOKI_VERSION_MAJOR, CRYPTOKI_VERSION_MINOR },
+	// Function pointers
+	C_Initialize,
+	C_Finalize,
+	C_GetInfo,
+	C_GetFunctionList,
+	C_GetSlotList,
+	C_GetSlotInfo,
+	C_GetTokenInfo,
+	C_GetMechanismList,
+	C_GetMechanismInfo,
+	C_InitToken,
+	C_InitPIN,
+	C_SetPIN,
+	C_OpenSession,
+	C_CloseSession,
+	C_CloseAllSessions,
+	C_GetSessionInfo,
+	C_GetOperationState,
+	C_SetOperationState,
+	C_Login,
+	C_Logout,
+	C_CreateObject,
+	C_CopyObject,
+	C_DestroyObject,
+	C_GetObjectSize,
+	C_GetAttributeValue,
+	C_SetAttributeValue,
+	C_FindObjectsInit,
+	C_FindObjects,
+	C_FindObjectsFinal,
+	C_EncryptInit,
+	C_Encrypt,
+	C_EncryptUpdate,
+	C_EncryptFinal,
+	C_DecryptInit,
+	C_Decrypt,
+	C_DecryptUpdate,
+	C_DecryptFinal,
+	C_DigestInit,
+	C_Digest,
+	C_DigestUpdate,
+	C_DigestKey,
+	C_DigestFinal,
+	C_SignInit,
+	C_Sign,
+	C_SignUpdate,
+	C_SignFinal,
+	C_SignRecoverInit,
+	C_SignRecover,
+	C_VerifyInit,
+	C_Verify,
+	C_VerifyUpdate,
+	C_VerifyFinal,
+	C_VerifyRecoverInit,
+	C_VerifyRecover,
+	C_DigestEncryptUpdate,
+	C_DecryptDigestUpdate,
+	C_SignEncryptUpdate,
+	C_DecryptVerifyUpdate,
+	C_GenerateKey,
+	C_GenerateKeyPair,
+	C_WrapKey,
+	C_UnwrapKey,
+	C_DeriveKey,
+	C_SeedRandom,
+	C_GenerateRandom,
+	C_GetFunctionStatus,
+	C_CancelFunction,
+	C_WaitForSlotEvent,
+	C_GetInterfaceList,
+	C_GetInterface,
+	C_LoginUser,
+	C_SessionCancel,
+    C_MessageEncryptInit,
+    C_EncryptMessage,
+    C_EncryptMessageBegin,
+    C_EncryptMessageNext,
+    C_MessageEncryptFinal,
+    C_MessageDecryptInit,
+    C_DecryptMessage,
+    C_DecryptMessageBegin,
+    C_DecryptMessageNext,
+    C_MessageDecryptFinal,
+    C_MessageSignInit,
+    C_SignMessage,
+    C_SignMessageBegin,
+    C_SignMessageNext,
+    C_MessageSignFinal,
+    C_MessageVerifyInit,
+    C_VerifyMessage,
+    C_VerifyMessageBegin,
+    C_VerifyMessageNext,
+    C_MessageVerifyFinal,
+    C_EncapsulateKey,
+    C_DecapsulateKey,
+	C_VerifySignatureInit,
+    C_VerifySignature,
+    C_VerifySignatureUpdate,
+    C_VerifySignatureFinal,
+    C_GetSessionValidationFlags,
+    C_AsyncComplete,
+    C_AsyncGetID,
+    C_AsyncJoin,
+    C_WrapKeyAuthenticated,
+    C_UnwrapKeyAuthenticated
+};
+
+static CK_INTERFACE interfaceList[] = {
+	{ (char*)"PKCS 11", &function32List, CKF_INTERFACE_FORK_SAFE }
+};
+
+static unsigned long INTERFACE_COUNT = 1;
+
 
 // PKCS #11 initialisation function
 PKCS_API CK_RV C_Initialize(CK_VOID_PTR pInitArgs)
@@ -1185,3 +1303,484 @@ PKCS_API CK_RV C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot, CK_VOID_
 	return CKR_FUNCTION_FAILED;
 }
 
+PKCS_API CK_RV C_EncapsulateKey
+(
+  CK_SESSION_HANDLE    hSession,    /* the session's handle */
+  CK_MECHANISM_PTR     pMechanism,   /* the encapsulation mechanism */
+  CK_OBJECT_HANDLE     hPublicKey,   /* the encapsulating key */
+  CK_ATTRIBUTE_PTR     pTemplate,    /* new key template */
+  CK_ULONG             ulAttributeCount,     /* template length */
+  CK_BYTE_PTR          pCiphertext,       /* the wrapped key */
+  CK_ULONG_PTR         pulCiphertextLen, /* the wrapped key size */
+  CK_OBJECT_HANDLE_PTR phKey     /* the encapsulated key */
+)
+{
+    INFO_MSG("C_EncapsulateKey");
+	try
+	{
+		return SoftHSM::i()->C_EncapsulateKey(hSession, pMechanism, hPublicKey, pTemplate, ulAttributeCount, pCiphertext, pulCiphertextLen, phKey);
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
+PKCS_API CK_RV C_DecapsulateKey
+(
+  CK_SESSION_HANDLE    hSession,    /* the session's handle */
+  CK_MECHANISM_PTR     pMechanism,   /* the decapsulation mechanism */
+  CK_OBJECT_HANDLE     hPrivateKey,  /* the decapsulating key */
+  CK_ATTRIBUTE_PTR     pTemplate,    /* new key template */
+  CK_ULONG             ulAttributeCount,     /* template length */
+  CK_BYTE_PTR          pCiphertext,       /* the wrapped key */
+  CK_ULONG             ulCiphertextLen,      /* the wrapped key size */
+  CK_OBJECT_HANDLE_PTR phKey     /* the decapsulated key */
+)
+{
+	try
+	{
+		return SoftHSM::i()->C_DecapsulateKey(hSession, pMechanism, hPrivateKey, pTemplate, ulAttributeCount, pCiphertext, ulCiphertextLen, phKey);
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
+// Return the list of PKCS #11 functions
+PKCS_API CK_RV C_GetInterfaceList(CK_INTERFACE_PTR pInterfaceList, CK_ULONG_PTR pulCount)
+{
+	try
+	{
+		if (pulCount == NULL_PTR) {
+			return CKR_ARGUMENTS_BAD;
+		}
+		CK_ULONG count = *pulCount;
+		*pulCount = INTERFACE_COUNT;
+		if (pInterfaceList == NULL) {
+			return CKR_OK;
+		}
+		if (count < INTERFACE_COUNT) {
+			return CKR_BUFFER_TOO_SMALL;
+		}
+		memcpy(pInterfaceList, interfaceList, sizeof(interfaceList));
+		return CKR_OK;
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
+PKCS_API CK_RV C_GetInterface(CK_UTF8CHAR_PTR pInterfaceName, CK_VERSION_PTR pVersion, CK_INTERFACE_PTR_PTR  ppInterface, CK_FLAGS flags)
+{
+	try
+	{
+		if (ppInterface == NULL_PTR) {
+			return CKR_ARGUMENTS_BAD;
+		}
+		*ppInterface = NULL_PTR;
+		unsigned long i;
+    	for (i = 0; i < INTERFACE_COUNT; i++) {
+			CK_INTERFACE_PTR interface = &interfaceList[i];
+			if (pInterfaceName && strcmp(reinterpret_cast<char *>(pInterfaceName), interface->pInterfaceName) != 0) {
+				continue;
+			}
+			if (pVersion && memcmp(pVersion, interface->pFunctionList, sizeof(CK_VERSION)) != 0) {
+				continue;
+			}
+    		if ((interface->flags & flags) != flags) {
+				continue;
+			}
+			*ppInterface = interface;
+			return CKR_OK;
+		}
+    	return CKR_ARGUMENTS_BAD;
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
+PKCS_API CK_RV C_LoginUser(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
+             CK_CHAR_PTR pPin, CK_ULONG ulPinLen, CK_UTF8CHAR_PTR /*pUsername*/,
+             CK_ULONG /*ulUsernameLen*/)
+{
+	try
+	{
+		return SoftHSM::i()->C_Login(hSession, userType, pPin, ulPinLen);
+	}
+	catch (...)
+	{
+		FatalException();
+	}
+
+	return CKR_FUNCTION_FAILED;
+}
+
+PKCS_API CK_RV C_SessionCancel
+(
+  CK_SESSION_HANDLE /*hSession*/,  /* the session's handle */
+  CK_FLAGS          /*flags*/      /* flags control which sessions are cancelled */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageEncryptInit
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_MECHANISM_PTR  /*pMechanism*/,  /* the encryption mechanism */
+  CK_OBJECT_HANDLE  /*hKey*/         /* handle of encryption key */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_EncryptMessage
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pAssociatedData*/,  /* AEAD Associated data */
+  CK_ULONG /*ulAssociatedDataLen*/, /* AEAD Associated data length */
+  CK_BYTE_PTR /*pPlaintext*/,       /* plain text  */
+  CK_ULONG /*ulPlaintextLen*/,      /* plain text length */
+  CK_BYTE_PTR /*pCiphertext*/,      /* gets cipher text */
+  CK_ULONG_PTR /*pulCiphertextLen*/ /* gets cipher text length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_EncryptMessageBegin
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pAssociatedData*/,  /* AEAD Associated data */
+  CK_ULONG /*ulAssociatedDataLen*/  /* AEAD Associated data length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_EncryptMessageNext
+(
+  CK_SESSION_HANDLE /*hSession*/,        /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,            /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,           /* length of message specific parameter */
+  CK_BYTE_PTR /*pPlaintextPart*/,        /* plain text */
+  CK_ULONG /*ulPlaintextPartLen*/,       /* plain text length */
+  CK_BYTE_PTR /*pCiphertextPart*/,       /* gets cipher text */
+  CK_ULONG_PTR /*pulCiphertextPartLen*/, /* gets cipher text length */
+  CK_FLAGS /*flags*/                     /* multi mode flag */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageEncryptFinal
+(
+  CK_SESSION_HANDLE /*hSession*/        /* the session's handle */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageDecryptInit
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_MECHANISM_PTR  /*pMechanism*/,  /* the decryption mechanism */
+  CK_OBJECT_HANDLE  /*hKey*/         /* handle of decryption key */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_DecryptMessage
+(
+   CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+   CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+   CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+   CK_BYTE_PTR /*pAssociatedData*/,  /* AEAD Associated data */
+   CK_ULONG /*ulAssociatedDataLen*/, /* AEAD Associated data length */
+   CK_BYTE_PTR /*pCiphertext*/,      /* cipher text */
+   CK_ULONG /*ulCiphertextLen*/,     /* cipher text length */
+   CK_BYTE_PTR /*pPlaintext*/,       /* gets plain text */
+   CK_ULONG_PTR /*pulPlaintextLen*/  /* gets plain text length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_DecryptMessageBegin
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pAssociatedData*/,  /* AEAD Associated data */
+  CK_ULONG /*ulAssociatedDataLen*/  /* AEAD Associated data length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_DecryptMessageNext
+(
+  CK_SESSION_HANDLE /*hSession*/,        /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,            /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,           /* length of message specific parameter */
+  CK_BYTE_PTR /*pCiphertextPart*/,       /* cipher text */
+  CK_ULONG /*ulCiphertextPartLen*/,      /* cipher text length */
+  CK_BYTE_PTR /*pPlaintextPart*/,        /* gets plain text */
+  CK_ULONG_PTR /*pulPlaintextPartLen*/,  /* gets plain text length */
+  CK_FLAGS /*flags*/                     /* multi mode flag */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageDecryptFinal
+(
+  CK_SESSION_HANDLE /*hSession*/        /* the session's handle */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageSignInit
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_MECHANISM_PTR  /*pMechanism*/,  /* the signing mechanism */
+  CK_OBJECT_HANDLE  /*hKey*/         /* handle of signing key */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_SignMessage
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pData*/,            /* data to sign */
+  CK_ULONG /*ulDataLen*/,           /* data to sign length */
+  CK_BYTE_PTR /*pSignature*/,       /* gets signature */
+  CK_ULONG_PTR /*pulSignatureLen*/  /* gets signature length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_SignMessageBegin
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/      /* length of message specific parameter */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_SignMessageNext
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pData*/,            /* data to sign */
+  CK_ULONG /*ulDataLen*/,           /* data to sign length */
+  CK_BYTE_PTR /*pSignature*/,       /* gets signature */
+  CK_ULONG_PTR /*pulSignatureLen*/  /* gets signature length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageSignFinal
+(
+  CK_SESSION_HANDLE /*hSession*/        /* the session's handle */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageVerifyInit
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_MECHANISM_PTR  /*pMechanism*/,  /* the signing mechanism */
+  CK_OBJECT_HANDLE  /*hKey*/         /* handle of signing key */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifyMessage
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pData*/,            /* data to sign */
+  CK_ULONG /*ulDataLen*/,           /* data to sign length */
+  CK_BYTE_PTR /*pSignature*/,       /* signature */
+  CK_ULONG /*ulSignatureLen*/       /* signature length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifyMessageBegin
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/      /* length of message specific parameter */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifyMessageNext
+(
+  CK_SESSION_HANDLE /*hSession*/,   /* the session's handle */
+  CK_VOID_PTR /*pParameter*/,       /* message specific parameter */
+  CK_ULONG /*ulParameterLen*/,      /* length of message specific parameter */
+  CK_BYTE_PTR /*pData*/,            /* data to sign */
+  CK_ULONG /*ulDataLen*/,           /* data to sign length */
+  CK_BYTE_PTR /*pSignature*/,       /* signature */
+  CK_ULONG /*ulSignatureLen*/       /* signature length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_MessageVerifyFinal
+(
+  CK_SESSION_HANDLE /*hSession*/        /* the session's handle */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifySignatureInit
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_MECHANISM_PTR /*pMechanism*/,   /* the verification mechanism */
+  CK_OBJECT_HANDLE /*hKey*/,         /* verification key */
+  CK_BYTE_PTR /*pSignature*/,        /* signature */
+  CK_ULONG /*ulSignatureLen*/        /* signature length */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifySignature
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_BYTE_PTR /*pData*/,             /* signed data */
+  CK_ULONG /*ulDataLen*/             /* length of signed data */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifySignatureUpdate
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_BYTE_PTR /*pPart*/,             /* signed data */
+  CK_ULONG /*ulPartLen*/             /* length of signed data */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_VerifySignatureFinal
+(
+  CK_SESSION_HANDLE /*hSession*/    /* the session's handle */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_GetSessionValidationFlags
+(
+    CK_SESSION_HANDLE /*hSession*/,             /* the session's handle */
+    CK_SESSION_VALIDATION_FLAGS_TYPE /*type*/,  /* which state of flags */
+    CK_FLAGS_PTR /*pFlags*/                     /* validation flags */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_AsyncComplete
+(
+  CK_SESSION_HANDLE /*hSession*/,      /* the session's handle */
+  CK_UTF8CHAR_PTR /*pFunctionName*/,   /* pkcs11 function name */
+  CK_ASYNC_DATA_PTR /*pResult*/        /* operation result */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_AsyncGetID
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_UTF8CHAR_PTR /*pFunctionName*/, /* pkcs11 function name */
+  CK_ULONG_PTR /*pulID*/             /* persistent operation id */
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_AsyncJoin
+(
+  CK_SESSION_HANDLE /*hSession*/,    /* the session's handle */
+  CK_UTF8CHAR_PTR /*pFunctionName*/, /* pkcs11 function name */
+  CK_ULONG /*ulID*/,                 /* persistent operation id */
+  CK_BYTE_PTR /*pData*/,             /* location for the data */
+  CK_ULONG /*ulData*/
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_WrapKeyAuthenticated
+(
+  CK_SESSION_HANDLE /*hSession*/,
+  CK_MECHANISM_PTR /*pMechanism*/,
+  CK_OBJECT_HANDLE /*hWrappingKey*/,
+  CK_OBJECT_HANDLE /*hKey*/,
+  CK_BYTE_PTR /*pAssociatedData*/,
+  CK_ULONG /*ulAssociatedDataLen*/,
+  CK_BYTE_PTR /*pWrappedKey*/,
+  CK_ULONG_PTR /*pulWrappedKeyLen*/
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}
+
+PKCS_API CK_RV C_UnwrapKeyAuthenticated
+(
+  CK_SESSION_HANDLE /*hSession*/,
+  CK_MECHANISM_PTR /*pMechanism*/,
+  CK_OBJECT_HANDLE /*hUnwrappingKey*/,
+  CK_BYTE_PTR /*pWrappedKey*/,
+  CK_ULONG /*ulWrappedKeyLen*/,
+  CK_ATTRIBUTE_PTR /*pTemplate*/,
+  CK_ULONG /*ulAttributeCount*/,
+  CK_BYTE_PTR /*pAssociatedData*/,
+  CK_ULONG /*ulAssociatedDataLen*/,
+  CK_OBJECT_HANDLE_PTR /*phKey*/
+)
+{
+    return CKR_FUNCTION_NOT_SUPPORTED;
+}

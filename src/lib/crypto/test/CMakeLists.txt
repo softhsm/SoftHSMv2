@@ -23,6 +23,7 @@ set(SOURCES cryptotest.cpp
             HashTests.cpp
             MacTests.cpp
             MLDSATests.cpp
+            MLKEMTests.cpp
             RNGTests.cpp
             RSATests.cpp
             chisq.c

@@ -15,6 +15,7 @@
 class MLDSAParameters : public AsymmetricParameters
 {
 public:
+	MLDSAParameters() : parameterSet(0) {}
 	// The type
 	static const char* type;
 
@@ -64,7 +65,7 @@ public:
 
 
 private:
-	unsigned long parameterSet = 0;
+	unsigned long parameterSet;
 
 };
 

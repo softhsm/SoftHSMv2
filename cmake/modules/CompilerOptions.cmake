@@ -391,6 +391,27 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
         message(STATUS "OpenSSL: Support for ML-DSA is disabled")
     endif(ENABLE_MLDSA)
 
+    # acx_openssl_mlkem.m4
+    if(ENABLE_MLKEM)
+        # ML-DSA
+        set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_mlkem.c)
+        try_run(RUN_MLKEM COMPILE_RESULT
+                "${CMAKE_BINARY_DIR}/prebuild_santity_tests" ${testfile}
+                LINK_LIBRARIES ${CRYPTO_LIBS}
+                CMAKE_FLAGS
+                "-DINCLUDE_DIRECTORIES=${CRYPTO_INCLUDES}"
+        )
+        if(COMPILE_RESULT AND RUN_MLKEM EQUAL 0)
+            set(WITH_ML_KEM 1)
+            message(STATUS "OpenSSL: Found ML-KEM")
+        else()
+            set(error_msg "OpenSSL: Cannot find ML-KEM! OpenSSL library has no ML-KEM support!")
+            message(FATAL_ERROR ${error_msg})
+        endif()
+    else(ENABLE_MLKEM)
+        message(STATUS "OpenSSL: Support for ML-KEM is disabled")
+    endif(ENABLE_MLKEM)
+
     # acx_openssl_gost.m4
     if(ENABLE_GOST)
         set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_gost.c)

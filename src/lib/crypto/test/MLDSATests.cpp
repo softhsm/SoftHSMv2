@@ -26,8 +26,6 @@ static const std::vector<unsigned long> allParameterSets = {
 
 void MLDSATests::setUp()
 {
-	mldsa = NULL;
-
 	mldsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLDSA);
 
 	// Check the MLDSA object

@@ -38,12 +38,17 @@
 #ifdef WITH_ECC
 #include <openssl/ec.h>
 #endif
-#if defined(WITH_EDDSA) || defined(WITH_ML_DSA)
+#if defined(WITH_EDDSA) || defined(WITH_ML_DSA) || defined(WITH_ML_KEM)
 #include <openssl/evp.h>
 #endif
-#ifdef WITH_ML_DSA
+#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM)
 #include <openssl/core_names.h>
+#endif
+#ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
+#endif
+#ifdef WITH_ML_KEM
+#include "MLKEMParameters.h"
 #endif
 
 typedef struct rsa_key_material_t {
@@ -167,6 +172,27 @@ typedef struct mldsa_key_material_t {
 } mldsa_key_material_t;
 #endif
 
+#ifdef WITH_ML_KEM
+typedef struct mlkem_key_material_t {
+	CK_ULONG sizeSeed;
+	CK_ULONG sizePrivValue;
+	CK_ULONG sizePubValue;
+	CK_ULONG parameterSet;
+	CK_VOID_PTR seed;
+	CK_VOID_PTR privValue;
+	CK_VOID_PTR pubValue;
+	mlkem_key_material_t() {
+		sizeSeed = 0;
+		sizePrivValue = 0;
+		sizePubValue = 0;
+		parameterSet = 0;
+		seed = NULL_PTR;
+		privValue = NULL_PTR;
+		pubValue = NULL_PTR;
+	}
+} mlkem_key_material_t;
+#endif
+
 EVP_PKEY* crypto_read_file(char* filePath, char* filePIN);
 
 // RSA
@@ -198,6 +224,13 @@ void crypto_free_eddsa(eddsa_key_material_t* keyMat);
 int crypto_save_mldsa(CK_SESSION_HANDLE hSession, char* label, char* objID, size_t objIDLen, int noPublicKey, EVP_PKEY* mldsa);
 mldsa_key_material_t* crypto_malloc_mldsa(EVP_PKEY* mldsa);
 void crypto_free_mldsa(mldsa_key_material_t* keyMat);
+#endif
+
+#ifdef WITH_ML_KEM
+// MLKEM
+int crypto_save_mlkem(CK_SESSION_HANDLE hSession, char* label, char* objID, size_t objIDLen, int noPublicKey, EVP_PKEY* mlkem);
+mlkem_key_material_t* crypto_malloc_mlkem(EVP_PKEY* mlkem);
+void crypto_free_mlkem(mlkem_key_material_t* keyMat);
 #endif
 
 #endif // !_SOFTHSM_V2_SOFTHSM2_UTIL_OSSL_H

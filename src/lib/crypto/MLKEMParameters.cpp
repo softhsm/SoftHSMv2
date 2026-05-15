@@ -1,31 +1,31 @@
 /*****************************************************************************
- MLDSAParameters.cpp
+ MLKEMParameters.cpp
 
- ML-DSA parameters (only used for key generation)
+ ML-KEM parameters (only used for key generation)
  *****************************************************************************/
 
 #include "config.h"
 #include "log.h"
-#include "MLDSAParameters.h"
+#include "MLKEMParameters.h"
 #include <string.h>
 
 // The type
-/*static*/ const char* MLDSAParameters::type = "ML-DSA parameters";
+/*static*/ const char* MLKEMParameters::type = "ML-KEM parameters";
 
 // Set the parameter set
-void MLDSAParameters::setParameterSet(const unsigned long inParameterSet)
+void MLKEMParameters::setParameterSet(const unsigned long inParameterSet)
 {
 	parameterSet = inParameterSet;
 }
 
 // Get the parameter set
-unsigned long MLDSAParameters::getParameterSet() const
+unsigned long MLKEMParameters::getParameterSet() const
 {
 	return parameterSet;
 }
 
 // Are the parameters of the given type?
-bool MLDSAParameters::areOfType(const char* inType)
+bool MLKEMParameters::areOfType(const char* inType)
 {
 	if (inType == NULL)
 	{
@@ -35,22 +35,23 @@ bool MLDSAParameters::areOfType(const char* inType)
 }
 
 // Serialisation
-ByteString MLDSAParameters::serialise() const
+ByteString MLKEMParameters::serialise() const
 {
 	return ByteString(getParameterSet());
 }
 
-bool MLDSAParameters::deserialise(ByteString& serialised)
+bool MLKEMParameters::deserialise(ByteString& serialised)
 {
+
 	if (serialised.size() != 8)
 	{
 		return false;
 	}
 
 	unsigned long parameter = serialised.long_val();
-	if (parameter != ML_DSA_44_PARAMETER_SET && 
-		parameter != ML_DSA_65_PARAMETER_SET && 
-		parameter != ML_DSA_87_PARAMETER_SET) 
+	if (parameter != ML_KEM_512_PARAMETER_SET &&
+		parameter != ML_KEM_768_PARAMETER_SET &&
+		parameter != ML_KEM_1024_PARAMETER_SET)
 	{
 		return false;
 	}

@@ -59,6 +59,8 @@ Botan-*
 ROOT
 *.cmake
 CMakeFiles
+.idea/
+.vscode/
 
 # Specifics
 softhsm2.module

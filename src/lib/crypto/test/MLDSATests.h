@@ -45,6 +45,7 @@ class MLDSATests : public CppUnit::TestFixture
 	CPPUNIT_TEST_SUITE_END();
 
 public:
+	MLDSATests() : mldsa(NULL) {}
 	void testKeyGeneration();
 	void testSerialisation();
 	void testPKCS8();

@@ -174,6 +174,15 @@ bool AsymmetricAlgorithm::unwrapKey(PrivateKey* privateKey, const ByteString& en
 	return decrypt(privateKey, encryptedData, data, padding, mechanismParam);
 }
 
+bool AsymmetricAlgorithm::encapsulate(PublicKey* /*publicKey*/, ByteString& /*cipherText*/, SymmetricKey** /*secretKey*/, CK_KEY_TYPE /*keyType*/, const AsymMech::Type /*mechanism*/) 
+{
+	return false;
+}
+	
+bool AsymmetricAlgorithm::decapsulate(PrivateKey* /*privateKey*/, const ByteString& /*cipherText*/, SymmetricKey** /*secretKey*/, CK_KEY_TYPE /*keyType*/, const AsymMech::Type /*mechanism*/) 
+{
+	return false;
+}
 
 bool AsymmetricAlgorithm::generateParameters(AsymmetricParameters** /*ppParams*/, void* /*parameters = NULL*/, RNG* /*rng = NULL*/)
 {

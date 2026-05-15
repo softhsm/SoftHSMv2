@@ -1,36 +1,35 @@
 /*****************************************************************************
- OSSLMLDSAPrivateKey.cpp
+ OSSLMLKEMPrivateKey.cpp
 
- OpenSSL ML-DSA private key class
+ OpenSSL ML-KEM private key class
  *****************************************************************************/
 
 #include "config.h"
-#ifdef WITH_ML_DSA
+#ifdef WITH_ML_KEM
 #include "log.h"
-#include "OSSLMLDSAPrivateKey.h"
-#include "MLDSAParameters.h"
+#include "OSSLMLKEMPrivateKey.h"
+#include "MLKEMParameters.h"
 #include "OSSLUtil.h"
-#include <cstring>
-#include <utility>
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 #include <openssl/core_names.h>
 #include <openssl/x509.h>
 
 // Constructors
-OSSLMLDSAPrivateKey::OSSLMLDSAPrivateKey()
+OSSLMLKEMPrivateKey::OSSLMLKEMPrivateKey()
 {
 	pkey = NULL;
 }
 
-OSSLMLDSAPrivateKey::OSSLMLDSAPrivateKey(const EVP_PKEY* inMLDSAKEY)
+OSSLMLKEMPrivateKey::OSSLMLKEMPrivateKey(const EVP_PKEY* inMLKEMKEY)
 {
 	pkey = NULL;
 
-	setFromOSSL(inMLDSAKEY);
+	setFromOSSL(inMLKEMKEY);
 }
 
 // Destructor
-OSSLMLDSAPrivateKey::~OSSLMLDSAPrivateKey()
+OSSLMLKEMPrivateKey::~OSSLMLKEMPrivateKey()
 {
 	if (pkey != NULL)
 	{
@@ -39,43 +38,52 @@ OSSLMLDSAPrivateKey::~OSSLMLDSAPrivateKey()
 	}
 }
 
-OSSLMLDSAPrivateKey::OSSLMLDSAPrivateKey(OSSLMLDSAPrivateKey&& other) noexcept  
-	: MLDSAPrivateKey(std::move(other)), pkey(other.pkey)  
-{  
-	other.pkey = NULL;  
-}  
-  
-OSSLMLDSAPrivateKey& OSSLMLDSAPrivateKey::operator=(OSSLMLDSAPrivateKey&& other) noexcept  
-{  
-	if (this != &other)  
-	{  
-		MLDSAPrivateKey::operator=(std::move(other));  
-		if (pkey) EVP_PKEY_free(pkey);  
-		pkey = other.pkey;  
-		other.pkey = NULL;  
-	}  
-	return *this;  
-}  
+OSSLMLKEMPrivateKey::OSSLMLKEMPrivateKey(OSSLMLKEMPrivateKey&& other) noexcept
+	: MLKEMPrivateKey(std::move(other)), pkey(other.pkey)
+{
+	other.pkey = NULL;
+}
+
+OSSLMLKEMPrivateKey& OSSLMLKEMPrivateKey::operator=(OSSLMLKEMPrivateKey&& other) noexcept
+{
+	if (this != &other)
+	{
+		MLKEMPrivateKey::operator=(std::move(other));
+		if (pkey) EVP_PKEY_free(pkey);
+		pkey = other.pkey;
+		other.pkey = NULL;
+	}
+	return *this;
+}
 
 // The type
-const char* OSSLMLDSAPrivateKey::type = "OpenSSL ML-DSA Private Key";
+const char* OSSLMLKEMPrivateKey::type = "OpenSSL ML-KEM Private Key";
 
 // Set from OpenSSL representation
-bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
+bool OSSLMLKEMPrivateKey::setFromOSSL(const EVP_PKEY* inMLKEMKEY)
 {
+	if (inMLKEMKEY == NULL)
+	{
+		ERROR_MSG("NULL EVP_PKEY in setFromOSSL");
+		return false;
+	}
 	ByteString localSeed;
-	uint8_t osslSeed[32];
+	uint8_t osslSeed[64];
 	size_t osslSeed_len;
-	int rv = EVP_PKEY_get_octet_string_param(inMLDSAKEY, OSSL_PKEY_PARAM_ML_DSA_SEED,
+	int rv = EVP_PKEY_get_octet_string_param(inMLKEMKEY, OSSL_PKEY_PARAM_ML_KEM_SEED,
 								osslSeed, sizeof(osslSeed), &osslSeed_len);
-	if(rv && osslSeed_len == 32) {
+	if(rv && osslSeed_len == 64) {
 		localSeed = ByteString(osslSeed, osslSeed_len);
+	} else {
+		ERROR_MSG("Could not get seed, rv: %d", rv);
+		OPENSSL_cleanse(osslSeed, sizeof(osslSeed));
+		return false;
 	}
 	
 	// let's use max priv length
-	uint8_t priv[MLDSAParameters::ML_DSA_87_PRIV_LENGTH];
+	uint8_t priv[MLKEMParameters::ML_KEM_1024_PRIV_LENGTH];
 	size_t priv_len;
-	rv = EVP_PKEY_get_octet_string_param(inMLDSAKEY, OSSL_PKEY_PARAM_PRIV_KEY,
+	rv = EVP_PKEY_get_octet_string_param(inMLKEMKEY, OSSL_PKEY_PARAM_PRIV_KEY,
 									priv, sizeof(priv), &priv_len);
 	if(!rv) {
 		ERROR_MSG("Could not get private key, rv: %d", rv);
@@ -84,11 +92,11 @@ bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 		return false;
 	}
 
-	if (priv_len != MLDSAParameters::ML_DSA_44_PRIV_LENGTH &&
-	    priv_len != MLDSAParameters::ML_DSA_65_PRIV_LENGTH &&
-	    priv_len != MLDSAParameters::ML_DSA_87_PRIV_LENGTH)
+	if (priv_len != MLKEMParameters::ML_KEM_512_PRIV_LENGTH &&
+		priv_len != MLKEMParameters::ML_KEM_768_PRIV_LENGTH &&
+		priv_len != MLKEMParameters::ML_KEM_1024_PRIV_LENGTH)
 	{
-		ERROR_MSG("Unsupported ML-DSA private key length: %zu", priv_len);
+		ERROR_MSG("Unsupported ML-KEM private key length: %zu", priv_len);
 		OPENSSL_cleanse(osslSeed, sizeof(osslSeed));
 		OPENSSL_cleanse(priv, sizeof(priv));
 		return false;
@@ -103,14 +111,18 @@ bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 }
 
 // Check if the key is of the given type
-bool OSSLMLDSAPrivateKey::isOfType(const char* inType)
+bool OSSLMLKEMPrivateKey::isOfType(const char* inType)
 {
-	return !strcmp(type, inType);
+	if (inType == NULL)
+	{
+		return false;
+	}
+	return !strcmp(type, inType) || MLKEMPrivateKey::isOfType(inType);
 }
 
-void OSSLMLDSAPrivateKey::setValue(const ByteString& inValue)
+void OSSLMLKEMPrivateKey::setValue(const ByteString& inValue)
 {
-	MLDSAPrivateKey::setValue(inValue);
+	MLKEMPrivateKey::setValue(inValue);
 	if (pkey != NULL)
 	{
 		EVP_PKEY_free(pkey);
@@ -118,9 +130,9 @@ void OSSLMLDSAPrivateKey::setValue(const ByteString& inValue)
 	}
 }
 
-void OSSLMLDSAPrivateKey::setSeed(const ByteString& inSeed)
+void OSSLMLKEMPrivateKey::setSeed(const ByteString& inSeed)
 {
-	MLDSAPrivateKey::setSeed(inSeed);
+	MLKEMPrivateKey::setSeed(inSeed);
 	if (pkey != NULL)
 	{
 		EVP_PKEY_free(pkey);
@@ -129,7 +141,7 @@ void OSSLMLDSAPrivateKey::setSeed(const ByteString& inSeed)
 }
 
 // Encode into PKCS#8 DER
-ByteString OSSLMLDSAPrivateKey::PKCS8Encode()
+ByteString OSSLMLKEMPrivateKey::PKCS8Encode()
 {
 	ByteString der;
 	EVP_PKEY* key = getOSSLKey();
@@ -151,7 +163,7 @@ ByteString OSSLMLDSAPrivateKey::PKCS8Encode()
 }
 
 // Decode from PKCS#8 BER
-bool OSSLMLDSAPrivateKey::PKCS8Decode(const ByteString& ber)
+bool OSSLMLKEMPrivateKey::PKCS8Decode(const ByteString& ber)
 {
 	int len = ber.size();
 	if (len <= 0) return false;
@@ -167,7 +179,7 @@ bool OSSLMLDSAPrivateKey::PKCS8Decode(const ByteString& ber)
 }
 
 // Retrieve the OpenSSL representation of the key
-EVP_PKEY* OSSLMLDSAPrivateKey::getOSSLKey()
+EVP_PKEY* OSSLMLKEMPrivateKey::getOSSLKey()
 {
 	if (pkey == NULL) createOSSLKey();
 
@@ -175,30 +187,33 @@ EVP_PKEY* OSSLMLDSAPrivateKey::getOSSLKey()
 }
 
 // Create the OpenSSL representation of the key
-void OSSLMLDSAPrivateKey::createOSSLKey()
+void OSSLMLKEMPrivateKey::createOSSLKey()
 {
 	if (pkey != NULL) return;
 
 	ByteString localValue = getValue();
+	ByteString localSeed = getSeed();
 
-	const char* name = OSSL::mldsaParameterSet2Name(getParameterSet());
-	if (name == NULL) 
+	const char* name = OSSL::mlkemParameterSet2Name(getParameterSet());
+	if (name == NULL)
 	{
-		ERROR_MSG("Unknown ML-DSA parameter set (value length: %zu)", localValue.size());
+		ERROR_MSG("Unknown ML-KEM parameter set (value length: %zu)", localValue.size());
 		return;
 	}
-	if (localValue.size() == 0) 
+	if (localValue.size() == 0)
 	{
-		ERROR_MSG("Empty ML-DSA private key value; cannot create EVP_PKEY");
+		ERROR_MSG("Empty ML-KEM private key value; cannot create EVP_PKEY");
 		return;
 	}
 
 	int selection = 0;
     EVP_PKEY_CTX *ctx = NULL;
-    OSSL_PARAM params[3], *p = params;
+    OSSL_PARAM params[4], *p = params;
 
 	*p++ = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_PRIV_KEY,
 												localValue.byte_str(), localValue.size());
+	*p++ = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_ML_KEM_SEED,
+												localSeed.byte_str(), localSeed.size());
 	selection = OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
 
 	*p = OSSL_PARAM_construct_end();

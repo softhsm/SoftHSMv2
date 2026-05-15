@@ -37,7 +37,6 @@
 #include "OSSLComp.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <iostream>
 #include <fstream>
@@ -155,6 +154,9 @@ int crypto_import_key_pair
 #ifdef WITH_ML_DSA
 	EVP_PKEY* mldsa = NULL;
 #endif
+#ifdef WITH_ML_KEM
+	EVP_PKEY* mlkem = NULL;
+#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	int keyType = EVP_PKEY_get_id(pkey);
@@ -196,20 +198,40 @@ int crypto_import_key_pair
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	} else {
 		// Provider Keys management
+		#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM)
+            int isMldsa = 0;
+            int isMlkem = 0;
 		#ifdef WITH_ML_DSA
-			size_t len;
-			int rv = (EVP_PKEY_is_a(pkey, "ML-DSA-44") ||
-                     EVP_PKEY_is_a(pkey, "ML-DSA-65") ||
-                     EVP_PKEY_is_a(pkey, "ML-DSA-87"));
-			if (!rv) {
-				fprintf(stderr, "ERROR: Cannot handle this algorithm, rv: %d\n", rv);
-				EVP_PKEY_free(pkey);
-				return 1;
-			}
-			EVP_PKEY_up_ref(pkey);
-			mldsa = pkey;
+            isMldsa = (EVP_PKEY_is_a(pkey, "ML-DSA-44") ||
+                       EVP_PKEY_is_a(pkey, "ML-DSA-65") ||
+                       EVP_PKEY_is_a(pkey, "ML-DSA-87"));
 		#endif
-		
+		#ifdef WITH_ML_KEM
+            isMlkem = (EVP_PKEY_is_a(pkey, "ML-KEM-512") ||
+                       EVP_PKEY_is_a(pkey, "ML-KEM-768") ||
+                       EVP_PKEY_is_a(pkey, "ML-KEM-1024"));
+		#endif
+            if (!isMldsa && !isMlkem)
+            {
+	            fprintf(stderr, "ERROR: Cannot handle this algorithm.\n");
+	            EVP_PKEY_free(pkey);
+	            return 1;
+	        }
+		#ifdef WITH_ML_DSA
+	        if (isMldsa)
+	        {
+                EVP_PKEY_up_ref(pkey);
+                mldsa = pkey;
+	        }
+		#endif
+		#ifdef WITH_ML_KEM
+            if (isMlkem)
+            {
+                EVP_PKEY_up_ref(pkey);
+                mlkem = pkey;
+            }
+		#endif
+		#endif
 	}
 #endif
 	EVP_PKEY_free(pkey);
@@ -245,6 +267,13 @@ int crypto_import_key_pair
 	{
 		result = crypto_save_mldsa(hSession, label, objID, objIDLen, noPublicKey, mldsa);
 		EVP_PKEY_free(mldsa);
+	}
+#endif
+#ifdef WITH_ML_KEM
+	else if (mlkem)
+	{
+		result = crypto_save_mlkem(hSession, label, objID, objIDLen, noPublicKey, mlkem);
+		EVP_PKEY_free(mlkem);
 	}
 #endif
 	else
@@ -1253,7 +1282,7 @@ int crypto_save_mldsa
 		return 1;
 	}
 
-	printf("The MLDSA key pair with label=%s has been imported.\n", label);
+	printf("The ML-DSA key pair with label=%s has been imported.\n", label);
 
 	return 0;
 }
@@ -1375,6 +1404,216 @@ mldsa_key_material_t* crypto_malloc_mldsa(EVP_PKEY* pkey)
 
 // Free the memory of the key
 void crypto_free_mldsa(mldsa_key_material_t* keyMat)
+{
+	if (keyMat == NULL) return;
+	if (keyMat->seed) free(keyMat->seed);
+	if (keyMat->privValue) free(keyMat->privValue);
+	if (keyMat->pubValue) free(keyMat->pubValue);
+	free(keyMat);
+}
+
+#endif
+
+#ifdef WITH_ML_KEM
+
+// Save the key data in PKCS#11
+int crypto_save_mlkem
+(
+	CK_SESSION_HANDLE hSession,
+	char* label,
+	char* objID,
+	size_t objIDLen,
+	int noPublicKey,
+	EVP_PKEY* mlkem
+)
+{
+	mlkem_key_material_t* keyMat = crypto_malloc_mlkem(mlkem);
+	if (keyMat == NULL)
+	{
+		fprintf(stderr, "ERROR: Could not convert the key material to binary information.\n");
+		return 1;
+	}
+
+	CK_OBJECT_CLASS pubClass = CKO_PUBLIC_KEY, privClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE keyType = CKK_ML_KEM;
+	CK_BBOOL ckTrue = CK_TRUE, ckFalse = CK_FALSE, ckToken = CK_TRUE;
+	if (noPublicKey)
+	{
+		ckToken = CK_FALSE;
+	}
+	CK_ATTRIBUTE pubTemplate[] = {
+		{ CKA_CLASS,          &pubClass,               sizeof(pubClass) },
+		{ CKA_KEY_TYPE,       &keyType,                sizeof(keyType) },
+		{ CKA_LABEL,          label,                   strlen(label) },
+		{ CKA_ID,             objID,                   objIDLen },
+		{ CKA_TOKEN,          &ckToken,                sizeof(ckToken) },
+		{ CKA_ENCAPSULATE,    &ckTrue,                 sizeof(ckTrue) },
+		{ CKA_VERIFY,         &ckFalse,                sizeof(ckFalse) },
+		{ CKA_ENCRYPT,        &ckFalse,                sizeof(ckFalse) },
+		{ CKA_WRAP,           &ckFalse,                sizeof(ckFalse) },
+		{ CKA_PARAMETER_SET,  &keyMat->parameterSet,   sizeof(CK_ULONG) },
+		{ CKA_VALUE,          keyMat->pubValue,        keyMat->sizePubValue },
+	};
+	CK_ATTRIBUTE privTemplate[] = {
+		{ CKA_CLASS,          &privClass,        sizeof(privClass) },
+		{ CKA_KEY_TYPE,       &keyType,          sizeof(keyType) },
+		{ CKA_LABEL,          label,             strlen(label) },
+		{ CKA_ID,             objID,             objIDLen },
+		{ CKA_SIGN,           &ckFalse,          sizeof(ckFalse) },
+		{ CKA_DECAPSULATE,    &ckTrue,           sizeof(ckTrue) },
+		{ CKA_DECRYPT,        &ckFalse,          sizeof(ckFalse) },
+		{ CKA_UNWRAP,         &ckFalse,          sizeof(ckFalse) },
+		{ CKA_SENSITIVE,      &ckTrue,           sizeof(ckTrue) },
+		{ CKA_TOKEN,          &ckTrue,           sizeof(ckTrue) },
+		{ CKA_PRIVATE,        &ckTrue,           sizeof(ckTrue) },
+		{ CKA_EXTRACTABLE,    &ckFalse,          sizeof(ckFalse) },
+		{ CKA_PARAMETER_SET,  &keyMat->parameterSet,   sizeof(CK_ULONG) },
+		{ CKA_SEED,           keyMat->seed,            keyMat->sizeSeed },
+		{ CKA_VALUE,          keyMat->privValue,       keyMat->sizePrivValue },
+	};
+
+	CK_OBJECT_HANDLE hKey1, hKey2;
+	CK_RV rv = p11->C_CreateObject(hSession, privTemplate, 15, &hKey1);
+	if (rv != CKR_OK)
+	{
+		fprintf(stderr, "ERROR: Could not save the private key in the token. "
+				"Maybe the algorithm is not supported.\n");
+		crypto_free_mlkem(keyMat);
+		return 1;
+	}
+
+	rv = p11->C_CreateObject(hSession, pubTemplate, 11, &hKey2);
+	crypto_free_mlkem(keyMat);
+
+	if (rv != CKR_OK)
+	{
+		p11->C_DestroyObject(hSession, hKey1);
+		fprintf(stderr, "ERROR: Could not save the public key in the token.\n");
+		return 1;
+	}
+
+	printf("The ML-KEM key pair with label=%s has been imported.\n", label);
+
+	return 0;
+}
+
+mlkem_key_material_t* crypto_malloc_mlkem(EVP_PKEY* pkey)
+{
+
+	if (pkey == NULL)
+	{
+		return NULL;
+	}
+
+	mlkem_key_material_t* keyMat = (mlkem_key_material_t*)calloc(1, sizeof(mlkem_key_material_t));
+	if (keyMat == NULL)
+	{
+		return NULL;
+	}
+
+	uint8_t seed[64];
+	size_t seed_len;
+	int rv = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_ML_KEM_SEED,
+								seed, sizeof(seed), &seed_len);
+
+	if(!rv)
+	{
+		fprintf(stderr, "ERROR: Could not get ML-KEM seed, rv: %d\n", rv);
+		memset(seed, 0, sizeof(seed));
+		crypto_free_mlkem(keyMat);
+		return NULL;
+	}
+
+	// let's use max priv length
+	uint8_t priv[MLKEMParameters::ML_KEM_1024_PRIV_LENGTH];
+	size_t priv_len;
+	rv = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY,
+									priv, sizeof(priv), &priv_len);
+	if(!rv)
+	{
+		fprintf(stderr, "ERROR: Could not get ML-KEM private key, rv: %d\n", rv);
+		memset(seed, 0, sizeof(seed));
+		memset(priv, 0, sizeof(priv));
+		crypto_free_mlkem(keyMat);
+		return NULL;
+	}
+
+	if (priv_len != MLKEMParameters::ML_KEM_512_PRIV_LENGTH &&
+	    priv_len != MLKEMParameters::ML_KEM_768_PRIV_LENGTH &&
+	    priv_len != MLKEMParameters::ML_KEM_1024_PRIV_LENGTH)
+	{
+		fprintf(stderr, "ERROR: Unsupported ML-KEM private key length: %zu\n", priv_len);
+		memset(seed, 0, sizeof(seed));
+		memset(priv, 0, sizeof(priv));
+		crypto_free_mlkem(keyMat);
+		return NULL;
+	}
+
+	uint8_t pub[MLKEMParameters::ML_KEM_1024_PUB_LENGTH];
+    size_t pub_len;
+	rv = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY,
+                                    pub, sizeof(pub), &pub_len);
+
+	if(!rv)
+	{
+		fprintf(stderr, "ERROR: Could not get ML-KEM public key, rv: %d\n", rv);
+		memset(seed, 0, sizeof(seed));
+		memset(priv, 0, sizeof(priv));
+		memset(pub, 0, sizeof(pub));
+		crypto_free_mlkem(keyMat);
+		return NULL;
+	}
+
+	keyMat->sizeSeed = seed_len;
+	keyMat->sizePrivValue = priv_len;
+	keyMat->sizePubValue = pub_len;
+
+	if (keyMat->sizeSeed > 0) {
+		keyMat->seed = (CK_VOID_PTR)malloc(keyMat->sizeSeed);
+	}
+	if (keyMat->sizePrivValue > 0) {
+		keyMat->privValue = (CK_VOID_PTR)malloc(keyMat->sizePrivValue);
+	}
+	keyMat->pubValue = (CK_VOID_PTR)malloc(keyMat->sizePubValue);
+
+	if (!keyMat->seed || !keyMat->privValue || !keyMat->pubValue)
+	{
+		crypto_free_mlkem(keyMat);
+		return NULL;
+	}
+
+	switch (keyMat->sizePrivValue)
+	{
+		case MLKEMParameters::ML_KEM_512_PRIV_LENGTH:
+			keyMat->parameterSet = MLKEMParameters::ML_KEM_512_PARAMETER_SET;
+			break;
+
+		case MLKEMParameters::ML_KEM_768_PRIV_LENGTH:
+			keyMat->parameterSet = MLKEMParameters::ML_KEM_768_PARAMETER_SET;
+			break;
+
+		case MLKEMParameters::ML_KEM_1024_PRIV_LENGTH:
+			keyMat->parameterSet = MLKEMParameters::ML_KEM_1024_PARAMETER_SET;
+			break;
+
+		default:
+			crypto_free_mlkem(keyMat);
+			return NULL;
+	}
+
+	if (keyMat->seed) {
+		memcpy(keyMat->seed, seed, keyMat->sizeSeed);
+	}
+	if (keyMat->privValue) {
+		memcpy(keyMat->privValue, priv, keyMat->sizePrivValue);
+	}
+	memcpy(keyMat->pubValue, pub, keyMat->sizePubValue);
+
+	return keyMat;
+}
+
+// Free the memory of the key
+void crypto_free_mlkem(mlkem_key_material_t* keyMat)
 {
 	if (keyMat == NULL) return;
 	if (keyMat->seed) free(keyMat->seed);

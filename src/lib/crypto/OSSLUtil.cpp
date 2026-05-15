@@ -34,9 +34,14 @@
 #include "log.h"
 #include "DerUtil.h"
 #include "OSSLUtil.h"
+#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM)
+#include <map>
+#endif
 #ifdef WITH_ML_DSA
 #include "MLDSAParameters.h"
-#include <map>
+#endif
+#ifdef WITH_ML_KEM
+#include "MLKEMParameters.h"
 #endif
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
@@ -47,6 +52,14 @@ static const std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet {
 	{MLDSAParameters::ML_DSA_44_PARAMETER_SET, "ML-DSA-44"},
 	{MLDSAParameters::ML_DSA_65_PARAMETER_SET, "ML-DSA-65"},
 	{MLDSAParameters::ML_DSA_87_PARAMETER_SET, "ML-DSA-87"}
+};
+#endif
+
+#ifdef WITH_ML_KEM
+static const std::map<unsigned long, const char*> mlkemAlgNameFromParameterSet {
+	{MLKEMParameters::ML_KEM_512_PARAMETER_SET, "ML-KEM-512"},
+	{MLKEMParameters::ML_KEM_768_PARAMETER_SET, "ML-KEM-768"},
+	{MLKEMParameters::ML_KEM_1024_PARAMETER_SET, "ML-KEM-1024"}
 };
 #endif
 
@@ -245,6 +258,19 @@ const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
 	std::map<unsigned long, const char*>::const_iterator it = mldsaAlgNameFromParameterSet.find(parameterSet);
 
 	if (it != mldsaAlgNameFromParameterSet.end()) {
+		return it->second;
+	}
+
+	return NULL;
+}
+#endif
+
+#ifdef WITH_ML_KEM
+const char* OSSL::mlkemParameterSet2Name(unsigned long parameterSet) {
+
+	std::map<unsigned long, const char*>::const_iterator it = mlkemAlgNameFromParameterSet.find(parameterSet);
+
+	if (it != mlkemAlgNameFromParameterSet.end()) {
 		return it->second;
 	}
 
