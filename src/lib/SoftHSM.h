@@ -172,6 +172,30 @@ public:
 	CK_RV C_CancelFunction(CK_SESSION_HANDLE hSession);
 	CK_RV C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot, CK_VOID_PTR pReserved);
 
+	CK_RV C_EncapsulateKey
+	(
+		CK_SESSION_HANDLE    hSession,        /* the session's handle */
+		CK_MECHANISM_PTR     pMechanism,      /* the encapsulation mechanism */
+		CK_OBJECT_HANDLE     hPublicKey,      /* the public key */
+		CK_ATTRIBUTE_PTR     pTemplate,       /* the new key template */
+		CK_ULONG             ulAttributeCount, /* the template length */
+		CK_BYTE_PTR          pCipherText,      /* the key encapsulated */
+		CK_ULONG_PTR         pulCipherTextLen,  /* the key encapsulated size */
+		CK_OBJECT_HANDLE_PTR phKey            /* the key which has been encapsulated */
+	);
+
+	CK_RV C_DecapsulateKey
+	(
+		CK_SESSION_HANDLE hSession,         /* the session's handle */
+		CK_MECHANISM_PTR  pMechanism,       /* the decapsulation mechanism */
+		CK_OBJECT_HANDLE  hPrivateKey,      /* the private key */
+		CK_ATTRIBUTE_PTR  pTemplate,        /* the decapsulated key template */
+		CK_ULONG          ulAttributeCount, /* the decapsulated key template length */
+		CK_BYTE_PTR       pCipherText,      /* the encapsulated key */
+        CK_ULONG          ulCipherTextLen,  /* the encapsulated key size */
+		CK_OBJECT_HANDLE_PTR phKey            /* the decapsulated key  */
+	);
+
 private:
 	// Constructor
 	SoftHSM();
@@ -373,6 +397,22 @@ private:
 	);
 #ifdef WITH_ML_DSA
 	CK_RV generateMLDSA
+	(
+		CK_SESSION_HANDLE hSession,
+		CK_ATTRIBUTE_PTR pPublicKeyTemplate,
+		CK_ULONG ulPublicKeyAttributeCount,
+		CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
+		CK_ULONG ulPrivateKeyAttributeCount,
+		CK_OBJECT_HANDLE_PTR phPublicKey,
+		CK_OBJECT_HANDLE_PTR phPrivateKey,
+		CK_BBOOL isPublicKeyOnToken,
+		CK_BBOOL isPublicKeyPrivate,
+		CK_BBOOL isPrivateKeyOnToken,
+		CK_BBOOL isPrivateKeyPrivate
+	);
+#endif
+#ifdef WITH_ML_KEM
+	CK_RV generateMLKEM
 	(
 		CK_SESSION_HANDLE hSession,
 		CK_ATTRIBUTE_PTR pPublicKeyTemplate,
