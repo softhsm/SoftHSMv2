@@ -440,8 +440,11 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 	{
 		if (OBJECT_OP_GENERATE==op)
 		{
-			ERROR_MSG("Prohibited attribute was passed to key generation function");
-			return CKR_ATTRIBUTE_READ_ONLY;
+            if (type != CKA_PARAMETER_SET) 
+            {
+                ERROR_MSG("Prohibited attribute was passed to key generation function");
+                return CKR_ATTRIBUTE_READ_ONLY;
+            }
 		}
 	}
 
