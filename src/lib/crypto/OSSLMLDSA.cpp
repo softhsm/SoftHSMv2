@@ -27,7 +27,6 @@ int OSSLMLDSA::OSSL_DETERMINISTIC = 1;
 // Signing functions
 bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 					 ByteString &signature, const AsymMech::Type mechanism,
-					 const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
 					 const MechanismParam* mechanismParam)
 {
 	DEBUG_MSG("sign dataToSign: %s", dataToSign.hex_str().c_str());
@@ -157,10 +156,9 @@ bool OSSLMLDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 }
 
 bool OSSLMLDSA::signInit(PrivateKey * privateKey, const AsymMech::Type mechanism,
-						 const void * param /* = NULL */ , const size_t paramLen /* = 0 */,
-					     const MechanismParam* mechanismParam /* = NULL */)
+						 const MechanismParam* mechanismParam )
 {
-	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::signInit(privateKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -218,7 +216,7 @@ bool OSSLMLDSA::signUpdate(const ByteString & dataToSign)
 bool OSSLMLDSA::signFinal(ByteString & signature)
 {
 	DEBUG_MSG("signFinal mechanismParameters != NULL: %d", mechanismParameters != NULL);
-	int rv = OSSLMLDSA::sign(currentPrivateKey, message, signature, currentMechanism, NULL, 0, mechanismParameters);
+	int rv = OSSLMLDSA::sign(currentPrivateKey, message, signature, currentMechanism, mechanismParameters);
 	DEBUG_MSG("rv=%d", rv);
 
 	delete mechanismParameters;
@@ -237,7 +235,6 @@ bool OSSLMLDSA::signFinal(ByteString & signature)
 // Verification functions
 bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 					   const ByteString &signature, const AsymMech::Type mechanism,
-					   const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
 					   const MechanismParam* mechanismParam)
 {
 	DEBUG_MSG("verify originalData: %s", originalData.hex_str().c_str());
@@ -365,10 +362,9 @@ bool OSSLMLDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 }
 
 bool OSSLMLDSA::verifyInit(PublicKey * publicKey, const AsymMech::Type mechanism,
-						   const void * param /* = NULL */, const size_t paramLen /* = 0 */,
-					       const MechanismParam* mechanismParam /* = NULL */)
+						   const MechanismParam* mechanismParam )
 {
-	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, param, paramLen))
+	if (!AsymmetricAlgorithm::verifyInit(publicKey, mechanism, mechanismParam))
 	{
 		return false;
 	}
@@ -426,7 +422,7 @@ bool OSSLMLDSA::verifyUpdate(const ByteString & originalData)
 bool OSSLMLDSA::verifyFinal(const ByteString & signature)
 {
 	DEBUG_MSG("verifyFinal mechanismParameters != NULL: %d", mechanismParameters != NULL);
-	int rv = OSSLMLDSA::verify(currentPublicKey, message, signature, currentMechanism, NULL, 0, mechanismParameters);
+	int rv = OSSLMLDSA::verify(currentPublicKey, message, signature, currentMechanism, mechanismParameters);
 	DEBUG_MSG("rv=%d", rv);
 
 	delete mechanismParameters;
@@ -444,7 +440,8 @@ bool OSSLMLDSA::verifyFinal(const ByteString & signature)
 
 // Encryption functions
 bool OSSLMLDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
-						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/)
+						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/,
+					    const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-DSA does not support encryption");
 
@@ -453,7 +450,8 @@ bool OSSLMLDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 
 // Decryption functions
 bool OSSLMLDSA::decrypt(PrivateKey * /*privateKey*/, const ByteString & /*encryptedData*/,
-						ByteString & /*data*/, const AsymMech::Type /*padding*/)
+						ByteString & /*data*/, const AsymMech::Type /*padding*/,
+						const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-DSA does not support decryption");
 

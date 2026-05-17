@@ -211,7 +211,7 @@ void MLDSATests::testSigningTestVector()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED);
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -238,7 +238,7 @@ void MLDSATests::testSigningTestVectorEmptyContext()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, contextBS);
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -263,7 +263,7 @@ void MLDSATests::testSigningTestVectorNonEmptyContext()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, contextStr);
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -288,7 +288,7 @@ void MLDSATests::testSigningTestVectorLongestContext()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, contextStr);
 
-	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context));
 
 	CPPUNIT_ASSERT(sig.size() != 0);
 	CPPUNIT_ASSERT(sig == wantedSig);
@@ -312,7 +312,7 @@ void MLDSATests::testSigningTestVectorContextTooLong()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextStr);
 
-	CPPUNIT_ASSERT(!mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(!mldsa->sign(dPriv, msg, sig, AsymMech::MLDSA, &context));
 	mldsa->recyclePrivateKey(dPriv);
 }
 
@@ -332,7 +332,7 @@ void MLDSATests::testVerifyingTestVector()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED);
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -355,7 +355,7 @@ void MLDSATests::testVerifyingTestVectorEmptyContext()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextBS);
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -377,7 +377,7 @@ void MLDSATests::testVerifyingTestVectorNonEmptyContext()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextStr);
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -399,7 +399,7 @@ void MLDSATests::testVerifyingTestVectorLongestContext()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextStr);
 
-	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -421,7 +421,7 @@ void MLDSATests::testVerifyingTestVectorContextTooLong()
 
 	MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextStr);
 
-	CPPUNIT_ASSERT(!mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(!mldsa->verify(dPub, msg, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recyclePublicKey(dPub);
 }
@@ -495,12 +495,12 @@ void MLDSATests::testSigningMultiPartVerifyingWithContext()
 		MLDSAMechanismParam context = MLDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
 
 		ByteString sigMultiPart;
-		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
 
-		CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), all, sigMultiPart, AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), all, sigMultiPart, AsymMech::MLDSA, &context));
 
 		mldsa->recycleKeyPair(kp);
 		mldsa->recycleParameters(p);
@@ -533,9 +533,9 @@ void MLDSATests::testSigningVerifyingMultiPart()
 		ByteString all = dataToSign + dataToSignMultipart;
 
 		ByteString sig;
-		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sig, AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sig, AsymMech::MLDSA, NULL));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sig));
@@ -577,9 +577,9 @@ void MLDSATests::testSigningVerifyingMultiPartWithContext()
 
 		ByteString sigMultiPart;
 
-		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sigMultiPart, AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), all, sigMultiPart, AsymMech::MLDSA, &context));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
@@ -615,12 +615,12 @@ void MLDSATests::testSigningMultiPartVerifyingMultiPart()
 		ByteString all = dataToSign + dataToSignMultipart;
 
 		ByteString sigMultiPart;
-		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, NULL));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
@@ -662,12 +662,12 @@ void MLDSATests::testSigningMultiPartVerifyingMultiPartWithContext()
 
 		ByteString sigMultiPart;
 
-		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->signInit(kp->getPrivateKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->signUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->signFinal(sigMultiPart));
 
-		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, NULL, 0, &context));
+		CPPUNIT_ASSERT(mldsa->verifyInit(kp->getPublicKey(), AsymMech::MLDSA, &context));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSign));
 		CPPUNIT_ASSERT(mldsa->verifyUpdate(dataToSignMultipart));
 		CPPUNIT_ASSERT(mldsa->verifyFinal(sigMultiPart));
@@ -701,10 +701,10 @@ void MLDSATests::testSigningVerifyingHedgePreferred()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -736,10 +736,10 @@ void MLDSATests::testSigningVerifyingHedgePreferredWithContext()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -771,7 +771,7 @@ void MLDSATests::testSigningVerifyingHedgePreferredWithContextTooLong()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT_EQUAL(false, mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT_EQUAL(false, mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA,  &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -800,10 +800,10 @@ void MLDSATests::testSigningVerifyingHedgeRequired()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -835,10 +835,10 @@ void MLDSATests::testSigningVerifyingHedgeRequiredWithContext()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -870,7 +870,7 @@ void MLDSATests::testSigningVerifyingHedgeRequiredWithContextTooLong()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -899,10 +899,10 @@ void MLDSATests::testSigningVerifyingDeterministic()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -934,10 +934,10 @@ void MLDSATests::testSigningVerifyingDeterministicWithContext()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	// And verify it
-	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(mldsa->verify(kp->getPublicKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
@@ -969,7 +969,7 @@ void MLDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 
 	// Sign the data
 	ByteString sig;
-	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, NULL, 0UL, &context));
+	CPPUNIT_ASSERT(!mldsa->sign(kp->getPrivateKey(), dataToSign, sig, AsymMech::MLDSA, &context));
 
 	mldsa->recycleKeyPair(kp);
 	mldsa->recycleParameters(p);
