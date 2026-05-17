@@ -88,6 +88,7 @@ jobs:
           LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
           PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
         run: |
+          set -x
           sudo apt-get update -qq
           sudo apt-get install -y libcppunit-dev p11-kit build-essential checkinstall zlib1g-dev sudo autoconf libtool git
           # Install OpenSSL 3.5
@@ -108,6 +109,7 @@ jobs:
           LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
           PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
         run: |
+          set -x
           ./autogen.sh
           ./configure --with-crypto-backend=openssl --with-openssl=${{ env.OPENSSL_INSTALL_DIR }}
           make -j$(nproc)
@@ -187,8 +189,9 @@ jobs:
             target-platform: x64
             ossl-version: "3.5.4"
             botan-version: ""
-            build-options: "-DENABLE_MLDSA=ON"
+            build-options: "-DENABLE_MLDSA=ON -DENABLE_MLKEM=ON"
             mldsa-test: "true"
+            mlkem-test: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
@@ -223,5 +226,6 @@ jobs:
         env:
           CTEST_OUTPUT_ON_FAILURE: 1
           MLDSA_TEST: ${{ matrix.mldsa-test || '' }}
+          MLKEM_TEST: ${{ matrix.mlkem-test || '' }}
         run: |
           cmake --build build --target RUN_TESTS
