@@ -143,35 +143,71 @@ jobs:
           make check || (find . -name test-suite.log -exec cat {} \; && false)
 
   windows:
-    name: Windows (${{ matrix.arch }}, ${{ matrix.backend }})
+    name: Windows (${{ matrix.arch }}, ${{ matrix.backend }}, OpenSSL ${{ matrix.ossl-version }})
     runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
         include:
+          # OpenSSL 1.1.1n variants (+ Botan 2.19.3)
           - arch: x64
             backend: openssl
             target-platform: x64
-            build-options:
+            ossl-version: "1.1.1n"
+            botan-version: ""
+            build-options: ""
           - arch: x64
             backend: botan
             target-platform: x64
-            build-options: -DENABLE_ECC=OFF -DENABLE_EDDSA=OFF
+            ossl-version: "1.1.1n"
+            botan-version: "2.19.3"
+            build-options: "-DENABLE_ECC=OFF -DENABLE_EDDSA=OFF"
           - arch: x86
             backend: openssl
             target-platform: Win32
-            build-options: -DENABLE_ECC=OFF -DENABLE_EDDSA=OFF
+            ossl-version: "1.1.1n"
+            botan-version: ""
+            build-options: "-DENABLE_ECC=OFF -DENABLE_EDDSA=OFF"
+          # OpenSSL 3.4.1
+          - arch: x64
+            backend: openssl
+            target-platform: x64
+            ossl-version: "3.4.1"
+            botan-version: ""
+            build-options: ""
+          - arch: x86
+            backend: openssl
+            target-platform: Win32
+            ossl-version: "3.4.1"
+            botan-version: ""
+            build-options: "-DENABLE_ECC=OFF -DENABLE_EDDSA=OFF"
+          # OpenSSL 3.5.4 + ML-DSA (x64 only — 32-bit runner limitation)
+          - arch: x64
+            backend: openssl
+            target-platform: x64
+            ossl-version: "3.5.4"
+            botan-version: ""
+            build-options: "-DENABLE_MLDSA=ON"
+            mldsa-test: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch }}
       - name: Create vcpkg.json
-        run: >
-          echo '{ "dependencies": [ "openssl", "botan", "cppunit" ],
-                  "overrides": [ { "name": "openssl", "version-string": "1.1.1n" },
-                                 { "name": "botan",   "version-string": "2.19.3" } ],
-                  "builtin-baseline": "38d1652f152d36481f2f4e8a85c0f1e14f3769f7" }' > vcpkg.json
+        shell: pwsh
+        run: |
+          $deps = @("openssl", "cppunit")
+          $overrides = @(@{ name = "openssl"; "version-string" = "${{ matrix.ossl-version }}" })
+          if ("${{ matrix.backend }}" -eq "botan") {
+            $deps += "botan"
+            $overrides += @{ name = "botan"; "version-string" = "${{ matrix.botan-version }}" }
+          }
+          [ordered]@{
+            dependencies     = $deps
+            overrides        = $overrides
+            "builtin-baseline" = "38d1652f152d36481f2f4e8a85c0f1e14f3769f7"
+          } | ConvertTo-Json -Depth 5 | Out-File vcpkg.json -Encoding utf8
       - uses: seanmiddleditch/vcpkg-action@master
         id: vcpkg
         with:
@@ -186,5 +222,6 @@ jobs:
       - name: Test
         env:
           CTEST_OUTPUT_ON_FAILURE: 1
+          MLDSA_TEST: ${{ matrix.mldsa-test || '' }}
         run: |
           cmake --build build --target RUN_TESTS

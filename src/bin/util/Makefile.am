@@ -36,6 +36,8 @@ if WITH_BOTAN
 softhsm2_util_SOURCES +=	softhsm2-util-botan.cpp
 endif
 
+SUBDIRS =		test
+
 EXTRA_DIST =		$(srcdir)/CMakeLists.txt \
 			$(srcdir)/*.h \
 			$(srcdir)/*.cpp
