@@ -34,17 +34,20 @@
 
 // Constructor
 Handle::Handle(CK_HANDLE_KIND _kind, CK_SLOT_ID _slotID, CK_SESSION_HANDLE _hSession)
-    : kind(_kind), slotID(_slotID), hSession(_hSession), object(NULL_PTR), isPrivate(false)
+    : kind(_kind), slotID(_slotID), hSession(_hSession), object(nullptr), session(nullptr),
+    isPrivate(false)
 {
 }
 
 Handle::Handle(CK_HANDLE_KIND _kind, CK_SLOT_ID _slotID)
-    : kind(_kind), slotID(_slotID), hSession(CK_INVALID_HANDLE), object(NULL_PTR), isPrivate(false)
+    : kind(_kind), slotID(_slotID), hSession(CK_INVALID_HANDLE), object(nullptr), session(nullptr),
+    isPrivate(false)
 {
 }
 
 Handle::Handle()
-    : kind(CKH_INVALID), slotID(0), hSession(CK_INVALID_HANDLE), object(NULL_PTR), isPrivate(false)
+    : kind(CKH_INVALID), slotID(0), hSession(CK_INVALID_HANDLE), object(nullptr), session(nullptr),
+    isPrivate(false)
 {
 
 }

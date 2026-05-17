@@ -56,40 +56,52 @@ HandleManager::HandleManager()
 // Destructor
 HandleManager::~HandleManager()
 {
+	// Safety net to release any session-object handles that weren't explicitly cleaned up.
+	// In normal C_Finalize flow this should be empty.
+	for (auto& kv : handles)
+	{
+		if (kv.second.kind == CKH_OBJECT && kv.second.hSession != CK_INVALID_HANDLE)
+		{
+			WARNING_MSG("Session object handle %lu (session %lu) was not released before "
+				"HandleManager destruction; releasing now",
+				kv.first, kv.second.hSession);
+			kv.second.object->release();
+		}
+	}
 
 	MutexFactory::i()->recycleMutex(handlesMutex);
 }
 
-CK_SESSION_HANDLE HandleManager::addSession(CK_SLOT_ID slotID, CK_VOID_PTR session)
+CK_SESSION_HANDLE HandleManager::addSession(CK_SLOT_ID slotID, Session *session)
 {
 	MutexLocker lock(handlesMutex);
 
 	Handle h( CKH_SESSION, slotID );
-	h.object = session;
+	h.session = session;
 	handles[++handleCounter] = h;
 	slotHandles[slotID].insert(handleCounter);
 	slotSessionCount[slotID]++;
 	return (CK_SESSION_HANDLE)handleCounter;
 }
 
-CK_VOID_PTR HandleManager::getSession(const CK_SESSION_HANDLE hSession)
+Session *HandleManager::getSession(const CK_SESSION_HANDLE hSession)
 {
 	MutexLocker lock(handlesMutex);
 
 	std::map< CK_ULONG, Handle>::iterator it = handles.find(hSession);
 	if (it == handles.end() || CKH_SESSION != it->second.kind)
-		return NULL_PTR;
-	return it->second.object;
+		return nullptr;
+	return it->second.session;
 }
 
-CK_OBJECT_HANDLE HandleManager::addSessionObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate, CK_VOID_PTR object)
+CK_OBJECT_HANDLE HandleManager::addSessionObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate, OSObject *object)
 {
 	MutexLocker lock(handlesMutex);
 
 	// Return existing handle when the object has already been registered.
-	std::map< CK_VOID_PTR, CK_ULONG>::iterator oit = objects.find(object);
+	auto oit = objects.find(object);
 	if (oit != objects.end()) {
-		std::map< CK_ULONG, Handle>::iterator hit = handles.find(oit->second);
+		auto hit = handles.find(oit->second);
 		if (hit == handles.end() || CKH_OBJECT != hit->second.kind || slotID != hit->second.slotID) {
 			objects.erase(oit);
 			return CK_INVALID_HANDLE;
@@ -103,22 +115,25 @@ CK_OBJECT_HANDLE HandleManager::addSessionObject(CK_SLOT_ID slotID, CK_SESSION_H
 	handles[++handleCounter] = h;
 	objects[object] = handleCounter;
 
+	sessionObjectHandles[hSession].insert(handleCounter);
+	slotHandles[slotID].insert(handleCounter);
+
+	object->acquire();
+
 	DEBUG_MSG("Added session object - handle: %lu, slot ID: %lu, session ID: %lu, private: %d, obj: %p",
 		handleCounter, slotID, hSession, isPrivate, object);
 
-	sessionObjectHandles[hSession].insert(handleCounter);
-	slotHandles[slotID].insert(handleCounter);
 	return (CK_OBJECT_HANDLE)handleCounter;
 }
 
-CK_OBJECT_HANDLE HandleManager::addTokenObject(CK_SLOT_ID slotID, bool isPrivate, CK_VOID_PTR object)
+CK_OBJECT_HANDLE HandleManager::addTokenObject(CK_SLOT_ID slotID, bool isPrivate, OSObject *object)
 {
 	MutexLocker lock(handlesMutex);
 
 	// Return existing handle when the object has already been registered.
-	std::map< CK_VOID_PTR, CK_ULONG>::iterator oit = objects.find(object);
+	auto oit = objects.find(object);
 	if (oit != objects.end()) {
-		std::map< CK_ULONG, Handle>::iterator hit = handles.find(oit->second);
+		auto hit = handles.find(oit->second);
 		if (hit == handles.end() || CKH_OBJECT != hit->second.kind || slotID != hit->second.slotID) {
 			objects.erase(oit);
 			return CK_INVALID_HANDLE;
@@ -133,28 +148,29 @@ CK_OBJECT_HANDLE HandleManager::addTokenObject(CK_SLOT_ID slotID, bool isPrivate
 	handles[++handleCounter] = h;
 	objects[object] = handleCounter;
 
+	slotHandles[slotID].insert(handleCounter);
+
 	DEBUG_MSG("Added token object - handle: %lu, slot ID: %lu, private: %d, obj: %p",
 		handleCounter, slotID, isPrivate, object);
 
-	slotHandles[slotID].insert(handleCounter);
 	return (CK_OBJECT_HANDLE)handleCounter;
 }
 
-CK_VOID_PTR HandleManager::getObject(const CK_OBJECT_HANDLE hObject)
+OSObject *HandleManager::getObject(const CK_OBJECT_HANDLE hObject)
 {
 	MutexLocker lock(handlesMutex);
 
-	std::map< CK_ULONG, Handle>::iterator it = handles.find(hObject);
+	auto it = handles.find(hObject);
 	if (it == handles.end() || CKH_OBJECT != it->second.kind )
-		return NULL_PTR;
+		return nullptr;
 	return it->second.object;
 }
 
-CK_OBJECT_HANDLE HandleManager::getObjectHandle(CK_VOID_PTR object)
+CK_OBJECT_HANDLE HandleManager::getObjectHandle(OSObject *object)
 {
 	MutexLocker lock(handlesMutex);
 
-	std::map< CK_VOID_PTR, CK_ULONG>::iterator it = objects.find(object);
+	auto it = objects.find(object);
 	if (it == objects.end())
 		return CK_INVALID_HANDLE;
 	return it->second;
@@ -162,125 +178,152 @@ CK_OBJECT_HANDLE HandleManager::getObjectHandle(CK_VOID_PTR object)
 
 void HandleManager::destroyObject(const CK_OBJECT_HANDLE hObject)
 {
-	MutexLocker lock(handlesMutex);
+	OSObject* toRelease = NULL;
+	{
+		MutexLocker lock(handlesMutex);
 
-	std::map< CK_ULONG, Handle>::iterator it = handles.find(hObject);
-	if (it != handles.end() && CKH_OBJECT == it->second.kind) {
-		// Remove from secondary indexes
-		if (it->second.hSession != CK_INVALID_HANDLE)
-			sessionObjectHandles[it->second.hSession].erase(hObject);
-		slotHandles[it->second.slotID].erase(hObject);
+		auto it = handles.find(hObject);
+		if (it != handles.end() && CKH_OBJECT == it->second.kind) {
+			// Remove from secondary indexes
+			if (it->second.hSession != CK_INVALID_HANDLE) {
+				sessionObjectHandles[it->second.hSession].erase(hObject);
+				toRelease = it->second.object;
+			}
+			slotHandles[it->second.slotID].erase(hObject);
 
-		objects.erase(it->second.object);
-		handles.erase(it);
-		DEBUG_MSG("Destroyed object handle: %lu", hObject);
-	} else {
-		DEBUG_MSG("Cannot destroy handle %lu that is not found or not an object handle", hObject);
+			objects.erase(it->second.object);
+			handles.erase(it);
+			DEBUG_MSG("Destroyed object handle: %lu", hObject);
+		} else {
+			DEBUG_MSG("Cannot destroy handle %lu that is not found or not an object handle", hObject);
+		}
 	}
+	if (toRelease != NULL)
+		toRelease->release();
 }
 
 void HandleManager::sessionClosed(const CK_SESSION_HANDLE hSession)
 {
-	MutexLocker lock(handlesMutex);
+	std::set<OSObject*> toRelease;
 
-	std::map< CK_ULONG, Handle>::iterator it = handles.find(hSession);
-	if (it == handles.end() || CKH_SESSION != it->second.kind)
 	{
-		DEBUG_MSG("Session %lu not found and cannot be closed", hSession);
-		return; // Unable to find the specified session.
-	}
-	CK_SLOT_ID slotID = it->second.slotID;
+		MutexLocker lock(handlesMutex);
 
-	// session closed, so we can erase information about it.
-	slotHandles[slotID].erase(hSession);
-	handles.erase(it);
-
-	DEBUG_MSG("Session %lu (slot %lu) closed", hSession, slotID);
-
-	// Erase all session object handles associated with the given session handle
-	// using the secondary index instead of scanning the entire handles map.
-	std::map< CK_SESSION_HANDLE, std::set<CK_ULONG> >::iterator soit = sessionObjectHandles.find(hSession);
-	if (soit != sessionObjectHandles.end()) {
-		std::set<CK_ULONG>& objHandles = soit->second;
-		for (std::set<CK_ULONG>::iterator oit = objHandles.begin(); oit != objHandles.end(); ++oit) {
-			std::map< CK_ULONG, Handle>::iterator hit = handles.find(*oit);
-			if (hit != handles.end()) {
-				objects.erase(hit->second.object);
-				DEBUG_MSG("Erasing object %lu for closed session %lu", hit->first, hSession);
-				slotHandles[slotID].erase(*oit);
-				handles.erase(hit);
-			}
+		std::map< CK_ULONG, Handle>::iterator it = handles.find(hSession);
+		if (it == handles.end() || CKH_SESSION != it->second.kind)
+		{
+			DEBUG_MSG("Session %lu not found and cannot be closed", hSession);
+			return; // Unable to find the specified session.
 		}
-		sessionObjectHandles.erase(soit);
+		CK_SLOT_ID slotID = it->second.slotID;
+
+		// session closed, so we can erase information about it.
+		slotHandles[slotID].erase(hSession);
+		handles.erase(it);
+
+		DEBUG_MSG("Session %lu (slot %lu) closed", hSession, slotID);
+
+		// Erase all session object handles associated with the given session handle
+		// using the secondary index instead of scanning the entire handles map.
+		auto soit = sessionObjectHandles.find(hSession);
+		if (soit != sessionObjectHandles.end()) {
+			std::set<CK_ULONG>& objHandles = soit->second;
+			for (auto oit = objHandles.begin(); oit != objHandles.end(); ++oit) {
+				auto hit = handles.find(*oit);
+				if (hit != handles.end()) {
+					toRelease.insert(hit->second.object);
+					objects.erase(hit->second.object);
+					DEBUG_MSG("Erasing object %lu for closed session %lu", hit->first, hSession);
+					slotHandles[slotID].erase(*oit);
+					handles.erase(hit);
+				}
+			}
+			sessionObjectHandles.erase(soit);
+		}
+
+		// Use the session counter to check if there are remaining open sessions.
+		CK_ULONG& count = slotSessionCount[slotID];
+		if (count > 0)
+			count--;
+
+		if (count == 0)
+			allSessionsClosed(slotID, true);
 	}
 
-	// Use the session counter to check if there are remaining open sessions.
-	CK_ULONG& count = slotSessionCount[slotID];
-	if (count > 0)
-		count--;
-
-	if (count > 0)
-		return;
-
-	// No more sessions open for this token, so remove all remaining object handles (token objects)
-	// for the given slotID.
-	slotSessionCount.erase(slotID);
-	allSessionsClosed(slotID, true);
+	for (auto* obj : toRelease)
+		obj->release();
 }
 
 void HandleManager::allSessionsClosed(const CK_SLOT_ID slotID, bool isLocked)
 {
-	MutexLocker lock(isLocked ? NULL : handlesMutex);
-
+	std::set<OSObject*> toRelease;
 
 	DEBUG_MSG("Closing all sessions for slot %lu", slotID);
 
-	// Erase all "session", "session object" and "token object" handles for a given slot id
-	// using the per-slot index instead of scanning the entire handles map.
-	std::map< CK_SLOT_ID, std::set<CK_ULONG> >::iterator sit = slotHandles.find(slotID);
-	if (sit != slotHandles.end()) {
-		std::set<CK_ULONG>& handleSet = sit->second;
-		for (std::set<CK_ULONG>::iterator it = handleSet.begin(); it != handleSet.end(); ++it) {
-			std::map< CK_ULONG, Handle>::iterator hit = handles.find(*it);
-			if (hit != handles.end()) {
-				if (CKH_OBJECT == hit->second.kind) {
-					DEBUG_MSG("Erasing object %lu for empty slot %lu", hit->first, slotID);
-					objects.erase(hit->second.object);
+	{
+		MutexLocker lock(isLocked ? NULL : handlesMutex);
+
+		// Erase all "session", "session object" and "token object" handles for a given slot id
+		// using the per-slot index instead of scanning the entire handles map.
+		auto sit = slotHandles.find(slotID);
+		if (sit != slotHandles.end()) {
+			auto& handleSet = sit->second;
+			for (auto it = handleSet.begin(); it != handleSet.end(); ++it) {
+				auto hit = handles.find(*it);
+				if (hit != handles.end()) {
+					if (CKH_OBJECT == hit->second.kind) {
+						DEBUG_MSG("Erasing object %lu for empty slot %lu", hit->first, slotID);
+						if (hit->second.hSession != CK_INVALID_HANDLE)
+							toRelease.insert(hit->second.object);
+						objects.erase(hit->second.object);
+					}
+					if (CKH_SESSION == hit->second.kind)
+						sessionObjectHandles.erase(*it);
+					handles.erase(hit);
 				}
-				if (CKH_SESSION == hit->second.kind)
-					sessionObjectHandles.erase(*it);
-				handles.erase(hit);
 			}
+			slotHandles.erase(sit);
 		}
-		slotHandles.erase(sit);
+
+		slotSessionCount.erase(slotID);
 	}
 
-	slotSessionCount.erase(slotID);
+	for (auto* obj : toRelease)
+		obj->release();
 }
 
 void HandleManager::tokenLoggedOut(const CK_SLOT_ID slotID)
 {
-	MutexLocker lock(handlesMutex);
+	std::set<OSObject*> toRelease;
+	{
+		MutexLocker lock(handlesMutex);
 
-	// Erase all private "token object" or "session object" handles for a given slot id
-	// using the per-slot index instead of scanning the entire handles map.
-	std::map< CK_SLOT_ID, std::set<CK_ULONG> >::iterator sit = slotHandles.find(slotID);
-	if (sit == slotHandles.end())
-		return;
+		// Erase all private "token object" or "session object" handles for a given slot id
+		// using the per-slot index instead of scanning the entire handles map.
+		auto sit = slotHandles.find(slotID);
+		if (sit == slotHandles.end())
+			return;
 
-	std::set<CK_ULONG>& handleSet = sit->second;
-	for (std::set<CK_ULONG>::iterator it = handleSet.begin(); it != handleSet.end(); ) {
-		std::map< CK_ULONG, Handle>::iterator hit = handles.find(*it);
-		if (hit != handles.end() && CKH_OBJECT == hit->second.kind && hit->second.isPrivate) {
-			// A private object is present for the given slotID so we need to remove it.
-			objects.erase(hit->second.object);
-			DEBUG_MSG("Erasing private object %lu for logged out token slot %lu", hit->first, slotID);
-			if (hit->second.hSession != CK_INVALID_HANDLE)
-				sessionObjectHandles[hit->second.hSession].erase(*it);
-			handles.erase(hit);
-			handleSet.erase(it++);
-			continue;
+		auto& handleSet = sit->second;
+		for (auto it = handleSet.begin(); it != handleSet.end(); ) {
+			auto hit = handles.find(*it);
+			if (hit != handles.end() && CKH_OBJECT == hit->second.kind && hit->second.isPrivate) {
+				// A private object is present for the given slotID so we need to remove it.
+				DEBUG_MSG("Erasing private object %lu for logged out token slot %lu", hit->first, slotID);
+				if (hit->second.hSession != CK_INVALID_HANDLE) {
+					sessionObjectHandles[hit->second.hSession].erase(*it);
+					toRelease.insert(hit->second.object);
+				}
+				objects.erase(hit->second.object);
+				handles.erase(hit);
+				handleSet.erase(it++);
+				continue;
+			}
+			++it;
 		}
-		++it;
 	}
+
+
+	for (auto* obj : toRelease)
+		obj->release();
 }

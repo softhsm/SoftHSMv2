@@ -34,6 +34,8 @@
 #define _SOFTHSM_V2_HANDLE_H
 
 #include "cryptoki.h"
+#include "OSObject.h"
+#include "Session.h"
 
 enum {
    CKH_INVALID,
@@ -54,7 +56,8 @@ public:
     CK_SLOT_ID slotID;
     CK_SESSION_HANDLE hSession;
 
-    CK_VOID_PTR object;
+    OSObject *object;
+    Session *session;
     bool isPrivate;
 };
 
