@@ -149,8 +149,7 @@ CK_RV P11Object::loadTemplate(Token *token, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG
 		P11Attribute* attr = attributes[pTemplate[i].type];
 
 		// case 2 of the attribute checks
-		if (attr == NULL)
-		{
+		if (attr == NULL) {
 			pTemplate[i].ulValueLen = CK_UNAVAILABLE_INFORMATION;
 			// If case 2 applies to any of the requested attributes, then the call should
 			// return the value CKR_ATTRIBUTE_TYPE_INVALID.
@@ -160,20 +159,15 @@ CK_RV P11Object::loadTemplate(Token *token, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG
 
 		// case 1,3,4 and 5 of the attribute checks are done while retrieving the attribute itself.
 		CK_RV retrieve_rv = attr->retrieve(token, isPrivate, pTemplate[i].pValue, &pTemplate[i].ulValueLen);
-		if (retrieve_rv == CKR_ATTRIBUTE_SENSITIVE)
-		{
+		if (retrieve_rv == CKR_ATTRIBUTE_SENSITIVE) {
 			// If case 1 applies to any of the requested attributes, then the call should
 			// return the value CKR_ATTRIBUTE_SENSITIVE.
 			sensitive = true;
-		}
-		else if (retrieve_rv == CKR_BUFFER_TOO_SMALL)
-		{
+		} else if (retrieve_rv == CKR_BUFFER_TOO_SMALL) {
 			// If case 5 applies to any of the requested attributes, then the call should
 			// return the value CKR_BUFFER_TOO_SMALL.
 			buffer_too_small = true;
-		}
-		else if (retrieve_rv != CKR_OK)
-		{
+		} else if (retrieve_rv != CKR_OK) {
 		    return CKR_GENERAL_ERROR;
 		}
 
@@ -347,8 +341,7 @@ bool P11DataObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DATA)
-	{
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DATA) {
 		OSAttribute setClass((unsigned long)CKO_DATA);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -402,14 +395,12 @@ bool P11CertificateObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_CERTIFICATE)
-	{
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_CERTIFICATE) {
 		OSAttribute setClass((unsigned long)CKO_CERTIFICATE);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
 	// Make certificates public
-	if (!inobject->attributeExists(CKA_PRIVATE))
-	{
+	if (!inobject->attributeExists(CKA_PRIVATE)) {
 		OSAttribute setPrivate(false);
 		inobject->setAttribute(CKA_PRIVATE, setPrivate);
 	}
@@ -480,8 +471,7 @@ bool P11X509CertificateObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_X_509)
-	{
+	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_X_509) {
 		OSAttribute setCertType((unsigned long)CKC_X_509);
 		inobject->setAttribute(CKA_CERTIFICATE_TYPE, setCertType);
 	}
@@ -558,8 +548,7 @@ bool P11OpenPGPPublicKeyObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_OPENPGP)
-	{
+	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_OPENPGP) {
 		OSAttribute setCertType((unsigned long)CKC_OPENPGP);
 		inobject->setAttribute(CKA_CERTIFICATE_TYPE, setCertType);
 	}
@@ -684,14 +673,12 @@ bool P11PublicKeyObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PUBLIC_KEY)
-	{
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PUBLIC_KEY) {
 		OSAttribute setClass((unsigned long)CKO_PUBLIC_KEY);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
 	// Make public keys public
-	if (!inobject->attributeExists(CKA_PRIVATE))
-	{
+	if (!inobject->attributeExists(CKA_PRIVATE)) {
 		OSAttribute setPrivate(false);
 		inobject->setAttribute(CKA_PRIVATE, setPrivate);
 	}
@@ -763,8 +750,7 @@ bool P11RSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA) {
 		OSAttribute setKeyType((unsigned long)CKK_RSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -813,8 +799,7 @@ bool P11DSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -867,8 +852,7 @@ bool P11ECPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC) {
 		OSAttribute setKeyType((unsigned long)CKK_EC);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -913,8 +897,7 @@ bool P11EDPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS) {
 		OSAttribute setKeyType((unsigned long)CKK_EC_EDWARDS);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -959,8 +942,7 @@ bool P11MLDSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_ML_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1005,8 +987,7 @@ bool P11DHPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH) {
 		OSAttribute setKeyType((unsigned long)CKK_DH);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1055,8 +1036,7 @@ bool P11GOSTPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410) {
 		OSAttribute setKeyType((unsigned long)CKK_GOSTR3410);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1109,8 +1089,7 @@ bool P11PrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PRIVATE_KEY)
-	{
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PRIVATE_KEY) {
 		OSAttribute setClass((unsigned long)CKO_PRIVATE_KEY);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -1201,8 +1180,7 @@ bool P11RSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA) {
 		OSAttribute setKeyType((unsigned long)CKK_RSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1271,8 +1249,7 @@ bool P11DSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1325,8 +1302,7 @@ bool P11ECPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC) {
 		OSAttribute setKeyType((unsigned long)CKK_EC);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1371,8 +1347,7 @@ bool P11EDPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS) {
 		OSAttribute setKeyType((unsigned long)CKK_EC_EDWARDS);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1417,8 +1392,7 @@ bool P11MLDSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_ML_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1467,8 +1441,7 @@ bool P11DHPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH) {
 		OSAttribute setKeyType((unsigned long)CKK_DH);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1521,8 +1494,7 @@ bool P11GOSTPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410) {
 		OSAttribute setKeyType((unsigned long)CKK_GOSTR3410);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1575,8 +1547,7 @@ bool P11SecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_SECRET_KEY)
-	{
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_SECRET_KEY) {
 		OSAttribute setClass((unsigned long)CKO_SECRET_KEY);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -1674,8 +1645,7 @@ bool P11GenericSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype) {
 		OSAttribute setKeyType(keytype);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1738,8 +1708,7 @@ bool P11AESSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES) {
 		OSAttribute setKeyType((unsigned long)CKK_AES);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1785,8 +1754,7 @@ bool P11DESSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype) {
 		OSAttribute setKeyType(keytype);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1842,8 +1810,7 @@ bool P11GOSTSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOST28147)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOST28147) {
 		OSAttribute setKeyType((unsigned long)CKK_GOST28147);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1888,8 +1855,7 @@ bool P11DomainObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DOMAIN_PARAMETERS)
-	{
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DOMAIN_PARAMETERS) {
 		OSAttribute setClass((unsigned long)CKO_DOMAIN_PARAMETERS);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -1934,8 +1900,7 @@ bool P11DSADomainObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1988,8 +1953,7 @@ bool P11DHDomainObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH) {
 		OSAttribute setKeyType((unsigned long)CKK_DH);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -2025,6 +1989,7 @@ bool P11DHDomainObj::init(OSObject *inobject)
 	initialized = true;
 	return true;
 }
+
 // Constructor
 P11SLHDSAPublicKeyObj::P11SLHDSAPublicKeyObj()
 {
@@ -2037,8 +2002,7 @@ bool P11SLHDSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_SLH_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -2051,12 +2015,7 @@ bool P11SLHDSAPublicKeyObj::init(OSObject *inobject)
 	P11Attribute* attrValue = new P11AttrValue(osobject, P11Attribute::ck1 | P11Attribute::ck4);
 
 	// Initialize the attributes
-	if
-	(
-	    !attrParameterSet->init() ||
-	    !attrValue->init()
-	)
-	{
+	if (!attrParameterSet->init() || !attrValue->init()) {
 		ERROR_MSG("Could not initialize the attribute");
 		delete attrParameterSet;
 		delete attrValue;
@@ -2083,8 +2042,7 @@ bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA)
-	{
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA) {
 		OSAttribute setKeyType((unsigned long)CKK_SLH_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -2097,12 +2055,7 @@ bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject)
 	P11Attribute* attrValue = new P11AttrValue(osobject, P11Attribute::ck1 | P11Attribute::ck4 | P11Attribute::ck6 | P11Attribute::ck7);
 
 	// Initialize the attributes
-	if
-	(
-	    !attrParameterSet->init() ||
-	    !attrValue->init()
-	)
-	{
+	if (!attrParameterSet->init() || !attrValue->init()) {
 		ERROR_MSG("Could not initialize the attribute");
 		delete attrParameterSet;
 		delete attrValue;
@@ -2116,4 +2069,3 @@ bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject)
 	initialized = true;
 	return true;
 }
-

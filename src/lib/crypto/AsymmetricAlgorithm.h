@@ -33,22 +33,34 @@
 #ifndef _SOFTHSM_V2_ASYMMETRICALGORITHM_H
 #define _SOFTHSM_V2_ASYMMETRICALGORITHM_H
 
-#include "AsymmetricKeyPair.h"
-#include "AsymmetricParameters.h"
-#include "HashAlgorithm.h"
-#include "MechanismParam.h"
-#include "PrivateKey.h"
-#include "PublicKey.h"
-#include "RNG.h"
-#include "SymmetricKey.h"
-#include "config.h"
+#include <new>
 #include <cstdlib>
 #include <cstring>
-#include <new>
+#include "config.h"
+#include "AsymmetricKeyPair.h"
+#include "AsymmetricParameters.h"
+#include "MechanismParam.h"
+#include "HashAlgorithm.h"
+#include "PublicKey.h"
+#include "PrivateKey.h"
+#include "RNG.h"
+#include "SymmetricKey.h"
 
 struct AsymAlgo
 {
-	enum Type { Unknown, RSA, DSA, DH, ECDH, ECDSA, GOST, EDDSA, MLDSA, SLHDSA };
+        enum Type
+	{
+		Unknown,
+		RSA,
+		DSA,
+		DH,
+		ECDH,
+		ECDSA,
+		GOST,
+		EDDSA,
+		MLDSA,
+		SLHDSA
+	};
 };
 
 struct AsymMech
@@ -172,9 +184,16 @@ protected:
 	AsymMech::Type currentPadding;
 
 private:
-	enum { NONE, SIGN, VERIFY } currentOperation;
+	enum
+	{
+		NONE,
+		SIGN,
+		VERIFY
+	}
+	currentOperation;
 
 	bool isWrappingMech(AsymMech::Type padding);
 };
 
 #endif // !_SOFTHSM_V2_ASYMMETRICALGORITHM_H
+

@@ -43,13 +43,14 @@
 #if defined(WITH_ML_DSA) || defined(WITH_SLH_DSA)
 #include <map>
 #endif
+
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
+
 #ifdef WITH_SLH_DSA
-static const std::map<unsigned long, const char*> slhdsaAlgNameFromParameterSet
-{
+static const std::map<unsigned long, const char*> slhdsaAlgNameFromParameterSet {
 	{SLHDSAParameters::SLH_DSA_SHA2_128S_PARAMETER_SET, "SLH-DSA-SHA2-128s"},
 	{SLHDSAParameters::SLH_DSA_SHAKE_128S_PARAMETER_SET, "SLH-DSA-SHAKE-128s"},
 	{SLHDSAParameters::SLH_DSA_SHA2_128F_PARAMETER_SET, "SLH-DSA-SHA2-128f"},
@@ -64,10 +65,8 @@ static const std::map<unsigned long, const char*> slhdsaAlgNameFromParameterSet
 	{SLHDSAParameters::SLH_DSA_SHAKE_256F_PARAMETER_SET, "SLH-DSA-SHAKE-256f"},
 };
 #endif
-
 #ifdef WITH_ML_DSA
-static const std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet
-{
+static const std::map<unsigned long, const char*> mldsaAlgNameFromParameterSet {
 	{MLDSAParameters::ML_DSA_44_PARAMETER_SET, "ML-DSA-44"},
 	{MLDSAParameters::ML_DSA_65_PARAMETER_SET, "ML-DSA-65"},
 	{MLDSAParameters::ML_DSA_87_PARAMETER_SET, "ML-DSA-87"}
@@ -264,13 +263,11 @@ int OSSL::byteString2oid(const ByteString& byteString)
 #endif
 
 #ifdef WITH_ML_DSA
-const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet)
-{
+const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
 
 	std::map<unsigned long, const char*>::const_iterator it = mldsaAlgNameFromParameterSet.find(parameterSet);
 
-	if (it != mldsaAlgNameFromParameterSet.end())
-	{
+	if (it != mldsaAlgNameFromParameterSet.end()) {
 		return it->second;
 	}
 
@@ -279,21 +276,17 @@ const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet)
 #endif
 
 #ifdef WITH_SLH_DSA
-const char* OSSL::slhdsaParameterSet2Name(unsigned long parameterSet)
-{
+const char* OSSL::slhdsaParameterSet2Name(unsigned long parameterSet) {
 	std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.find(parameterSet);
-	if (it != slhdsaAlgNameFromParameterSet.end())
-	{
+	if (it != slhdsaAlgNameFromParameterSet.end()) {
 		return it->second;
 	}
 	return NULL;
 }
 
-unsigned long OSSL::name2slhdsaParameterSet(const char* name)
-{
+unsigned long OSSL::name2slhdsaParameterSet(const char* name) {
 	if (!name) return 0;
-	for (std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.begin(); it != slhdsaAlgNameFromParameterSet.end(); ++it)
-	{
+	for (std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.begin(); it != slhdsaAlgNameFromParameterSet.end(); ++it) {
 		if (strcmp(it->second, name) == 0) return it->first;
 	}
 	return 0;

@@ -65,6 +65,7 @@
 #include "OSSLSLHDSA.h"
 #endif
 
+
 #include <algorithm>
 #include <string.h>
 #include <openssl/opensslv.h>
@@ -137,9 +138,7 @@ OSSLCryptoFactory::OSSLCryptoFactory()
 			ERROR_MSG("can't enter into FIPS mode");
 			return;
 		}
-	}
-	else
-	{
+	} else {
 		// Undo RAND_cleanup()
 		RAND_init_fips();
 	}
@@ -364,10 +363,6 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 #ifdef WITH_ML_DSA
 		case AsymAlgo::MLDSA:
 			return new OSSLMLDSA();
-#endif
-#ifdef WITH_SLH_DSA
-	case AsymAlgo::SLHDSA:
-		return new OSSLSLHDSA();
 #endif
 		default:
 			break;
