@@ -64,12 +64,12 @@ const char* OSSLMLDSAPrivateKey::type = "OpenSSL ML-DSA Private Key";
 bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 {
 	ByteString localSeed;
-	uint8_t seed[32];
-	size_t seed_len;
+	uint8_t osslSeed[32];
+	size_t osslSeed_len;
 	int rv = EVP_PKEY_get_octet_string_param(inMLDSAKEY, OSSL_PKEY_PARAM_ML_DSA_SEED,
-								seed, sizeof(seed), &seed_len);
-	if(rv && seed_len == 32) {
-		localSeed = ByteString(seed, seed_len);
+								osslSeed, sizeof(osslSeed), &osslSeed_len);
+	if(rv && osslSeed_len == 32) {
+		localSeed = ByteString(osslSeed, osslSeed_len);
 	}
 	
 	// let's use max priv length
@@ -79,7 +79,7 @@ bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 									priv, sizeof(priv), &priv_len);
 	if(!rv) {
 		ERROR_MSG("Could not get private key, rv: %d", rv);
-		memset(seed, 0, sizeof(seed));
+		memset(osslSeed, 0, sizeof(osslSeed));
 		memset(priv, 0, sizeof(priv));
 		return false;
 	}
@@ -89,7 +89,7 @@ bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 	    priv_len != MLDSAParameters::ML_DSA_87_PRIV_LENGTH)
 	{
 		ERROR_MSG("Unsupported ML-DSA private key length: %zu", priv_len);
-		memset(seed, 0, sizeof(seed));
+		memset(osslSeed, 0, sizeof(osslSeed));
 		memset(priv, 0, sizeof(priv));
 		return false;
 	}
@@ -97,7 +97,7 @@ bool OSSLMLDSAPrivateKey::setFromOSSL(const EVP_PKEY* inMLDSAKEY)
 	// Commit state atomically after successful extraction
 	setSeed(localSeed);
 	setValue(ByteString(priv, priv_len));
-	memset(seed, 0, sizeof(seed));
+	memset(osslSeed, 0, sizeof(osslSeed));
 	memset(priv, 0, sizeof(priv));
 	return true;
 }

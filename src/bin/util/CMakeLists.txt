@@ -43,3 +43,7 @@ install(TARGETS ${PROJECT_NAME}
 install(FILES ${PROJECT_NAME}.1
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
         )
+
+if(BUILD_TESTS)
+    add_subdirectory(test)
+endif(BUILD_TESTS)

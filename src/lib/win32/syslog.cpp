@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <vector>
+#include "log.h"
 
 #ifdef _WIN32
 
@@ -33,14 +35,15 @@ openlog(const char *ident, int , int ) {
 void
 syslog(int priority, const char *message, ...) {
 	va_list ap;
-	char buf[1024];
+	std::vector<char> logMessage;
+	logMessage.resize(MAX_LOG_MESSAGE_SIZE);
 	LPCSTR str[1];
 
-	str[0] = buf;
-
 	va_start(ap, message);
-	vsprintf(buf, message, ap);
+	vsnprintf(&logMessage[0], MAX_LOG_MESSAGE_SIZE, message, ap);
 	va_end(ap);
+
+	str[0] = &logMessage[0];
 
 	/* Make sure that the channel is open to write the event */
 	if (hEventLog == NULL) {

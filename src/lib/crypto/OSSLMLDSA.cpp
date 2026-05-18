@@ -478,23 +478,23 @@ bool OSSLMLDSA::checkEncryptedDataSize(PrivateKey * /* privateKey*/, const ByteS
 }
 
 // Key factory
-bool OSSLMLDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameters *parameters, RNG * /*rng = NULL */)
+bool OSSLMLDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameters *inParameters, RNG * /*rng = NULL */)
 {
 	// Check parameters
 	if ((ppKeyPair == NULL) ||
-		(parameters == NULL))
+		(inParameters == NULL))
 	{
 		return false;
 	}
 
-	if (!parameters->areOfType(MLDSAParameters::type))
+	if (!inParameters->areOfType(MLDSAParameters::type))
 	{
 		ERROR_MSG("Invalid parameters supplied for ML-DSA key generation");
 
 		return false;
 	}
 
-	MLDSAParameters *params = (MLDSAParameters *)parameters;
+	MLDSAParameters *params = (MLDSAParameters *)inParameters;
 	unsigned long parameterSet = params->getParameterSet();
 	const char* name = OSSL::mldsaParameterSet2Name(parameterSet);
 
