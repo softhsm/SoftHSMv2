@@ -57,6 +57,7 @@ Botan-*
 ROOT
 *.cmake
 CMakeFiles
+compile_commands.json
 
 # Specifics
 softhsm2.module
