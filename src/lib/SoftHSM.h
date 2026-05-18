@@ -68,6 +68,7 @@ public:
 	virtual ~SoftHSM();
 
 	// PKCS #11 functions
+	// NOTE: keep synchronised with "PKCS #11 function list"
 	CK_RV C_Initialize(CK_VOID_PTR pInitArgs);
 	CK_RV C_Finalize(CK_VOID_PTR pReserved);
 	CK_RV C_GetInfo(CK_INFO_PTR pInfo);
