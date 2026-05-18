@@ -45,36 +45,36 @@
 
 namespace OSSL
 {
-// Convert an OpenSSL BIGNUM to a ByteString
-ByteString bn2ByteString(const BIGNUM* bn);
+	// Convert an OpenSSL BIGNUM to a ByteString
+	ByteString bn2ByteString(const BIGNUM* bn);
 
-// Convert a ByteString to an OpenSSL BIGNUM
-BIGNUM* byteString2bn(const ByteString& byteString);
+	// Convert a ByteString to an OpenSSL BIGNUM
+	BIGNUM* byteString2bn(const ByteString& byteString);
 
 #ifdef WITH_ECC
-// Convert an OpenSSL EC GROUP to a ByteString
-ByteString grp2ByteString(const EC_GROUP* grp);
+	// Convert an OpenSSL EC GROUP to a ByteString
+	ByteString grp2ByteString(const EC_GROUP* grp);
 
-// Convert a ByteString to an OpenSSL EC GROUP
-EC_GROUP* byteString2grp(const ByteString& byteString);
+	// Convert a ByteString to an OpenSSL EC GROUP
+	EC_GROUP* byteString2grp(const ByteString& byteString);
 
-// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
-ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
+	// Convert an OpenSSL EC POINT in the given EC GROUP to a ByteString
+	ByteString pt2ByteString(const EC_POINT* pt, const EC_GROUP* grp);
 
-// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
-EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
+	// Convert a ByteString to an OpenSSL EC POINT in the given EC GROUP
+	EC_POINT* byteString2pt(const ByteString& byteString, const EC_GROUP* grp);
 #endif
 
 #ifdef WITH_EDDSA
-// Convert an OpenSSL NID to a ByteString
-ByteString oid2ByteString(int nid);
+	// Convert an OpenSSL NID to a ByteString
+	ByteString oid2ByteString(int nid);
 
-// Convert a ByteString to an OpenSSL NID
-int byteString2oid(const ByteString& byteString);
+	// Convert a ByteString to an OpenSSL NID
+	int byteString2oid(const ByteString& byteString);
 #endif
 
 #ifdef WITH_ML_DSA
-const char* mldsaParameterSet2Name(unsigned long parameterSet);
+	const char* mldsaParameterSet2Name(unsigned long parameterSet);
 #endif
 
 #ifdef WITH_SLH_DSA

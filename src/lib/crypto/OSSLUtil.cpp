@@ -163,24 +163,24 @@ ByteString OSSL::oid2ByteString(int nid)
 
 	switch (nid)
 	{
-	case EVP_PKEY_ED25519:
-		name = "edwards25519";
-		break;
+		case EVP_PKEY_ED25519:
+			name = "edwards25519";
+			break;
 
-	case EVP_PKEY_X25519:
-		name = "curve25519";
-		break;
+		case EVP_PKEY_X25519:
+			name = "curve25519";
+			break;
 
-	case EVP_PKEY_ED448:
-		name = "edwards448";
-		break;
+		case EVP_PKEY_ED448:
+			name = "edwards448";
+			break;
 
-	case EVP_PKEY_X448:
-		name = "curve448";
-		break;
+		case EVP_PKEY_X448:
+			name = "curve448";
+			break;
 
-	default:
-		return rv;
+		default:
+			return rv;
 	}
 
 	ASN1_PRINTABLESTRING *str = ASN1_PRINTABLESTRING_new();

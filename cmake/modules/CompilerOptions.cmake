@@ -393,8 +393,21 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
 
     # acx_openssl_slhdsa.m4
     if(ENABLE_SLHDSA)
-        set(WITH_SLH_DSA 1)
-        message(STATUS "OpenSSL: SLH-DSA support enabled")
+        # SLH-DSA
+        set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_slhdsa.c)
+        try_run(RUN_SLHDSA COMPILE_RESULT
+                "${CMAKE_BINARY_DIR}/prebuild_santity_tests" ${testfile}
+                LINK_LIBRARIES ${CRYPTO_LIBS}
+                CMAKE_FLAGS
+                    "-DINCLUDE_DIRECTORIES=${CRYPTO_INCLUDES}"
+                )
+        if(COMPILE_RESULT AND RUN_SLHDSA EQUAL 0)
+            set(WITH_SLH_DSA 1)
+            message(STATUS "OpenSSL: Found SLH-DSA")
+        else()
+            set(error_msg "OpenSSL: Cannot find SLH-DSA! OpenSSL library has no SLH-DSA support!")
+            message(FATAL_ERROR ${error_msg})
+        endif()
     else(ENABLE_SLHDSA)
         message(STATUS "OpenSSL: Support for SLH-DSA is disabled")
     endif(ENABLE_SLHDSA)

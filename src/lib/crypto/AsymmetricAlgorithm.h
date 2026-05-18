@@ -119,79 +119,54 @@ public:
 	AsymmetricAlgorithm();
 
 	// Destructor
-	virtual ~AsymmetricAlgorithm() {}
+	virtual ~AsymmetricAlgorithm() { }
 
 	// Signing functions
-	virtual bool sign(PrivateKey *privateKey, const ByteString &dataToSign,
-	                  ByteString &signature, const AsymMech::Type mechanism,
-	                  const void *param = NULL, const size_t paramLen = 0,
-	                  const MechanismParam *mechanismParam = NULL);
-	virtual bool signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
-	                      const void *param = NULL, const size_t paramLen = 0,
-	                      const MechanismParam *mechanismParam = NULL);
-	virtual bool signUpdate(const ByteString &dataToSign);
-	virtual bool signFinal(ByteString &signature);
+	virtual bool sign(PrivateKey* privateKey, const ByteString& dataToSign, ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool signInit(PrivateKey* privateKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool signUpdate(const ByteString& dataToSign);
+	virtual bool signFinal(ByteString& signature);
 
 	// Verification functions
-	virtual bool verify(PublicKey *publicKey, const ByteString &originalData,
-	                    const ByteString &signature,
-	                    const AsymMech::Type mechanism, const void *param = NULL,
-	                    const size_t paramLen = 0,
-	                    const MechanismParam *mechanismParam = NULL);
-	virtual bool verifyInit(PublicKey *publicKey, const AsymMech::Type mechanism,
-	                        const void *param = NULL, const size_t paramLen = 0,
-	                        const MechanismParam *mechanismParam = NULL);
-	virtual bool verifyUpdate(const ByteString &originalData);
-	virtual bool verifyFinal(const ByteString &signature);
+	virtual bool verify(PublicKey* publicKey, const ByteString& originalData, const ByteString& signature, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism, const void* param = NULL, const size_t paramLen = 0, const MechanismParam* mechanismParam = NULL);
+	virtual bool verifyUpdate(const ByteString& originalData);
+	virtual bool verifyFinal(const ByteString& signature);
 
 	// Encryption functions
-	virtual bool encrypt(PublicKey *publicKey, const ByteString &data,
-	                     ByteString &encryptedData,
-	                     const AsymMech::Type padding) = 0;
+	virtual bool encrypt(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding) = 0;
 
 	// Decryption functions
-	virtual bool decrypt(PrivateKey *privateKey, const ByteString &encryptedData,
-	                     ByteString &data, const AsymMech::Type padding) = 0;
+	virtual bool decrypt(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding) = 0;
 
 	// Wrap/Unwrap keys
-	bool wrapKey(PublicKey *publicKey, const ByteString &data,
-	             ByteString &encryptedData, const AsymMech::Type padding);
-	bool unwrapKey(PrivateKey *privateKey, const ByteString &encryptedData,
-	               ByteString &data, const AsymMech::Type padding);
+	bool wrapKey(PublicKey* publicKey, const ByteString& data, ByteString& encryptedData, const AsymMech::Type padding);
+	bool unwrapKey(PrivateKey* privateKey, const ByteString& encryptedData, ByteString& data, const AsymMech::Type padding);
 
 	// Key factory
-	virtual bool generateKeyPair(AsymmetricKeyPair **ppKeyPair,
-	                             AsymmetricParameters *parameters,
-	                             RNG *rng = NULL) = 0;
+	virtual bool generateKeyPair(AsymmetricKeyPair** ppKeyPair, AsymmetricParameters* parameters, RNG* rng = NULL) = 0;
 	virtual unsigned long getMinKeySize() = 0;
 	virtual unsigned long getMaxKeySize() = 0;
-	virtual bool generateParameters(AsymmetricParameters **ppParams,
-	                                void *parameters = NULL, RNG *rng = NULL);
-	virtual bool deriveKey(SymmetricKey **ppSymmetricKey, PublicKey *publicKey,
-	                       PrivateKey *privateKey);
-	virtual bool reconstructKeyPair(AsymmetricKeyPair **ppKeyPair,
-	                                ByteString &serialisedData) = 0;
-	virtual bool reconstructPublicKey(PublicKey **ppPublicKey,
-	                                  ByteString &serialisedData) = 0;
-	virtual bool reconstructPrivateKey(PrivateKey **ppPrivateKey,
-	                                   ByteString &serialisedData) = 0;
-	virtual bool reconstructParameters(AsymmetricParameters **ppParams,
-	                                   ByteString &serialisedData);
-	virtual PublicKey *newPublicKey() = 0;
-	virtual PrivateKey *newPrivateKey() = 0;
-	virtual AsymmetricParameters *newParameters();
+	virtual bool generateParameters(AsymmetricParameters** ppParams, void* parameters = NULL, RNG* rng = NULL);
+	virtual bool deriveKey(SymmetricKey **ppSymmetricKey, PublicKey* publicKey, PrivateKey* privateKey);
+	virtual bool reconstructKeyPair(AsymmetricKeyPair** ppKeyPair, ByteString& serialisedData) = 0;
+	virtual bool reconstructPublicKey(PublicKey** ppPublicKey, ByteString& serialisedData) = 0;
+	virtual bool reconstructPrivateKey(PrivateKey** ppPrivateKey, ByteString& serialisedData) = 0;
+	virtual bool reconstructParameters(AsymmetricParameters** ppParams, ByteString& serialisedData);
+	virtual PublicKey* newPublicKey() = 0;
+	virtual PrivateKey* newPrivateKey() = 0;
+	virtual AsymmetricParameters* newParameters();
 
-	// Key recycling -- override these functions in a derived class if you need to
-	// perform specific cleanup
-	virtual void recycleKeyPair(AsymmetricKeyPair *toRecycle);
-	virtual void recycleParameters(AsymmetricParameters *toRecycle);
-	virtual void recyclePublicKey(PublicKey *toRecycle);
-	virtual void recyclePrivateKey(PrivateKey *toRecycle);
-	virtual void recycleSymmetricKey(SymmetricKey *toRecycle);
+	// Key recycling -- override these functions in a derived class if you need to perform specific cleanup
+	virtual void recycleKeyPair(AsymmetricKeyPair* toRecycle);
+	virtual void recycleParameters(AsymmetricParameters* toRecycle);
+	virtual void recyclePublicKey(PublicKey* toRecycle);
+	virtual void recyclePrivateKey(PrivateKey* toRecycle);
+	virtual void recycleSymmetricKey(SymmetricKey* toRecycle);
 
 protected:
-	PublicKey *currentPublicKey;
-	PrivateKey *currentPrivateKey;
+	PublicKey* currentPublicKey;
+	PrivateKey* currentPrivateKey;
 
 	AsymMech::Type currentMechanism;
 	AsymMech::Type currentPadding;

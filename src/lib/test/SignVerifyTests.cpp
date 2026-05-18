@@ -95,9 +95,9 @@ CK_RV SignVerifyTests::generateRSA(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPu
 	hPuk = CK_INVALID_HANDLE;
 	hPrk = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
-	                       pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
-	                       prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
-	                       &hPuk, &hPrk) );
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
 }
 
 #ifdef WITH_ECC
@@ -163,9 +163,9 @@ CK_RV SignVerifyTests::generateEC(const char* curve, CK_SESSION_HANDLE hSession,
 	hPuk = CK_INVALID_HANDLE;
 	hPrk = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
-	                       pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
-	                       prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
-	                       &hPuk, &hPrk) );
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
 }
 #endif
 
@@ -230,9 +230,9 @@ CK_RV SignVerifyTests::generateED(const char* curve, CK_SESSION_HANDLE hSession,
 	hPuk = CK_INVALID_HANDLE;
 	hPrk = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
-	                       pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
-	                       prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
-	                       &hPuk, &hPrk) );
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
 }
 #endif
 
@@ -320,9 +320,9 @@ CK_RV SignVerifyTests::generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE h
 	hPuk = CK_INVALID_HANDLE;
 	hPrk = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
-	                       pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
-	                       prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
-	                       &hPuk, &hPrk) );
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
 }
 #endif
 
@@ -368,7 +368,7 @@ void SignVerifyTests::signVerifySingleData(size_t dataSize, CK_MECHANISM_TYPE me
 
 	CPPUNIT_ASSERT(data != NULL);
 
-	for (i=0; i<dataSize; i++)
+	for (i=0;i<dataSize;i++)
 		data[i] = i;
 
 	rv = CRYPTOKI_F_PTR( C_SignInit(hSession,&mechanism,hPrivateKey) );
@@ -609,54 +609,54 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA, hSessionRO, hPuk,hPrk);
 
 	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
 
 	// Private Session Keys
 	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
@@ -670,54 +670,54 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA, hSessionRO, hPuk,hPrk);
 
 	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
 
 	// Public Token Keys
 	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
@@ -731,54 +731,54 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA, hSessionRO, hPuk,hPrk);
 
 	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
 
 	// Private Token Keys
 	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
@@ -792,54 +792,54 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA, hSessionRO, hPuk,hPrk);
 
 	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA1, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA224, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk,hPrk);
 
-	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
-	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
-	CPPUNIT_ASSERT(rv == CKR_OK);
-	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
+    rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+    CPPUNIT_ASSERT(rv == CKR_OK);
+    signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk,hPrk);
 }
 #endif
 
@@ -936,8 +936,8 @@ void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
 	CK_OBJECT_HANDLE hPuk = CK_INVALID_HANDLE;
 	CK_OBJECT_HANDLE hPrk = CK_INVALID_HANDLE;
 
-	CK_BYTE data[] = "context-context-context";
-	CK_ULONG dataSize = (CK_ULONG)(sizeof(data) - 1); // exclude trailing NULL
+    CK_BYTE data[] = "context-context-context";
+    CK_ULONG dataSize = (CK_ULONG)(sizeof(data) - 1); // exclude trailing NULL
 
 	CK_SIGN_ADDITIONAL_CONTEXT params[] =
 	{
@@ -1144,8 +1144,8 @@ CK_RV SignVerifyTests::generateDes2Key(CK_SESSION_HANDLE hSession, CK_BBOOL bTok
 
 	hKey = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKey(hSession, &mechanism,
-	                                     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
-	                                     &hKey) );
+			     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
+			     &hKey) );
 }
 
 CK_RV SignVerifyTests::generateDes3Key(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey)
@@ -1164,8 +1164,8 @@ CK_RV SignVerifyTests::generateDes3Key(CK_SESSION_HANDLE hSession, CK_BBOOL bTok
 
 	hKey = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKey(hSession, &mechanism,
-	                                     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
-	                                     &hKey) );
+			     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
+			     &hKey) );
 }
 
 CK_RV SignVerifyTests::generateAesKey(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey)
@@ -1186,8 +1186,8 @@ CK_RV SignVerifyTests::generateAesKey(CK_SESSION_HANDLE hSession, CK_BBOOL bToke
 
 	hKey = CK_INVALID_HANDLE;
 	return CRYPTOKI_F_PTR( C_GenerateKey(hSession, &mechanism,
-	                                     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
-	                                     &hKey) );
+			     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
+			     &hKey) );
 }
 
 void SignVerifyTests::macSignVerify(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)

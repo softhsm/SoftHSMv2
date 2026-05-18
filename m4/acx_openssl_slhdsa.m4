@@ -20,6 +20,7 @@ AC_DEFUN([ACX_OPENSSL_SLHDSA],[
     					EVP_PKEY_CTX_new_from_name(NULL, "SLH-DSA-SHA2-128s", NULL);
 						if (pctx == NULL)
 							return 1;
+						EVP_PKEY_CTX_free(pctx);
 						return 0;
 				}
 			]])

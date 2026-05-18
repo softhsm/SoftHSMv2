@@ -80,13 +80,13 @@ bool P11Object::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrClass->init() ||
-	    !attrToken->init() ||
-	    !attrPrivate->init() ||
-	    !attrModifiable->init() ||
-	    !attrLabel->init() ||
-	    !attrCopyable->init() ||
-	    !attrDestroyable->init()
+		!attrClass->init() ||
+		!attrToken->init() ||
+		!attrPrivate->init() ||
+		!attrModifiable->init() ||
+		!attrLabel->init() ||
+		!attrCopyable->init() ||
+		!attrDestroyable->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -174,7 +174,7 @@ CK_RV P11Object::loadTemplate(Token *token, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG
 		}
 		else if (retrieve_rv != CKR_OK)
 		{
-			return CKR_GENERAL_ERROR;
+		    return CKR_GENERAL_ERROR;
 		}
 
 	}
@@ -261,8 +261,8 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 		//  ck3  MUST be specified when object is generated with C_GenerateKey or C_GenerateKeyPair.
 		//  ck5  MUST be specified when object is unwrapped with C_UnwrapKey.
 		if (((checks & P11Attribute::ck1) == P11Attribute::ck1 && op == OBJECT_OP_CREATE) ||
-		        ((checks & P11Attribute::ck3) == P11Attribute::ck3 && op == OBJECT_OP_GENERATE) ||
-		        ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_UNWRAP))
+		    ((checks & P11Attribute::ck3) == P11Attribute::ck3 && op == OBJECT_OP_GENERATE) ||
+		    ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_UNWRAP))
 		{
 			bool isSpecified = false;
 
@@ -368,9 +368,9 @@ bool P11DataObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrApplication->init() ||
-	    !attrObjectID->init() ||
-	    !attrValue->init()
+		!attrApplication->init() ||
+		!attrObjectID->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -434,13 +434,13 @@ bool P11CertificateObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrCertificateType->init() ||
-	    !attrTrusted->init() ||
-	    !attrCertificateCategory->init() ||
-	    !attrCheckValue->init() ||
-	    !attrStartDate->init() ||
-	    !attrEndDate->init() ||
-	    !attrPublicKeyInfo->init()
+		!attrCertificateType->init() ||
+		!attrTrusted->init() ||
+		!attrCertificateCategory->init() ||
+		!attrCheckValue->init() ||
+		!attrStartDate->init() ||
+		!attrEndDate->init() ||
+		!attrPublicKeyInfo->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -504,16 +504,16 @@ bool P11X509CertificateObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrSubject->init() ||
-	    !attrID->init() ||
-	    !attrIssuer->init() ||
-	    !attrSerialNumber->init() ||
-	    !attrValue->init() ||
-	    !attrURL->init() ||
-	    !attrHashOfSubjectPublicKey->init() ||
-	    !attrHashOfIssuerPublicKey->init() ||
-	    !attrJavaMidpSecurityDomain->init() ||
-	    !attrNameHashAlgorithm->init()
+		!attrSubject->init() ||
+		!attrID->init() ||
+		!attrIssuer->init() ||
+		!attrSerialNumber->init() ||
+		!attrValue->init() ||
+		!attrURL->init() ||
+		!attrHashOfSubjectPublicKey->init() ||
+		!attrHashOfIssuerPublicKey->init() ||
+		!attrJavaMidpSecurityDomain->init() ||
+		!attrNameHashAlgorithm->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -578,12 +578,12 @@ bool P11OpenPGPPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrSubject->init() ||
-	    !attrID->init() ||
-	    !attrIssuer->init() ||
-	    !attrSerialNumber->init() ||
-	    !attrValue->init() ||
-	    !attrURL->init()
+		!attrSubject->init() ||
+		!attrID->init() ||
+		!attrIssuer->init() ||
+		!attrSerialNumber->init() ||
+		!attrValue->init() ||
+		!attrURL->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -635,14 +635,14 @@ bool P11KeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrKeyType->init() ||
-	    !attrID->init() ||
-	    !attrStartDate->init() ||
-	    !attrEndDate->init() ||
-	    !attrDerive->init() ||
-	    !attrLocal->init() ||
-	    !attrKeyGenMechanism->init() ||
-	    !attrAllowedMechanisms->init()
+		!attrKeyType->init() ||
+		!attrID->init() ||
+		!attrStartDate->init() ||
+		!attrEndDate->init() ||
+		!attrDerive->init() ||
+		!attrLocal->init() ||
+		!attrKeyGenMechanism->init() ||
+		!attrAllowedMechanisms->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -715,14 +715,14 @@ bool P11PublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrSubject->init() ||
-	    !attrEncrypt->init() ||
-	    !attrVerify->init() ||
-	    !attrVerifyRecover->init() ||
-	    !attrWrap->init() ||
-	    !attrTrusted->init() ||
-	    !attrWrapTemplate->init() ||
-	    !attrPublicKeyInfo->init()
+		!attrSubject->init() ||
+		!attrEncrypt->init() ||
+		!attrVerify->init() ||
+		!attrVerifyRecover->init() ||
+		!attrWrap->init() ||
+		!attrTrusted->init() ||
+		!attrWrapTemplate->init() ||
+		!attrPublicKeyInfo->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -780,9 +780,9 @@ bool P11RSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrModulus->init() ||
-	    !attrModulusBits->init() ||
-	    !attrPublicExponent->init()
+		!attrModulus->init() ||
+		!attrModulusBits->init() ||
+		!attrPublicExponent->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -831,10 +831,10 @@ bool P11DSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrPrime->init() ||
-	    !attrSubPrime->init() ||
-	    !attrBase->init() ||
-	    !attrValue->init()
+		!attrPrime->init() ||
+		!attrSubPrime->init() ||
+		!attrBase->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -883,8 +883,8 @@ bool P11ECPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrEcParams->init() ||
-	    !attrEcPoint->init()
+		!attrEcParams->init() ||
+		!attrEcPoint->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -929,8 +929,8 @@ bool P11EDPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrEcParams->init() ||
-	    !attrEcPoint->init()
+		!attrEcParams->init() ||
+		!attrEcPoint->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -975,8 +975,8 @@ bool P11MLDSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrParameterSet->init() ||
-	    !attrValue->init()
+		!attrParameterSet->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1022,9 +1022,9 @@ bool P11DHPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrPrime->init() ||
-	    !attrBase->init() ||
-	    !attrValue->init()
+		!attrPrime->init() ||
+		!attrBase->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1073,10 +1073,10 @@ bool P11GOSTPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrValue->init() ||
-	    !attrGostR3410Params->init() ||
-	    !attrGostR3411Params->init() ||
-	    !attrGost28147Params->init()
+		!attrValue->init() ||
+		!attrGostR3410Params->init() ||
+		!attrGostR3411Params->init() ||
+		!attrGost28147Params->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1138,19 +1138,19 @@ bool P11PrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrSubject->init() ||
-	    !attrSensitive->init() ||
-	    !attrDecrypt->init() ||
-	    !attrSign->init() ||
-	    !attrSignRecover->init() ||
-	    !attrUnwrap->init() ||
-	    !attrExtractable->init() ||
-	    !attrAlwaysSensitive->init() ||
-	    !attrNeverExtractable->init() ||
-	    !attrWrapWithTrusted->init() ||
-	    !attrUnwrapTemplate->init() ||
-	    !attrAlwaysAuthenticate->init() ||
-	    !attrPublicKeyInfo->init()
+		!attrSubject->init() ||
+		!attrSensitive->init() ||
+		!attrDecrypt->init() ||
+		!attrSign->init() ||
+		!attrSignRecover->init() ||
+		!attrUnwrap->init() ||
+		!attrExtractable->init() ||
+		!attrAlwaysSensitive->init() ||
+		!attrNeverExtractable->init() ||
+		!attrWrapWithTrusted->init() ||
+		!attrUnwrapTemplate->init() ||
+		!attrAlwaysAuthenticate->init() ||
+		!attrPublicKeyInfo->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1223,14 +1223,14 @@ bool P11RSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrModulus->init() ||
-	    !attrPublicExponent->init() ||
-	    !attrPrivateExponent->init() ||
-	    !attrPrime1->init() ||
-	    !attrPrime2->init() ||
-	    !attrExponent1->init() ||
-	    !attrExponent2->init() ||
-	    !attrCoefficient->init()
+		!attrModulus->init() ||
+		!attrPublicExponent->init() ||
+		!attrPrivateExponent->init() ||
+		!attrPrime1->init() ||
+		!attrPrime2->init() ||
+		!attrExponent1->init() ||
+		!attrExponent2->init() ||
+		!attrCoefficient->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1289,10 +1289,10 @@ bool P11DSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrPrime->init() ||
-	    !attrSubPrime->init() ||
-	    !attrBase->init() ||
-	    !attrValue->init()
+		!attrPrime->init() ||
+		!attrSubPrime->init() ||
+		!attrBase->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1341,8 +1341,8 @@ bool P11ECPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrEcParams->init() ||
-	    !attrValue->init()
+		!attrEcParams->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1387,8 +1387,8 @@ bool P11EDPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrEcParams->init() ||
-	    !attrValue->init()
+		!attrEcParams->init() ||
+		!attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1434,9 +1434,9 @@ bool P11MLDSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrParameterSet->init() ||
-	    !attrValue->init() ||
-	    !attrSeed->init()
+		!attrParameterSet->init() ||
+		!attrValue->init() ||
+		!attrSeed->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1485,10 +1485,10 @@ bool P11DHPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrPrime->init() ||
-	    !attrBase->init() ||
-	    !attrValue->init() ||
-	    !attrValueBits->init()
+		!attrPrime->init() ||
+		!attrBase->init() ||
+		!attrValue->init() ||
+		!attrValueBits->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1539,10 +1539,10 @@ bool P11GOSTPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrValue->init() ||
-	    !attrGostR3410Params->init() ||
-	    !attrGostR3411Params->init() ||
-	    !attrGost28147Params->init()
+		!attrValue->init() ||
+		!attrGostR3410Params->init() ||
+		!attrGostR3411Params->init() ||
+		!attrGost28147Params->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1604,21 +1604,21 @@ bool P11SecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrSensitive->init() ||
-	    !attrEncrypt->init() ||
-	    !attrDecrypt->init() ||
-	    !attrSign->init() ||
-	    !attrVerify->init() ||
-	    !attrWrap->init() ||
-	    !attrUnwrap->init() ||
-	    !attrExtractable->init() ||
-	    !attrAlwaysSensitive->init() ||
-	    !attrNeverExtractable->init() ||
-	    !attrCheckValue->init() ||
-	    !attrWrapWithTrusted->init() ||
-	    !attrTrusted->init() ||
-	    !attrWrapTemplate->init() ||
-	    !attrUnwrapTemplate->init()
+		!attrSensitive->init() ||
+		!attrEncrypt->init() ||
+		!attrDecrypt->init() ||
+		!attrSign->init() ||
+		!attrVerify->init() ||
+		!attrWrap->init() ||
+		!attrUnwrap->init() ||
+		!attrExtractable->init() ||
+		!attrAlwaysSensitive->init() ||
+		!attrNeverExtractable->init() ||
+		!attrCheckValue->init() ||
+		!attrWrapWithTrusted->init() ||
+		!attrTrusted->init() ||
+		!attrWrapTemplate->init() ||
+		!attrUnwrapTemplate->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1690,8 +1690,8 @@ bool P11GenericSecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrValue->init() ||
-	    !attrValueLen->init()
+		!attrValue->init() ||
+		!attrValueLen->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1754,8 +1754,8 @@ bool P11AESSecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrValue->init() ||
-	    !attrValueLen->init()
+		!attrValue->init() ||
+		!attrValueLen->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1858,8 +1858,8 @@ bool P11GOSTSecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrValue->init() ||
-	    !attrGost28147Params->init()
+		!attrValue->init() ||
+		!attrGost28147Params->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1904,8 +1904,8 @@ bool P11DomainObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrKeyType->init() ||
-	    !attrLocal->init()
+		!attrKeyType->init() ||
+		!attrLocal->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1952,10 +1952,10 @@ bool P11DSADomainObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrPrime->init() ||
-	    !attrSubPrime->init() ||
-	    !attrBase->init() ||
-	    !attrPrimeBits->init()
+		!attrPrime->init() ||
+		!attrSubPrime->init() ||
+		!attrBase->init() ||
+		!attrPrimeBits->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -2005,9 +2005,9 @@ bool P11DHDomainObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-	    !attrPrime->init() ||
-	    !attrBase->init() ||
-	    !attrPrimeBits->init()
+		!attrPrime->init() ||
+		!attrBase->init() ||
+		!attrPrimeBits->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");

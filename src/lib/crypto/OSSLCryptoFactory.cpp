@@ -90,7 +90,7 @@ void lock_callback(int mode, int n, const char* file, int line)
 	if ((unsigned) n >= nlocks)
 	{
 		ERROR_MSG("out of range [0..%u[ lock %d at %s:%d",
-		          nlocks, n, file, line);
+			  nlocks, n, file, line);
 
 		return;
 	}
@@ -186,11 +186,11 @@ OSSLCryptoFactory::OSSLCryptoFactory()
 	ENGINE_load_builtin_engines();
 #else
 	OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN |
-	                    OPENSSL_INIT_ENGINE_RDRAND |
-	                    OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
-	                    OPENSSL_INIT_ADD_ALL_CIPHERS |
-	                    OPENSSL_INIT_ADD_ALL_DIGESTS |
-	                    OPENSSL_INIT_LOAD_CONFIG, NULL);
+			    OPENSSL_INIT_ENGINE_RDRAND |
+			    OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
+			    OPENSSL_INIT_ADD_ALL_CIPHERS |
+			    OPENSSL_INIT_ADD_ALL_DIGESTS |
+			    OPENSSL_INIT_LOAD_CONFIG, NULL);
 #endif
 
 	// Initialise the GOST engine
@@ -221,9 +221,9 @@ OSSLCryptoFactory::OSSLCryptoFactory()
 		goto err;
 	}
 	if (ENGINE_ctrl_cmd_string(eg,
-	                           "CRYPT_PARAMS",
-	                           "id-Gost28147-89-CryptoPro-A-ParamSet",
-	                           0) <= 0)
+				   "CRYPT_PARAMS",
+				   "id-Gost28147-89-CryptoPro-A-ParamSet",
+				   0) <= 0)
 	{
 		ERROR_MSG("can't set params of the GOST engine");
 		goto err;
@@ -322,13 +322,13 @@ SymmetricAlgorithm* OSSLCryptoFactory::getSymmetricAlgorithm(SymAlgo::Type algor
 {
 	switch (algorithm)
 	{
-	case SymAlgo::AES:
-		return new OSSLAES();
-	case SymAlgo::DES:
-	case SymAlgo::DES3:
-		return new OSSLDES();
-	default:
-		break;
+		case SymAlgo::AES:
+			return new OSSLAES();
+		case SymAlgo::DES:
+		case SymAlgo::DES3:
+			return new OSSLDES();
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
@@ -341,36 +341,36 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 {
 	switch (algorithm)
 	{
-	case AsymAlgo::RSA:
-		return new OSSLRSA();
-	case AsymAlgo::DSA:
-		return new OSSLDSA();
-	case AsymAlgo::DH:
-		return new OSSLDH();
+		case AsymAlgo::RSA:
+			return new OSSLRSA();
+		case AsymAlgo::DSA:
+			return new OSSLDSA();
+		case AsymAlgo::DH:
+			return new OSSLDH();
 #ifdef WITH_ECC
-	case AsymAlgo::ECDH:
-		return new OSSLECDH();
-	case AsymAlgo::ECDSA:
-		return new OSSLECDSA();
+		case AsymAlgo::ECDH:
+			return new OSSLECDH();
+		case AsymAlgo::ECDSA:
+			return new OSSLECDSA();
 #endif
 #ifdef WITH_GOST
-	case AsymAlgo::GOST:
-		return new OSSLGOST();
+		case AsymAlgo::GOST:
+			return new OSSLGOST();
 #endif
 #ifdef WITH_EDDSA
-	case AsymAlgo::EDDSA:
-		return new OSSLEDDSA();
+		case AsymAlgo::EDDSA:
+			return new OSSLEDDSA();
 #endif
 #ifdef WITH_ML_DSA
-	case AsymAlgo::MLDSA:
-		return new OSSLMLDSA();
+		case AsymAlgo::MLDSA:
+			return new OSSLMLDSA();
 #endif
 #ifdef WITH_SLH_DSA
 	case AsymAlgo::SLHDSA:
 		return new OSSLSLHDSA();
 #endif
-	default:
-		break;
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
@@ -383,24 +383,24 @@ HashAlgorithm* OSSLCryptoFactory::getHashAlgorithm(HashAlgo::Type algorithm)
 {
 	switch (algorithm)
 	{
-	case HashAlgo::MD5:
-		return new OSSLMD5();
-	case HashAlgo::SHA1:
-		return new OSSLSHA1();
-	case HashAlgo::SHA224:
-		return new OSSLSHA224();
-	case HashAlgo::SHA256:
-		return new OSSLSHA256();
-	case HashAlgo::SHA384:
-		return new OSSLSHA384();
-	case HashAlgo::SHA512:
-		return new OSSLSHA512();
+		case HashAlgo::MD5:
+			return new OSSLMD5();
+		case HashAlgo::SHA1:
+			return new OSSLSHA1();
+		case HashAlgo::SHA224:
+			return new OSSLSHA224();
+		case HashAlgo::SHA256:
+			return new OSSLSHA256();
+		case HashAlgo::SHA384:
+			return new OSSLSHA384();
+		case HashAlgo::SHA512:
+			return new OSSLSHA512();
 #ifdef WITH_GOST
-	case HashAlgo::GOST:
-		return new OSSLGOSTR3411();
+		case HashAlgo::GOST:
+			return new OSSLGOSTR3411();
 #endif
-	default:
-		break;
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
@@ -413,28 +413,28 @@ MacAlgorithm* OSSLCryptoFactory::getMacAlgorithm(MacAlgo::Type algorithm)
 {
 	switch (algorithm)
 	{
-	case MacAlgo::HMAC_MD5:
-		return new OSSLHMACMD5();
-	case MacAlgo::HMAC_SHA1:
-		return new OSSLHMACSHA1();
-	case MacAlgo::HMAC_SHA224:
-		return new OSSLHMACSHA224();
-	case MacAlgo::HMAC_SHA256:
-		return new OSSLHMACSHA256();
-	case MacAlgo::HMAC_SHA384:
-		return new OSSLHMACSHA384();
-	case MacAlgo::HMAC_SHA512:
-		return new OSSLHMACSHA512();
+		case MacAlgo::HMAC_MD5:
+			return new OSSLHMACMD5();
+		case MacAlgo::HMAC_SHA1:
+			return new OSSLHMACSHA1();
+		case MacAlgo::HMAC_SHA224:
+			return new OSSLHMACSHA224();
+		case MacAlgo::HMAC_SHA256:
+			return new OSSLHMACSHA256();
+		case MacAlgo::HMAC_SHA384:
+			return new OSSLHMACSHA384();
+		case MacAlgo::HMAC_SHA512:
+			return new OSSLHMACSHA512();
 #ifdef WITH_GOST
-	case MacAlgo::HMAC_GOST:
-		return new OSSLHMACGOSTR3411();
+		case MacAlgo::HMAC_GOST:
+			return new OSSLHMACGOSTR3411();
 #endif
-	case MacAlgo::CMAC_DES:
-		return new OSSLCMACDES();
-	case MacAlgo::CMAC_AES:
-		return new OSSLCMACAES();
-	default:
-		break;
+		case MacAlgo::CMAC_DES:
+			return new OSSLCMACDES();
+		case MacAlgo::CMAC_AES:
+			return new OSSLCMACAES();
+		default:
+			break;
 	}
 
 	// No algorithm implementation is available
