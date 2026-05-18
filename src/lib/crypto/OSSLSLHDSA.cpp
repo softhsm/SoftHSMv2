@@ -25,9 +25,9 @@
 // Signing functions
 /** \brief sign */
 bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
-					 ByteString &signature, const AsymMech::Type mechanism,
-					 const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
-					 const MechanismParam* mechanismParam)
+                      ByteString &signature, const AsymMech::Type mechanism,
+                      const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
+                      const MechanismParam* mechanismParam)
 {
 	if (mechanism != AsymMech::SLHDSA)
 	{
@@ -36,10 +36,10 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	}
 
 	if (privateKey == NULL)
-    {
-        ERROR_MSG("No private key supplied");
-        return false;
-    }
+	{
+		ERROR_MSG("No private key supplied");
+		return false;
+	}
 
 	// Check if the private key is the right type
 	if (!privateKey->isOfType(OSSLSLHDSAPrivateKey::type))
@@ -71,94 +71,103 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	size_t len = 0;
 
 	OSSL_PARAM params[4], *p = params;
-	
+
 	int local_deterministic = 1;
 	int local_random = 0;
 	const SLHDSAMechanismParam* slhdsaSignatureParam = dynamic_cast<const SLHDSAMechanismParam*>(mechanismParam);
 	ByteString context;
-	if (slhdsaSignatureParam != NULL) {
+	if (slhdsaSignatureParam != NULL)
+	{
 		Hedge::Type type = slhdsaSignatureParam->hedgeType;
-		if (slhdsaSignatureParam->additionalContext.size() > 0) {
+		if (slhdsaSignatureParam->additionalContext.size() > 0)
+		{
 			context = slhdsaSignatureParam->additionalContext;
 			size_t contextSize = context.size();
-			if (contextSize > 255) {
+			if (contextSize > 255)
+			{
 				ERROR_MSG("Invalid parameters, context length > 255");
 				return false;
 			}
 			*p++ = OSSL_PARAM_construct_octet_string(OSSL_SIGNATURE_PARAM_CONTEXT_STRING, context.byte_str(), contextSize);
 		}
-		switch (type) {
-			case Hedge::Type::DETERMINISTIC_REQUIRED:
-				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_deterministic);
-				break;
-			case Hedge::Type::HEDGE_REQUIRED:
-			default:
-				*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_random);
-				break;
+		switch (type)
+		{
+		case Hedge::Type::DETERMINISTIC_REQUIRED:
+			*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_deterministic);
+			break;
+		case Hedge::Type::HEDGE_REQUIRED:
+		default:
+			*p++ = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_random);
+			break;
 		}
 		*p = OSSL_PARAM_construct_end();
 	}
-	
+
 	EVP_PKEY_CTX *sctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
 	if (sctx == NULL)
-    {
-        ERROR_MSG("SLH-DSA sign sctx alloc failed");
-        return false;
-    }
+	{
+		ERROR_MSG("SLH-DSA sign sctx alloc failed");
+		return false;
+	}
 
 	unsigned long parameterSet = pk->getParameterSet();
 	const char* name = OSSL::slhdsaParameterSet2Name(parameterSet);
-	if (name == NULL) 
+	if (name == NULL)
 	{
-        ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", parameterSet);
-        EVP_PKEY_CTX_free(sctx);
-        return false;
-    }
+		ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", parameterSet);
+		EVP_PKEY_CTX_free(sctx);
+		return false;
+	}
 
 	EVP_SIGNATURE *sig_alg = EVP_SIGNATURE_fetch(NULL, name, NULL);
-	if (sig_alg == NULL) {
+	if (sig_alg == NULL)
+	{
 		ERROR_MSG("SLH-DSA EVP_SIGNATURE_fetch failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
 	int initRv;
-	if (mechanismParam != NULL) {
+	if (mechanismParam != NULL)
+	{
 		initRv = EVP_PKEY_sign_message_init(sctx, sig_alg, params);
-	} 
-	else 
+	}
+	else
 	{
 		initRv = EVP_PKEY_sign_message_init(sctx, sig_alg, NULL);
 	}
-	if (initRv <= 0) {
+	if (initRv <= 0)
+	{
 		ERROR_MSG("SLH-DSA sign_message_init failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
-    /* Calculate the required size for the signature by passing a NULL buffer. */
-    if (EVP_PKEY_sign(sctx, NULL, &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0) {
+	/* Calculate the required size for the signature by passing a NULL buffer. */
+	if (EVP_PKEY_sign(sctx, NULL, &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0)
+	{
 		ERROR_MSG("SLH-DSA sign size query failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
 	signature.resize(len);
-    if (EVP_PKEY_sign(sctx, &signature[0], &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0) {
+	if (EVP_PKEY_sign(sctx, &signature[0], &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0)
+	{
 		ERROR_MSG("SLH-DSA sign failed (0x%08lX)", ERR_get_error());
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;
 	}
-	
+
 	EVP_SIGNATURE_free(sig_alg);
-    EVP_PKEY_CTX_free(sctx);
+	EVP_PKEY_CTX_free(sctx);
 
 	return true;
 }
 
 /** \brief signInit */
 bool OSSLSLHDSA::signInit(PrivateKey * /*privateKey*/, const AsymMech::Type /*mechanism*/,
-						 const void * /* param = NULL */, const size_t /* paramLen = 0 */)
+                          const void * /* param = NULL */, const size_t /* paramLen = 0 */)
 {
 	ERROR_MSG("SLH-DSA does not support multi part signing");
 
@@ -184,9 +193,9 @@ bool OSSLSLHDSA::signFinal(ByteString & /*signature*/)
 // Verification functions
 /** \brief verify */
 bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
-					   const ByteString &signature, const AsymMech::Type mechanism,
-					   const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
-					   const MechanismParam* mechanismParam)
+                        const ByteString &signature, const AsymMech::Type mechanism,
+                        const void * /* param  = NULL*/, const size_t  /* paramLen = 0 */,
+                        const MechanismParam* mechanismParam)
 {
 	if (mechanism != AsymMech::SLHDSA)
 	{
@@ -195,10 +204,10 @@ bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	}
 
 	if (publicKey == NULL)
-    {
-        ERROR_MSG("No public key supplied");
-        return false;
-    }
+	{
+		ERROR_MSG("No public key supplied");
+		return false;
+	}
 
 	// Check if the public key is the right type
 	if (!publicKey->isOfType(OSSLSLHDSAPublicKey::type))
@@ -241,11 +250,14 @@ bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	OSSL_PARAM params[3], *p = params;
 	const SLHDSAMechanismParam* slhdsaSignatureParam = dynamic_cast<const SLHDSAMechanismParam*>(mechanismParam);
 	ByteString context;
-	if (slhdsaSignatureParam != NULL) {
-		if (slhdsaSignatureParam->additionalContext.size() > 0) {
+	if (slhdsaSignatureParam != NULL)
+	{
+		if (slhdsaSignatureParam->additionalContext.size() > 0)
+		{
 			context = slhdsaSignatureParam->additionalContext;
 			size_t contextSize = context.size();
-			if (contextSize > 255) {
+			if (contextSize > 255)
+			{
 				ERROR_MSG("Invalid parameters, context length > 255");
 				return false;
 			}
@@ -258,61 +270,65 @@ bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	EVP_SIGNATURE *sig_alg = NULL;
 
 	vctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
-	if (vctx == NULL) {
+	if (vctx == NULL)
+	{
 		ERROR_MSG("SLH-DSA EVP_PKEY_CTX_new_from_pkey failed (0x%08lX)", ERR_get_error());
 		return false;
 	}
 
 	unsigned long parameterSet = pk->getParameterSet();
 	const char* name = OSSL::slhdsaParameterSet2Name(parameterSet);
-	
-	if (name == NULL) 
+
+	if (name == NULL)
 	{
-        ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", parameterSet);
-        EVP_PKEY_CTX_free(vctx);
-        return false;
-    }
+		ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", parameterSet);
+		EVP_PKEY_CTX_free(vctx);
+		return false;
+	}
 
 	sig_alg = EVP_SIGNATURE_fetch(NULL, name, NULL);
-	if (sig_alg == NULL) {
+	if (sig_alg == NULL)
+	{
 		ERROR_MSG("SLH-DSA EVP_SIGNATURE_fetch failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(vctx);
 		return false;
 	}
 
 	int initRv;
-	if (mechanismParam != NULL) {
+	if (mechanismParam != NULL)
+	{
 		initRv = EVP_PKEY_verify_message_init(vctx, sig_alg, params);
-	} 
-	else 
+	}
+	else
 	{
 		initRv = EVP_PKEY_verify_message_init(vctx, sig_alg, NULL);
 	}
 
-	if (initRv <= 0) {
+	if (initRv <= 0)
+	{
 		ERROR_MSG("SLH-DSA verify init failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(vctx);
 		EVP_SIGNATURE_free(sig_alg);
 		return false;
 	}
 	int verifyRV = EVP_PKEY_verify(vctx, signature.const_byte_str(), signature.size(),
-                                            originalData.const_byte_str(), originalData.size());
+	                               originalData.const_byte_str(), originalData.size());
 	EVP_PKEY_CTX_free(vctx);
 	EVP_SIGNATURE_free(sig_alg);
-	if (verifyRV != 1) 
+	if (verifyRV != 1)
 	{
-        if (verifyRV != 0) 
+		if (verifyRV != 0)
 		{
-            ERROR_MSG("SLH-DSA verify error (0x%08lX)", ERR_get_error());
-        }
-        return false;
+			ERROR_MSG("SLH-DSA verify error (0x%08lX)", ERR_get_error());
+		}
+		return false;
 	}
 	return true;
 }
 
 /** \brief verifyInit */
 bool OSSLSLHDSA::verifyInit(PublicKey * /*publicKey*/, const AsymMech::Type /*mechanism*/,
-						   const void * /* param = NULL */, const size_t /* paramLen = 0 */)
+                            const void * /* param = NULL */, const size_t /* paramLen = 0 */)
 {
 	ERROR_MSG("SLH-DSA does not support multi part verifying");
 
@@ -338,7 +354,7 @@ bool OSSLSLHDSA::verifyFinal(const ByteString & /*signature*/)
 // Encryption functions
 /** \brief encrypt */
 bool OSSLSLHDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
-						ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/)
+                         ByteString & /*encryptedData*/, const AsymMech::Type /*padding*/)
 {
 	ERROR_MSG("SLH-DSA does not support encryption");
 
@@ -348,7 +364,7 @@ bool OSSLSLHDSA::encrypt(PublicKey * /*publicKey*/, const ByteString & /*data*/,
 // Decryption functions
 /** \brief decrypt */
 bool OSSLSLHDSA::decrypt(PrivateKey * /*privateKey*/, const ByteString & /*encryptedData*/,
-						ByteString & /*data*/, const AsymMech::Type /*padding*/)
+                         ByteString & /*data*/, const AsymMech::Type /*padding*/)
 {
 	ERROR_MSG("SLH-DSA does not support decryption");
 
@@ -381,7 +397,7 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParame
 {
 	// Check parameters
 	if ((ppKeyPair == NULL) ||
-		(parameters == NULL))
+	        (parameters == NULL))
 	{
 		return false;
 	}
@@ -397,28 +413,31 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParame
 	unsigned long parameterSet = params->getParameterSet();
 	const char* name = OSSL::slhdsaParameterSet2Name(parameterSet);
 
-	if (name == NULL) 
+	if (name == NULL)
 	{
-        ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", parameterSet);
-        return false;
-    }
+		ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", parameterSet);
+		return false;
+	}
 
 	EVP_PKEY_CTX *ctx = NULL;
 	EVP_PKEY *pkey = NULL;
 	ctx = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
-	if (ctx == NULL) {
+	if (ctx == NULL)
+	{
 		ERROR_MSG("SLH-DSA keygen context failed (0x%08lX)", ERR_get_error());
 		return false;
 	}
 	int initRV = EVP_PKEY_keygen_init(ctx);
-	if (initRV <= 0) {
+	if (initRV <= 0)
+	{
 		ERROR_MSG("SLH-DSA keygen init failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(ctx);
 		return false;
 	}
 
 	int keygenRV = EVP_PKEY_generate(ctx, &pkey);
-	if (keygenRV <= 0) {
+	if (keygenRV <= 0)
+	{
 		ERROR_MSG("SLH-DSA keygen failed (0x%08lX)", ERR_get_error());
 		EVP_PKEY_CTX_free(ctx);
 		return false;
@@ -430,7 +449,7 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParame
 	((OSSLSLHDSAPublicKey*) kp->getPublicKey())->setFromOSSL(pkey);
 
 	*ppKeyPair = kp;
-	
+
 	// Release the context
 	EVP_PKEY_CTX_free(ctx);
 	// Release the key
@@ -444,7 +463,7 @@ bool OSSLSLHDSA::reconstructKeyPair(AsymmetricKeyPair **ppKeyPair, ByteString &s
 {
 	// Check input
 	if ((ppKeyPair == NULL) ||
-		(serialisedData.size() == 0))
+	        (serialisedData.size() == 0))
 	{
 		return false;
 	}
@@ -483,7 +502,7 @@ bool OSSLSLHDSA::reconstructPublicKey(PublicKey **ppPublicKey, ByteString &seria
 {
 	// Check input
 	if ((ppPublicKey == NULL) ||
-		(serialisedData.size() == 0))
+	        (serialisedData.size() == 0))
 	{
 		return false;
 	}
@@ -507,7 +526,7 @@ bool OSSLSLHDSA::reconstructPrivateKey(PrivateKey **ppPrivateKey, ByteString &se
 {
 	// Check input
 	if ((ppPrivateKey == NULL) ||
-		(serialisedData.size() == 0))
+	        (serialisedData.size() == 0))
 	{
 		return false;
 	}

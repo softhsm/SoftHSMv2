@@ -62,7 +62,7 @@ public:
 	void testSigningVerifyingDeterministic();
 	void testSigningVerifyingDeterministicWithContext();
 	void testSigningVerifyingDeterministicWithContextTooLong();
-	
+
 	void setUp();
 	void tearDown();
 

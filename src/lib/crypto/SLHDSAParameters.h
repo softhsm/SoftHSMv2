@@ -15,23 +15,23 @@
 class SLHDSAParameters : public AsymmetricParameters
 {
 public:
- /** \brief The type */
+	/** \brief The type */
 	static const char* type;
 
- /** \brief Get the SLH-DSA parameter set */
+	/** \brief Get the SLH-DSA parameter set */
 	virtual unsigned long getParameterSet() const;
 
- /** \brief Setters for the SLH-DSA parameter set */
+	/** \brief Setters for the SLH-DSA parameter set */
 	virtual void setParameterSet(const unsigned long parameterSet);
 
- /** \brief Are the parameters of the given type? */
+	/** \brief Are the parameters of the given type? */
 	virtual bool areOfType(const char* inType);
 
- /** \brief Serialisation */
+	/** \brief Serialisation */
 	virtual ByteString serialise() const;
 	virtual bool deserialise(ByteString& serialised);
 
-	
+
 	/* SLH-DSA values for CKA_PARAMETER_SETS */
 	/** \brief SLH-DSA constant */
 	static const unsigned long SLH_DSA_SHA2_128S_PARAMETER_SET = CKP_SLH_DSA_SHA2_128S;
@@ -136,7 +136,7 @@ public:
 
 
 private:
- /** \brief The parameter set */
+	/** \brief The parameter set */
 	unsigned long parameterSet = 0;
 
 };

@@ -50,17 +50,17 @@ bool SLHDSAParameters::deserialise(ByteString& serialised)
 
 	unsigned long parameter = serialised.long_val();
 	if (parameter != SLH_DSA_SHA2_128S_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHAKE_128S_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHA2_128F_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHAKE_128F_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHA2_192S_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHAKE_192S_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHA2_192F_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHAKE_192F_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHA2_256S_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHAKE_256S_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHA2_256F_PARAMETER_SET &&
-	    parameter != SLH_DSA_SHAKE_256F_PARAMETER_SET) 
+	        parameter != SLH_DSA_SHAKE_128S_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHA2_128F_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHAKE_128F_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHA2_192S_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHAKE_192S_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHA2_192F_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHAKE_192F_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHA2_256S_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHAKE_256S_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHA2_256F_PARAMETER_SET &&
+	        parameter != SLH_DSA_SHAKE_256F_PARAMETER_SET)
 	{
 		return false;
 	}

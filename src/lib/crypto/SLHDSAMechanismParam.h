@@ -43,27 +43,27 @@ class SLHDSAMechanismParam : public MechanismParam
 {
 public:
 
- /** \brief The Hedge Type */
+	/** \brief The Hedge Type */
 	Hedge::Type hedgeType;
- /** \brief Additional Context */
+	/** \brief Additional Context */
 	ByteString additionalContext;
 
- /** \brief The type */
+	/** \brief The type */
 	static const char* type;
 
- /** \brief Default constructor */
+	/** \brief Default constructor */
 	SLHDSAMechanismParam();
 
- /** \brief Constructor with Hedge Type */
+	/** \brief Constructor with Hedge Type */
 	SLHDSAMechanismParam(Hedge::Type hedgeType);
 
- /** \brief Constructor with Hedge Type and Additional Context */
+	/** \brief Constructor with Hedge Type and Additional Context */
 	SLHDSAMechanismParam(Hedge::Type hedgeType, const ByteString& additionalContext);
-	
- /** \brief Clone */
+
+	/** \brief Clone */
 	virtual SLHDSAMechanismParam* clone() const override;
 
- /** \brief Check if the mechanism param is of the given type */
+	/** \brief Check if the mechanism param is of the given type */
 	virtual bool isOfType(const char* inType) const;
 };
 

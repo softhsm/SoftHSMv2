@@ -80,13 +80,13 @@ bool P11Object::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrClass->init() ||
-		!attrToken->init() ||
-		!attrPrivate->init() ||
-		!attrModifiable->init() ||
-		!attrLabel->init() ||
-		!attrCopyable->init() ||
-		!attrDestroyable->init()
+	    !attrClass->init() ||
+	    !attrToken->init() ||
+	    !attrPrivate->init() ||
+	    !attrModifiable->init() ||
+	    !attrLabel->init() ||
+	    !attrCopyable->init() ||
+	    !attrDestroyable->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -149,7 +149,8 @@ CK_RV P11Object::loadTemplate(Token *token, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG
 		P11Attribute* attr = attributes[pTemplate[i].type];
 
 		// case 2 of the attribute checks
-		if (attr == NULL) {
+		if (attr == NULL)
+		{
 			pTemplate[i].ulValueLen = CK_UNAVAILABLE_INFORMATION;
 			// If case 2 applies to any of the requested attributes, then the call should
 			// return the value CKR_ATTRIBUTE_TYPE_INVALID.
@@ -159,16 +160,21 @@ CK_RV P11Object::loadTemplate(Token *token, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG
 
 		// case 1,3,4 and 5 of the attribute checks are done while retrieving the attribute itself.
 		CK_RV retrieve_rv = attr->retrieve(token, isPrivate, pTemplate[i].pValue, &pTemplate[i].ulValueLen);
-		if (retrieve_rv == CKR_ATTRIBUTE_SENSITIVE) {
+		if (retrieve_rv == CKR_ATTRIBUTE_SENSITIVE)
+		{
 			// If case 1 applies to any of the requested attributes, then the call should
 			// return the value CKR_ATTRIBUTE_SENSITIVE.
 			sensitive = true;
-		} else if (retrieve_rv == CKR_BUFFER_TOO_SMALL) {
+		}
+		else if (retrieve_rv == CKR_BUFFER_TOO_SMALL)
+		{
 			// If case 5 applies to any of the requested attributes, then the call should
 			// return the value CKR_BUFFER_TOO_SMALL.
 			buffer_too_small = true;
-		} else if (retrieve_rv != CKR_OK) {
-		    return CKR_GENERAL_ERROR;
+		}
+		else if (retrieve_rv != CKR_OK)
+		{
+			return CKR_GENERAL_ERROR;
 		}
 
 	}
@@ -255,8 +261,8 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 		//  ck3  MUST be specified when object is generated with C_GenerateKey or C_GenerateKeyPair.
 		//  ck5  MUST be specified when object is unwrapped with C_UnwrapKey.
 		if (((checks & P11Attribute::ck1) == P11Attribute::ck1 && op == OBJECT_OP_CREATE) ||
-		    ((checks & P11Attribute::ck3) == P11Attribute::ck3 && op == OBJECT_OP_GENERATE) ||
-		    ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_UNWRAP))
+		        ((checks & P11Attribute::ck3) == P11Attribute::ck3 && op == OBJECT_OP_GENERATE) ||
+		        ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_UNWRAP))
 		{
 			bool isSpecified = false;
 
@@ -341,7 +347,8 @@ bool P11DataObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DATA) {
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DATA)
+	{
 		OSAttribute setClass((unsigned long)CKO_DATA);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -361,9 +368,9 @@ bool P11DataObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrApplication->init() ||
-		!attrObjectID->init() ||
-		!attrValue->init()
+	    !attrApplication->init() ||
+	    !attrObjectID->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -395,12 +402,14 @@ bool P11CertificateObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_CERTIFICATE) {
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_CERTIFICATE)
+	{
 		OSAttribute setClass((unsigned long)CKO_CERTIFICATE);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
 	// Make certificates public
-	if (!inobject->attributeExists(CKA_PRIVATE)) {
+	if (!inobject->attributeExists(CKA_PRIVATE))
+	{
 		OSAttribute setPrivate(false);
 		inobject->setAttribute(CKA_PRIVATE, setPrivate);
 	}
@@ -425,13 +434,13 @@ bool P11CertificateObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrCertificateType->init() ||
-		!attrTrusted->init() ||
-		!attrCertificateCategory->init() ||
-		!attrCheckValue->init() ||
-		!attrStartDate->init() ||
-		!attrEndDate->init() ||
-		!attrPublicKeyInfo->init()
+	    !attrCertificateType->init() ||
+	    !attrTrusted->init() ||
+	    !attrCertificateCategory->init() ||
+	    !attrCheckValue->init() ||
+	    !attrStartDate->init() ||
+	    !attrEndDate->init() ||
+	    !attrPublicKeyInfo->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -471,7 +480,8 @@ bool P11X509CertificateObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_X_509) {
+	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_X_509)
+	{
 		OSAttribute setCertType((unsigned long)CKC_X_509);
 		inobject->setAttribute(CKA_CERTIFICATE_TYPE, setCertType);
 	}
@@ -494,16 +504,16 @@ bool P11X509CertificateObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrSubject->init() ||
-		!attrID->init() ||
-		!attrIssuer->init() ||
-		!attrSerialNumber->init() ||
-		!attrValue->init() ||
-		!attrURL->init() ||
-		!attrHashOfSubjectPublicKey->init() ||
-		!attrHashOfIssuerPublicKey->init() ||
-		!attrJavaMidpSecurityDomain->init() ||
-		!attrNameHashAlgorithm->init()
+	    !attrSubject->init() ||
+	    !attrID->init() ||
+	    !attrIssuer->init() ||
+	    !attrSerialNumber->init() ||
+	    !attrValue->init() ||
+	    !attrURL->init() ||
+	    !attrHashOfSubjectPublicKey->init() ||
+	    !attrHashOfIssuerPublicKey->init() ||
+	    !attrJavaMidpSecurityDomain->init() ||
+	    !attrNameHashAlgorithm->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -548,7 +558,8 @@ bool P11OpenPGPPublicKeyObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_OPENPGP) {
+	if (!inobject->attributeExists(CKA_CERTIFICATE_TYPE) || inobject->getUnsignedLongValue(CKA_CERTIFICATE_TYPE, CKC_VENDOR_DEFINED) != CKC_OPENPGP)
+	{
 		OSAttribute setCertType((unsigned long)CKC_OPENPGP);
 		inobject->setAttribute(CKA_CERTIFICATE_TYPE, setCertType);
 	}
@@ -567,12 +578,12 @@ bool P11OpenPGPPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrSubject->init() ||
-		!attrID->init() ||
-		!attrIssuer->init() ||
-		!attrSerialNumber->init() ||
-		!attrValue->init() ||
-		!attrURL->init()
+	    !attrSubject->init() ||
+	    !attrID->init() ||
+	    !attrIssuer->init() ||
+	    !attrSerialNumber->init() ||
+	    !attrValue->init() ||
+	    !attrURL->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -624,14 +635,14 @@ bool P11KeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrKeyType->init() ||
-		!attrID->init() ||
-		!attrStartDate->init() ||
-		!attrEndDate->init() ||
-		!attrDerive->init() ||
-		!attrLocal->init() ||
-		!attrKeyGenMechanism->init() ||
-		!attrAllowedMechanisms->init()
+	    !attrKeyType->init() ||
+	    !attrID->init() ||
+	    !attrStartDate->init() ||
+	    !attrEndDate->init() ||
+	    !attrDerive->init() ||
+	    !attrLocal->init() ||
+	    !attrKeyGenMechanism->init() ||
+	    !attrAllowedMechanisms->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -673,12 +684,14 @@ bool P11PublicKeyObj::init(OSObject *inobject)
 	if (inobject == NULL) return false;
 
 	// Set default values for attributes that will be introduced in the parent
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PUBLIC_KEY) {
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PUBLIC_KEY)
+	{
 		OSAttribute setClass((unsigned long)CKO_PUBLIC_KEY);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
 	// Make public keys public
-	if (!inobject->attributeExists(CKA_PRIVATE)) {
+	if (!inobject->attributeExists(CKA_PRIVATE))
+	{
 		OSAttribute setPrivate(false);
 		inobject->setAttribute(CKA_PRIVATE, setPrivate);
 	}
@@ -702,14 +715,14 @@ bool P11PublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrSubject->init() ||
-		!attrEncrypt->init() ||
-		!attrVerify->init() ||
-		!attrVerifyRecover->init() ||
-		!attrWrap->init() ||
-		!attrTrusted->init() ||
-		!attrWrapTemplate->init() ||
-		!attrPublicKeyInfo->init()
+	    !attrSubject->init() ||
+	    !attrEncrypt->init() ||
+	    !attrVerify->init() ||
+	    !attrVerifyRecover->init() ||
+	    !attrWrap->init() ||
+	    !attrTrusted->init() ||
+	    !attrWrapTemplate->init() ||
+	    !attrPublicKeyInfo->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -750,7 +763,8 @@ bool P11RSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_RSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -766,9 +780,9 @@ bool P11RSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrModulus->init() ||
-		!attrModulusBits->init() ||
-		!attrPublicExponent->init()
+	    !attrModulus->init() ||
+	    !attrModulusBits->init() ||
+	    !attrPublicExponent->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -799,7 +813,8 @@ bool P11DSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -816,10 +831,10 @@ bool P11DSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrPrime->init() ||
-		!attrSubPrime->init() ||
-		!attrBase->init() ||
-		!attrValue->init()
+	    !attrPrime->init() ||
+	    !attrSubPrime->init() ||
+	    !attrBase->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -852,7 +867,8 @@ bool P11ECPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_EC);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -867,8 +883,8 @@ bool P11ECPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrEcParams->init() ||
-		!attrEcPoint->init()
+	    !attrEcParams->init() ||
+	    !attrEcPoint->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -897,7 +913,8 @@ bool P11EDPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_EC_EDWARDS);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -912,8 +929,8 @@ bool P11EDPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrEcParams->init() ||
-		!attrEcPoint->init()
+	    !attrEcParams->init() ||
+	    !attrEcPoint->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -942,7 +959,8 @@ bool P11MLDSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_ML_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -957,8 +975,8 @@ bool P11MLDSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrParameterSet->init() ||
-		!attrValue->init()
+	    !attrParameterSet->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -987,7 +1005,8 @@ bool P11DHPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_DH);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1003,9 +1022,9 @@ bool P11DHPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrPrime->init() ||
-		!attrBase->init() ||
-		!attrValue->init()
+	    !attrPrime->init() ||
+	    !attrBase->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1036,7 +1055,8 @@ bool P11GOSTPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_GOSTR3410);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1053,10 +1073,10 @@ bool P11GOSTPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrValue->init() ||
-		!attrGostR3410Params->init() ||
-		!attrGostR3411Params->init() ||
-		!attrGost28147Params->init()
+	    !attrValue->init() ||
+	    !attrGostR3410Params->init() ||
+	    !attrGostR3411Params->init() ||
+	    !attrGost28147Params->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1089,7 +1109,8 @@ bool P11PrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PRIVATE_KEY) {
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_PRIVATE_KEY)
+	{
 		OSAttribute setClass((unsigned long)CKO_PRIVATE_KEY);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -1117,19 +1138,19 @@ bool P11PrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrSubject->init() ||
-		!attrSensitive->init() ||
-		!attrDecrypt->init() ||
-		!attrSign->init() ||
-		!attrSignRecover->init() ||
-		!attrUnwrap->init() ||
-		!attrExtractable->init() ||
-		!attrAlwaysSensitive->init() ||
-		!attrNeverExtractable->init() ||
-		!attrWrapWithTrusted->init() ||
-		!attrUnwrapTemplate->init() ||
-		!attrAlwaysAuthenticate->init() ||
-		!attrPublicKeyInfo->init()
+	    !attrSubject->init() ||
+	    !attrSensitive->init() ||
+	    !attrDecrypt->init() ||
+	    !attrSign->init() ||
+	    !attrSignRecover->init() ||
+	    !attrUnwrap->init() ||
+	    !attrExtractable->init() ||
+	    !attrAlwaysSensitive->init() ||
+	    !attrNeverExtractable->init() ||
+	    !attrWrapWithTrusted->init() ||
+	    !attrUnwrapTemplate->init() ||
+	    !attrAlwaysAuthenticate->init() ||
+	    !attrPublicKeyInfo->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1180,7 +1201,8 @@ bool P11RSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_RSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_RSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1201,14 +1223,14 @@ bool P11RSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrModulus->init() ||
-		!attrPublicExponent->init() ||
-		!attrPrivateExponent->init() ||
-		!attrPrime1->init() ||
-		!attrPrime2->init() ||
-		!attrExponent1->init() ||
-		!attrExponent2->init() ||
-		!attrCoefficient->init()
+	    !attrModulus->init() ||
+	    !attrPublicExponent->init() ||
+	    !attrPrivateExponent->init() ||
+	    !attrPrime1->init() ||
+	    !attrPrime2->init() ||
+	    !attrExponent1->init() ||
+	    !attrExponent2->init() ||
+	    !attrCoefficient->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1249,7 +1271,8 @@ bool P11DSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1266,10 +1289,10 @@ bool P11DSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrPrime->init() ||
-		!attrSubPrime->init() ||
-		!attrBase->init() ||
-		!attrValue->init()
+	    !attrPrime->init() ||
+	    !attrSubPrime->init() ||
+	    !attrBase->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1302,7 +1325,8 @@ bool P11ECPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_EC);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1317,8 +1341,8 @@ bool P11ECPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrEcParams->init() ||
-		!attrValue->init()
+	    !attrEcParams->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1347,7 +1371,8 @@ bool P11EDPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_EC_EDWARDS)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_EC_EDWARDS);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1362,8 +1387,8 @@ bool P11EDPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrEcParams->init() ||
-		!attrValue->init()
+	    !attrEcParams->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1392,7 +1417,8 @@ bool P11MLDSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_ML_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_ML_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1408,9 +1434,9 @@ bool P11MLDSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrParameterSet->init() ||
-		!attrValue->init() ||
-		!attrSeed->init()
+	    !attrParameterSet->init() ||
+	    !attrValue->init() ||
+	    !attrSeed->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1441,7 +1467,8 @@ bool P11DHPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_DH);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1458,10 +1485,10 @@ bool P11DHPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrPrime->init() ||
-		!attrBase->init() ||
-		!attrValue->init() ||
-		!attrValueBits->init()
+	    !attrPrime->init() ||
+	    !attrBase->init() ||
+	    !attrValue->init() ||
+	    !attrValueBits->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1494,7 +1521,8 @@ bool P11GOSTPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOSTR3410)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_GOSTR3410);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1511,10 +1539,10 @@ bool P11GOSTPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrValue->init() ||
-		!attrGostR3410Params->init() ||
-		!attrGostR3411Params->init() ||
-		!attrGost28147Params->init()
+	    !attrValue->init() ||
+	    !attrGostR3410Params->init() ||
+	    !attrGostR3411Params->init() ||
+	    !attrGost28147Params->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1547,7 +1575,8 @@ bool P11SecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_SECRET_KEY) {
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_SECRET_KEY)
+	{
 		OSAttribute setClass((unsigned long)CKO_SECRET_KEY);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -1575,21 +1604,21 @@ bool P11SecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrSensitive->init() ||
-		!attrEncrypt->init() ||
-		!attrDecrypt->init() ||
-		!attrSign->init() ||
-		!attrVerify->init() ||
-		!attrWrap->init() ||
-		!attrUnwrap->init() ||
-		!attrExtractable->init() ||
-		!attrAlwaysSensitive->init() ||
-		!attrNeverExtractable->init() ||
-		!attrCheckValue->init() ||
-		!attrWrapWithTrusted->init() ||
-		!attrTrusted->init() ||
-		!attrWrapTemplate->init() ||
-		!attrUnwrapTemplate->init()
+	    !attrSensitive->init() ||
+	    !attrEncrypt->init() ||
+	    !attrDecrypt->init() ||
+	    !attrSign->init() ||
+	    !attrVerify->init() ||
+	    !attrWrap->init() ||
+	    !attrUnwrap->init() ||
+	    !attrExtractable->init() ||
+	    !attrAlwaysSensitive->init() ||
+	    !attrNeverExtractable->init() ||
+	    !attrCheckValue->init() ||
+	    !attrWrapWithTrusted->init() ||
+	    !attrTrusted->init() ||
+	    !attrWrapTemplate->init() ||
+	    !attrUnwrapTemplate->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1645,7 +1674,8 @@ bool P11GenericSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype)
+	{
 		OSAttribute setKeyType(keytype);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1660,8 +1690,8 @@ bool P11GenericSecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrValue->init() ||
-		!attrValueLen->init()
+	    !attrValue->init() ||
+	    !attrValueLen->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1708,7 +1738,8 @@ bool P11AESSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_AES)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_AES);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1723,8 +1754,8 @@ bool P11AESSecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrValue->init() ||
-		!attrValueLen->init()
+	    !attrValue->init() ||
+	    !attrValueLen->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1754,7 +1785,8 @@ bool P11DESSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != keytype)
+	{
 		OSAttribute setKeyType(keytype);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1810,7 +1842,8 @@ bool P11GOSTSecretKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOST28147) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_GOST28147)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_GOST28147);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1825,8 +1858,8 @@ bool P11GOSTSecretKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrValue->init() ||
-		!attrGost28147Params->init()
+	    !attrValue->init() ||
+	    !attrGost28147Params->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1855,7 +1888,8 @@ bool P11DomainObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DOMAIN_PARAMETERS) {
+	if (!inobject->attributeExists(CKA_CLASS) || inobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_DOMAIN_PARAMETERS)
+	{
 		OSAttribute setClass((unsigned long)CKO_DOMAIN_PARAMETERS);
 		inobject->setAttribute(CKA_CLASS, setClass);
 	}
@@ -1870,8 +1904,8 @@ bool P11DomainObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrKeyType->init() ||
-		!attrLocal->init()
+	    !attrKeyType->init() ||
+	    !attrLocal->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1900,7 +1934,8 @@ bool P11DSADomainObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1917,10 +1952,10 @@ bool P11DSADomainObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrPrime->init() ||
-		!attrSubPrime->init() ||
-		!attrBase->init() ||
-		!attrPrimeBits->init()
+	    !attrPrime->init() ||
+	    !attrSubPrime->init() ||
+	    !attrBase->init() ||
+	    !attrPrimeBits->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -1953,7 +1988,8 @@ bool P11DHDomainObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_DH)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_DH);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -1969,9 +2005,9 @@ bool P11DHDomainObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrPrime->init() ||
-		!attrBase->init() ||
-		!attrPrimeBits->init()
+	    !attrPrime->init() ||
+	    !attrBase->init() ||
+	    !attrPrimeBits->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -2001,7 +2037,8 @@ bool P11SLHDSAPublicKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_SLH_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -2016,8 +2053,8 @@ bool P11SLHDSAPublicKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrParameterSet->init() ||
-		!attrValue->init()
+	    !attrParameterSet->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");
@@ -2046,7 +2083,8 @@ bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject)
 	if (initialized) return true;
 	if (inobject == NULL) return false;
 
-	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA) {
+	if (!inobject->attributeExists(CKA_KEY_TYPE) || inobject->getUnsignedLongValue(CKA_KEY_TYPE, CKK_VENDOR_DEFINED) != CKK_SLH_DSA)
+	{
 		OSAttribute setKeyType((unsigned long)CKK_SLH_DSA);
 		inobject->setAttribute(CKA_KEY_TYPE, setKeyType);
 	}
@@ -2061,8 +2099,8 @@ bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject)
 	// Initialize the attributes
 	if
 	(
-		!attrParameterSet->init() ||
-		!attrValue->init()
+	    !attrParameterSet->init() ||
+	    !attrValue->init()
 	)
 	{
 		ERROR_MSG("Could not initialize the attribute");

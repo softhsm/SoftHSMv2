@@ -11,19 +11,22 @@
 #include "SLHDSAMechanismParam.h"
 
 /** \brief SLHDSAMechanismParam */
-SLHDSAMechanismParam::SLHDSAMechanismParam() {
-    this->hedgeType = Hedge::HEDGE_PREFERRED;
+SLHDSAMechanismParam::SLHDSAMechanismParam()
+{
+	this->hedgeType = Hedge::HEDGE_PREFERRED;
 }
 
 /** \brief SLHDSAMechanismParam */
-SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType) {
-    this->hedgeType = hedgeType;
+SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType)
+{
+	this->hedgeType = hedgeType;
 }
 
 /** \brief SLHDSAMechanismParam */
-SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, const ByteString& additionalContext) {
-    this->hedgeType = hedgeType;
-    this->additionalContext = additionalContext;
+SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, const ByteString& additionalContext)
+{
+	this->hedgeType = hedgeType;
+	this->additionalContext = additionalContext;
 }
 
 // Set the type
@@ -32,13 +35,13 @@ SLHDSAMechanismParam::SLHDSAMechanismParam(Hedge::Type hedgeType, const ByteStri
 /** \brief clone */
 SLHDSAMechanismParam* SLHDSAMechanismParam::clone() const
 {
-    return new SLHDSAMechanismParam(static_cast<const SLHDSAMechanismParam&>(*this)); // call the copy ctor.
+	return new SLHDSAMechanismParam(static_cast<const SLHDSAMechanismParam&>(*this)); // call the copy ctor.
 }
 
 // Check if the parameter is of the given type
 /** \brief isOfType */
 bool SLHDSAMechanismParam::isOfType(const char* inType) const
 {
-    return !strcmp(type, inType);
+	return !strcmp(type, inType);
 }
 #endif

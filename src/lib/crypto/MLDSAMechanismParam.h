@@ -28,7 +28,7 @@ public:
 	MLDSAMechanismParam(Hedge::Type hedgeType);
 
 	MLDSAMechanismParam(Hedge::Type hedgeType, ByteString additionalContext);
-	
+
 	MLDSAMechanismParam* clone() const;
 
 	// Check if the mechanism param is of the given type

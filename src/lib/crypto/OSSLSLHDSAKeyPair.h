@@ -42,27 +42,27 @@
 class OSSLSLHDSAKeyPair : public AsymmetricKeyPair
 {
 public:
- /** \brief Set the public key */
+	/** \brief Set the public key */
 	void setPublicKey(const OSSLSLHDSAPublicKey& publicKey);
 
- /** \brief Set the private key */
+	/** \brief Set the private key */
 	void setPrivateKey(const OSSLSLHDSAPrivateKey& privateKey);
 
- /** \brief Return the public key */
+	/** \brief Return the public key */
 	virtual PublicKey* getPublicKey();
- /** \brief Return the constant public key */
+	/** \brief Return the constant public key */
 	virtual const PublicKey* getConstPublicKey() const;
 
- /** \brief Return the private key */
+	/** \brief Return the private key */
 	virtual PrivateKey* getPrivateKey();
- /** \brief Return the constant private key */
+	/** \brief Return the constant private key */
 	virtual const PrivateKey* getConstPrivateKey() const;
 
 private:
- /** \brief The public key */
+	/** \brief The public key */
 	OSSLSLHDSAPublicKey pubKey;
 
- /** \brief The private key */
+	/** \brief The private key */
 	OSSLSLHDSAPrivateKey privKey;
 };
 

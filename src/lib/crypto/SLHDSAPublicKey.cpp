@@ -44,33 +44,34 @@ unsigned long SLHDSAPublicKey::getParameterSet() const
 /** \brief getOutputLength */
 unsigned long SLHDSAPublicKey::getOutputLength() const
 {
-	switch(parameterSet) {
-		case SLHDSAParameters::SLH_DSA_SHA2_128S_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHA2_128S_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHAKE_128S_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHAKE_128S_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHA2_128F_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHA2_128F_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHAKE_128F_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHAKE_128F_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHA2_192S_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHA2_192S_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHAKE_192S_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHAKE_192S_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHA2_192F_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHA2_192F_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHAKE_192F_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHAKE_192F_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHA2_256S_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHA2_256S_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHAKE_256S_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHAKE_256S_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHA2_256F_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHA2_256F_SIGNATURE_LENGTH;
-		case SLHDSAParameters::SLH_DSA_SHAKE_256F_PARAMETER_SET:
-			return SLHDSAParameters::SLH_DSA_SHAKE_256F_SIGNATURE_LENGTH;
-	}
-	return 0UL;
+	switch(parameterSet)
+{
+case SLHDSAParameters::SLH_DSA_SHA2_128S_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHA2_128S_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHAKE_128S_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHAKE_128S_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHA2_128F_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHA2_128F_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHAKE_128F_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHAKE_128F_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHA2_192S_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHA2_192S_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHAKE_192S_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHAKE_192S_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHA2_192F_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHA2_192F_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHAKE_192F_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHAKE_192F_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHA2_256S_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHA2_256S_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHAKE_256S_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHAKE_256S_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHA2_256F_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHA2_256F_SIGNATURE_LENGTH;
+case SLHDSAParameters::SLH_DSA_SHAKE_256F_PARAMETER_SET:
+	return SLHDSAParameters::SLH_DSA_SHAKE_256F_SIGNATURE_LENGTH;
+}
+return 0UL;
 }
 
 /** \brief getValue */
@@ -103,7 +104,8 @@ bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 	}
 
 	unsigned long paramSet = 0;
-	if (deserializedParam.size() == sizeof(unsigned long)) {
+	if (deserializedParam.size() == sizeof(unsigned long))
+	{
 		memcpy(&paramSet, deserializedParam.const_byte_str(), sizeof(unsigned long));
 	}
 

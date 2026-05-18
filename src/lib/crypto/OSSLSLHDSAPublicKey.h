@@ -42,45 +42,45 @@
 class OSSLSLHDSAPublicKey : public SLHDSAPublicKey
 {
 public:
- /** \brief Constructors */
+	/** \brief Constructors */
 	OSSLSLHDSAPublicKey();
 
- /** \brief Constructor from OpenSSL representation */
+	/** \brief Constructor from OpenSSL representation */
 	OSSLSLHDSAPublicKey(const EVP_PKEY* inSLHDSAKEY);
 
- /** \brief Destructor */
+	/** \brief Destructor */
 	virtual ~OSSLSLHDSAPublicKey();
 
- /** \brief Non-copyable (raw ownership of EVP_PKEY) */
-    OSSLSLHDSAPublicKey(const OSSLSLHDSAPublicKey&) = delete;
- /** \brief Non-copyable assignment */
-    OSSLSLHDSAPublicKey& operator=(const OSSLSLHDSAPublicKey&) = delete;
+	/** \brief Non-copyable (raw ownership of EVP_PKEY) */
+	OSSLSLHDSAPublicKey(const OSSLSLHDSAPublicKey&) = delete;
+	/** \brief Non-copyable assignment */
+	OSSLSLHDSAPublicKey& operator=(const OSSLSLHDSAPublicKey&) = delete;
 
- /** \brief Movable */
+	/** \brief Movable */
 	OSSLSLHDSAPublicKey(OSSLSLHDSAPublicKey&&) noexcept;
- /** \brief Movable assignment */
+	/** \brief Movable assignment */
 	OSSLSLHDSAPublicKey& operator=(OSSLSLHDSAPublicKey&&) noexcept;
 
- /** \brief The type */
+	/** \brief The type */
 	static const char* type;
 
- /** \brief Check if the key is of the given type */
+	/** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
- /** \brief Setters for the SLH-DSA public key components */
+	/** \brief Setters for the SLH-DSA public key components */
 	virtual void setValue(const ByteString& value);
 
- /** \brief Set from OpenSSL representation */
+	/** \brief Set from OpenSSL representation */
 	virtual void setFromOSSL(const EVP_PKEY* inSLHDSAKEY);
 
- /** \brief Retrieve the OpenSSL representation of the key */
+	/** \brief Retrieve the OpenSSL representation of the key */
 	EVP_PKEY* getOSSLKey();
 
 private:
- /** \brief The internal OpenSSL representation */
+	/** \brief The internal OpenSSL representation */
 	EVP_PKEY* pkey;
 
- /** \brief Create the OpenSSL representation of the key */
+	/** \brief Create the OpenSSL representation of the key */
 	void createOSSLKey();
 };
 

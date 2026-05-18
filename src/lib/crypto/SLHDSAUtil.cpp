@@ -137,28 +137,30 @@
 /*static*/ CK_RV SLHDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType)
 {
 
-	if (outHedgeType == NULL) {
+	if (outHedgeType == NULL)
+	{
 		ERROR_MSG("Invalid parameters, outHedgeType is NULL");
 		return CKR_ARGUMENTS_BAD;
 	}
 
 	Hedge::Type hedgeType = Hedge::HEDGE_PREFERRED;
 
-	switch (inHedgeType) {
-		case CKH_HEDGE_REQUIRED:
-			hedgeType = Hedge::HEDGE_REQUIRED;
-			break;
-		case CKH_DETERMINISTIC_REQUIRED:
-			hedgeType = Hedge::DETERMINISTIC_REQUIRED;
-			break;
-		case CKH_HEDGE_PREFERRED:
+	switch (inHedgeType)
+	{
+	case CKH_HEDGE_REQUIRED:
+		hedgeType = Hedge::HEDGE_REQUIRED;
+		break;
+	case CKH_DETERMINISTIC_REQUIRED:
+		hedgeType = Hedge::DETERMINISTIC_REQUIRED;
+		break;
+	case CKH_HEDGE_PREFERRED:
 		// Per PKCS11v3.2 section 6.67.5
 		// "If no parameter is supplied the hedgeVariant will be CKH_HEDGE_PREFERRED"
-			hedgeType = Hedge::HEDGE_PREFERRED;
-			break;
-		default:
-			ERROR_MSG("SLH-DSA: Invalid parameters, unknown hedgeVariant");
-			return CKR_ARGUMENTS_BAD;
+		hedgeType = Hedge::HEDGE_PREFERRED;
+		break;
+	default:
+		ERROR_MSG("SLH-DSA: Invalid parameters, unknown hedgeVariant");
+		return CKR_ARGUMENTS_BAD;
 	}
 	*outHedgeType = hedgeType;
 	return CKR_OK;

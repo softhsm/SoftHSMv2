@@ -38,41 +38,41 @@
 
 class SLHDSAPrivateKey : public PrivateKey
 {
-	public:
- /** \brief The type */
+public:
+	/** \brief The type */
 	static const char* type;
 
- /** \brief Constructor */
+	/** \brief Constructor */
 	SLHDSAPrivateKey();
 
- /** \brief Check if the key is of the given type */
+	/** \brief Check if the key is of the given type */
 	virtual bool isOfType(const char* inType);
 
- /** \brief Get the SLH-DSA parameter set */
+	/** \brief Get the SLH-DSA parameter set */
 	virtual unsigned long getParameterSet() const;
 
- /** \brief Get the signature length */
+	/** \brief Get the signature length */
 	virtual unsigned long getOutputLength() const;
 
- /** \brief Get the bit length */
+	/** \brief Get the bit length */
 	virtual unsigned long getBitLength() const;
 
- /** \brief Setters for the SLH-DSA private key components */
+	/** \brief Setters for the SLH-DSA private key components */
 	virtual void setValue(const ByteString& value);
 	virtual void setParameterSet(unsigned long inParameterSet);
 
- /** \brief Getters for the SLH-DSA private key components */
+	/** \brief Getters for the SLH-DSA private key components */
 	virtual const ByteString& getValue() const;
 
- /** \brief Serialisation */
+	/** \brief Serialisation */
 	virtual ByteString serialise() const;
 	virtual bool deserialise(ByteString& serialised);
 
 protected:
-    
- /** \brief Private key value */
+
+	/** \brief Private key value */
 	ByteString value;
- /** \brief Parameter set */
+	/** \brief Parameter set */
 	unsigned long parameterSet;
 };
 

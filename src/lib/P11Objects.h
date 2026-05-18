@@ -447,33 +447,33 @@ protected:
 	bool initialized;
 };
 
- /** \brief SLH-DSA public key object */
+/** \brief SLH-DSA public key object */
 class P11SLHDSAPublicKeyObj : public P11PublicKeyObj
 {
 public:
- /** \brief Constructor */
+	/** \brief Constructor */
 	P11SLHDSAPublicKeyObj();
 
- /** \brief Initialize the object */
+	/** \brief Initialize the object */
 	virtual bool init(OSObject *inobject);
 
 protected:
- /** \brief Is the object initialized? */
+	/** \brief Is the object initialized? */
 	bool initialized;
 };
 
- /** \brief SLH-DSA private key object */
+/** \brief SLH-DSA private key object */
 class P11SLHDSAPrivateKeyObj : public P11PrivateKeyObj
 {
 public:
- /** \brief Constructor */
+	/** \brief Constructor */
 	P11SLHDSAPrivateKeyObj();
 
- /** \brief Initialize the object */
+	/** \brief Initialize the object */
 	virtual bool init(OSObject *inobject);
 
 protected:
- /** \brief Is the object initialized? */
+	/** \brief Is the object initialized? */
 	bool initialized;
 };
 
