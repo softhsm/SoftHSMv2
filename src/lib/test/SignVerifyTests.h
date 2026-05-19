@@ -34,80 +34,108 @@
 #ifndef _SOFTHSM_V2_SIGNVERIFYTESTS_H
 #define _SOFTHSM_V2_SIGNVERIFYTESTS_H
 
-#include "config.h"
 #include "TestsBase.h"
+#include "config.h"
 #include <cppunit/extensions/HelperMacros.h>
 
-class SignVerifyTests : public TestsBase
-{
-	CPPUNIT_TEST_SUITE(SignVerifyTests);
-	CPPUNIT_TEST(testRsaSignVerify);
+class SignVerifyTests : public TestsBase {
+  CPPUNIT_TEST_SUITE(SignVerifyTests);
+  CPPUNIT_TEST(testRsaSignVerify);
 #ifdef WITH_ECC
-	CPPUNIT_TEST(testEcSignVerify);
+  CPPUNIT_TEST(testEcSignVerify);
 #endif
 #ifdef WITH_EDDSA
-	CPPUNIT_TEST_PARAMETERIZED(testEdSignVerify, {"Ed25519", "Ed448"});
+  CPPUNIT_TEST_PARAMETERIZED(testEdSignVerify, {"Ed25519", "Ed448"});
 #endif
-	CPPUNIT_TEST(testMacSignVerify);
+  CPPUNIT_TEST(testMacSignVerify);
 #ifdef WITH_ML_DSA
-	CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify, {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
+  CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify,
+                             {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
 #endif
 #ifdef WITH_SLH_DSA
-	CPPUNIT_TEST_PARAMETERIZED(testSLHDSASignVerify, {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHAKE_128S, CKP_SLH_DSA_SHA2_128F, CKP_SLH_DSA_SHAKE_128F, CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_192S, CKP_SLH_DSA_SHA2_192F, CKP_SLH_DSA_SHAKE_192F, CKP_SLH_DSA_SHA2_256S, CKP_SLH_DSA_SHAKE_256S, CKP_SLH_DSA_SHA2_256F, CKP_SLH_DSA_SHAKE_256F});
+  CPPUNIT_TEST_PARAMETERIZED(testSLHDSASignVerify,
+                             {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHAKE_128S,
+                              CKP_SLH_DSA_SHA2_128F, CKP_SLH_DSA_SHAKE_128F,
+                              CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_192S,
+                              CKP_SLH_DSA_SHA2_192F, CKP_SLH_DSA_SHAKE_192F,
+                              CKP_SLH_DSA_SHA2_256S, CKP_SLH_DSA_SHAKE_256S,
+                              CKP_SLH_DSA_SHA2_256F, CKP_SLH_DSA_SHAKE_256F});
 #endif
-#ifdef WITH_SLH_DSA
-	CPPUNIT_TEST_PARAMETERIZED(testSLHDSASignVerify, {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHAKE_128S, CKP_SLH_DSA_SHA2_128F, CKP_SLH_DSA_SHAKE_128F, CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_192S, CKP_SLH_DSA_SHA2_192F, CKP_SLH_DSA_SHAKE_192F, CKP_SLH_DSA_SHA2_256S, CKP_SLH_DSA_SHAKE_256S, CKP_SLH_DSA_SHA2_256F, CKP_SLH_DSA_SHAKE_256F});
-#endif
-	CPPUNIT_TEST(testSignInitWrongKeyType);
-	CPPUNIT_TEST(testVerifyInitWrongKeyType);
-	CPPUNIT_TEST_SUITE_END();
+  CPPUNIT_TEST(testSignInitWrongKeyType);
+  CPPUNIT_TEST(testVerifyInitWrongKeyType);
+  CPPUNIT_TEST_SUITE_END();
 
 public:
-	void testRsaSignVerify();
+  void testRsaSignVerify();
 #ifdef WITH_ECC
-	void testEcSignVerify();
+  void testEcSignVerify();
 #endif
 #ifdef WITH_EDDSA
-	void testEdSignVerify(const char* curve);
+  void testEdSignVerify(const char *curve);
 #endif
-	void testMacSignVerify();
+  void testMacSignVerify();
 #ifdef WITH_ML_DSA
-	void testMLDSASignVerify(CK_ULONG parameterSet);
+  void testMLDSASignVerify(CK_ULONG parameterSet);
 #endif
 #ifdef WITH_SLH_DSA
-	void testSLHDSASignVerify(CK_ULONG parameterSet);
+  void testSLHDSASignVerify(CK_ULONG parameterSet);
 #endif
-#ifdef WITH_SLH_DSA
-	void testSLHDSASignVerify(CK_ULONG parameterSet);
-#endif
-	void testSignInitWrongKeyType();
-	void testVerifyInitWrongKeyType();
+  void testSignInitWrongKeyType();
+  void testVerifyInitWrongKeyType();
 
 protected:
-	CK_RV generateRSA(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+  CK_RV generateRSA(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk,
+                    CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk,
+                    CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk,
+                    CK_OBJECT_HANDLE &hPrk);
 #ifdef WITH_ECC
-	CK_RV generateEC(const char* curve, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+  CK_RV generateEC(const char *curve, CK_SESSION_HANDLE hSession,
+                   CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk,
+                   CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk,
+                   CK_OBJECT_HANDLE &hPrk);
 #endif
 #ifdef WITH_EDDSA
-	CK_RV generateED(const char* curve, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+  CK_RV generateED(const char *curve, CK_SESSION_HANDLE hSession,
+                   CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk,
+                   CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk,
+                   CK_OBJECT_HANDLE &hPrk);
 #endif
 #ifdef WITH_ML_DSA
-	CK_RV generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+  CK_RV generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession,
+                      CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk,
+                      CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk,
+                      CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #endif
 #ifdef WITH_SLH_DSA
-	CK_RV generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+  CK_RV generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession,
+                       CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk,
+                       CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk,
+                       CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #endif
-#ifdef WITH_SLH_DSA
-	CK_RV generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
-#endif
-	void signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
-	void signVerifySingleData(size_t dataSize, CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
-	void signVerifyMulti(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
-	CK_RV generateKey(CK_SESSION_HANDLE hSession, CK_KEY_TYPE keyType, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
-	CK_RV generateDes2Key(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
-	CK_RV generateDes3Key(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
-	CK_RV generateAesKey(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
-	void macSignVerify(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey);
+  void signVerifySingle(CK_MECHANISM_TYPE mechanismType,
+                        CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey,
+                        CK_OBJECT_HANDLE hPrivateKey,
+                        CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
+  void signVerifySingleData(size_t dataSize, CK_MECHANISM_TYPE mechanismType,
+                            CK_SESSION_HANDLE hSession,
+                            CK_OBJECT_HANDLE hPublicKey,
+                            CK_OBJECT_HANDLE hPrivateKey,
+                            CK_VOID_PTR param = NULL_PTR,
+                            CK_ULONG paramLen = 0);
+  void signVerifyMulti(CK_MECHANISM_TYPE mechanismType,
+                       CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey,
+                       CK_OBJECT_HANDLE hPrivateKey,
+                       CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
+  CK_RV generateKey(CK_SESSION_HANDLE hSession, CK_KEY_TYPE keyType,
+                    CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
+  CK_RV generateDes2Key(CK_SESSION_HANDLE hSession, CK_BBOOL bToken,
+                        CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
+  CK_RV generateDes3Key(CK_SESSION_HANDLE hSession, CK_BBOOL bToken,
+                        CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
+  CK_RV generateAesKey(CK_SESSION_HANDLE hSession, CK_BBOOL bToken,
+                       CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey);
+  void macSignVerify(CK_MECHANISM_TYPE mechanismType,
+                     CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey);
 };
 
 #endif // !_SOFTHSM_V2_SIGNVERIFYTESTS_H
