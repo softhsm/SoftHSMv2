@@ -71,7 +71,7 @@ public:
 	virtual void setValue(const ByteString& value);
 
 	/** \brief Set from OpenSSL representation */
-	virtual void setFromOSSL(const EVP_PKEY* inSLHDSAKEY);
+	virtual bool setFromOSSL(const EVP_PKEY* inSLHDSAKEY);
 
 	/** \brief Retrieve the OpenSSL representation of the key */
 	EVP_PKEY* getOSSLKey();

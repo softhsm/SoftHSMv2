@@ -70,7 +70,7 @@ OSSLSLHDSAPublicKey& OSSLSLHDSAPublicKey::operator=(OSSLSLHDSAPublicKey&& other)
 
 // Set from OpenSSL representation
 /** \brief setFromOSSL */
-void OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
+bool OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 {
 	// let's use max pub length
 	uint8_t localPub[SLHDSAParameters::SLH_DSA_SHA2_256F_PUB_LENGTH];
@@ -78,10 +78,10 @@ void OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 	int rv = EVP_PKEY_get_octet_string_param(inEVPPKEY, OSSL_PKEY_PARAM_PUB_KEY,
 	         localPub, sizeof(localPub), &pub_len);
 
-	if(!rv)
+	if(rv <= 0)
 	{
 		ERROR_MSG("Could not get SLH-DSA public key, rv: %d", rv);
-		return;
+		return false;
 	}
 
 
@@ -90,14 +90,14 @@ void OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 	if (paramSet == 0)
 	{
 		ERROR_MSG("Unsupported SLH-DSA public key type: %s", type_name ? type_name : "unknown");
-		return;
+		return false;
 	}
 
 	ByteString pubBS = ByteString(localPub, pub_len);
 	setValue(pubBS);
 	setParameterSet(paramSet);
 
-
+	return true;
 }
 
 // Check if the key is of the given type
@@ -154,14 +154,14 @@ void OSSLSLHDSAPublicKey::createOSSLKey()
 		return;
 	}
 	int rv = EVP_PKEY_fromdata_init(ctx);
-	if (!rv)
+	if (rv <= 0)
 	{
 		ERROR_MSG("Could not EVP_PKEY_fromdata_init:%d", rv);
 		EVP_PKEY_CTX_free(ctx);
 		return;
 	}
 	rv = EVP_PKEY_fromdata(ctx, &pkey, selection, params);
-	if (!rv)
+	if (rv <= 0)
 	{
 		ERROR_MSG("Could not EVP_PKEY_fromdata:%d", rv);
 		EVP_PKEY_CTX_free(ctx);

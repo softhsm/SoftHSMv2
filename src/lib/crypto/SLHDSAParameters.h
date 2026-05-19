@@ -15,6 +15,9 @@
 class SLHDSAParameters : public AsymmetricParameters
 {
 public:
+	/** \brief Constructor */
+	SLHDSAParameters();
+
 	/** \brief The type */
 	static const char* type;
 
@@ -137,7 +140,7 @@ public:
 
 private:
 	/** \brief The parameter set */
-	unsigned long parameterSet = 0;
+	unsigned long parameterSet;
 
 };
 

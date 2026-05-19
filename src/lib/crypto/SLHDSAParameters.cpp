@@ -12,6 +12,13 @@
 // The type
 /*static*/ const char* SLHDSAParameters::type = "SLH-DSA parameters";
 
+// Constructor
+/** \brief SLHDSAParameters */
+SLHDSAParameters::SLHDSAParameters()
+{
+	parameterSet = 0;
+}
+
 // Set the parameter set
 /** \brief setParameterSet */
 void SLHDSAParameters::setParameterSet(const unsigned long inParameterSet)
