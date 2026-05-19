@@ -102,16 +102,13 @@ bool SLHDSAPrivateKey::deserialise(ByteString& serialised)
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
 	ByteString deserializedParam = ByteString::chainDeserialise(serialised);
 
-	if ((deserializedValue.size() == 0) || (deserializedParam.size() == 0))
+	if (deserializedValue.size() == 0 || deserializedParam.size() != sizeof(unsigned long))
 	{
 		return false;
 	}
 
 	unsigned long paramSet = 0;
-	if (deserializedParam.size() == sizeof(unsigned long))
-	{
-		memcpy(&paramSet, deserializedParam.const_byte_str(), sizeof(unsigned long));
-	}
+	memcpy(&paramSet, deserializedParam.const_byte_str(), sizeof(unsigned long));
 
 	setValue(deserializedValue);
 	setParameterSet(paramSet);

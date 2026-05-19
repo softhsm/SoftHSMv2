@@ -101,8 +101,9 @@ bool OSSLSLHDSAPrivateKey::setFromOSSL(const EVP_PKEY* inSLHDSAKEY)
 /** \brief isOfType */
 bool OSSLSLHDSAPrivateKey::isOfType(const char* inType)
 {
-	return !strcmp(type, inType);
+	return !strcmp(type, inType) || SLHDSAPrivateKey::isOfType(inType);
 }
+
 
 /** \brief setValue */
 void OSSLSLHDSAPrivateKey::setValue(const ByteString& inValue)

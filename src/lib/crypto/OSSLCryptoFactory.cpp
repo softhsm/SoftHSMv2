@@ -364,6 +364,10 @@ AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type al
 		case AsymAlgo::MLDSA:
 			return new OSSLMLDSA();
 #endif
+#ifdef WITH_SLH_DSA
+		case AsymAlgo::SLHDSA:
+			return new OSSLSLHDSA();
+#endif
 		default:
 			break;
 	}

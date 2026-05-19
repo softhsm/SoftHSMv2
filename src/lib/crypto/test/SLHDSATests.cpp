@@ -198,26 +198,26 @@ void SLHDSATests::testSigningVerifying()
 }
 
 // test vectors from https://github.com/google/boringssl/blob/main/third_party/wycheproof_testvectors/slhdsa_65_sign_seed_test.json
-void SLHDSATests::testSigningTestVector() {}
+void SLHDSATests::testSigningTestVector() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testSigningTestVectorEmptyContext() {}
+void SLHDSATests::testSigningTestVectorEmptyContext() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testSigningTestVectorNonEmptyContext() {}
+void SLHDSATests::testSigningTestVectorNonEmptyContext() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testSigningTestVectorLongestContext() {}
+void SLHDSATests::testSigningTestVectorLongestContext() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testSigningTestVectorContextTooLong() {}
+void SLHDSATests::testSigningTestVectorContextTooLong() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
 // test vectors from https://github.com/google/boringssl/blob/main/third_party/wycheproof_testvectors/slhdsa_65_verify_test.json
-void SLHDSATests::testVerifyingTestVector() {}
+void SLHDSATests::testVerifyingTestVector() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testVerifyingTestVectorEmptyContext() {}
+void SLHDSATests::testVerifyingTestVectorEmptyContext() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testVerifyingTestVectorNonEmptyContext() {}
+void SLHDSATests::testVerifyingTestVectorNonEmptyContext() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testVerifyingTestVectorLongestContext() {}
+void SLHDSATests::testVerifyingTestVectorLongestContext() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
-void SLHDSATests::testVerifyingTestVectorContextTooLong() {}
+void SLHDSATests::testVerifyingTestVectorContextTooLong() { CPPUNIT_FAIL("Wycheproof vectors not loaded (test not implemented yet)"); }
 
 void SLHDSATests::testSigningVerifyingHedgePreferred()
 {
@@ -272,9 +272,9 @@ void SLHDSATests::testSigningVerifyingHedgePreferredWithContext()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_PREFERRED");
-	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
+	ByteString contextBS((const unsigned char*)contextStr.c_str(), contextStr.size());
 
-	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, *contextBS);
+	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
 
 	// Sign the data
 	ByteString sig;
@@ -307,9 +307,9 @@ void SLHDSATests::testSigningVerifyingHedgePreferredWithContextTooLong()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERREDHEDGE_PREFERRED");
-	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
+	ByteString contextBS((const unsigned char*)contextStr.c_str(), contextStr.size());
 
-	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, *contextBS);
+	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_PREFERRED, contextBS);
 
 	// Sign the data
 	ByteString sig;
@@ -371,9 +371,9 @@ void SLHDSATests::testSigningVerifyingHedgeRequiredWithContext()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_REQUIRED");
-	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
+	ByteString contextBS((const unsigned char*)contextStr.c_str(), contextStr.size());
 
-	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_REQUIRED, *contextBS);
+	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_REQUIRED, contextBS);
 
 	// Sign the data
 	ByteString sig;
@@ -406,9 +406,9 @@ void SLHDSATests::testSigningVerifyingHedgeRequiredWithContextTooLong()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("HEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIREDHEDGE_REQUIRED");
-	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
+	ByteString contextBS((const unsigned char*)contextStr.c_str(), contextStr.size());
 
-	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_REQUIRED, *contextBS);
+	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::HEDGE_REQUIRED, contextBS);
 
 	// Sign the data
 	ByteString sig;
@@ -470,9 +470,9 @@ void SLHDSATests::testSigningVerifyingDeterministicWithContext()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("DETERMINISTIC_REQUIRED");
-	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
+	ByteString contextBS((const unsigned char*)contextStr.c_str(), contextStr.size());
 
-	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextBS);
+	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, contextBS);
 
 	// Sign the data
 	ByteString sig;
@@ -505,9 +505,9 @@ void SLHDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 	CPPUNIT_ASSERT(rng->generateRandom(dataToSign, 567));
 
 	std::string contextStr = std::string("DETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIREDDETERMINISTIC_REQUIRED");
-	ByteString* contextBS = new ByteString((const unsigned char*)contextStr.c_str(), contextStr.size());
+	ByteString contextBS((const unsigned char*)contextStr.c_str(), contextStr.size());
 
-	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, *contextBS);
+	SLHDSAMechanismParam context = SLHDSAMechanismParam(Hedge::Type::DETERMINISTIC_REQUIRED, contextBS);
 
 	// Sign the data
 	ByteString sig;

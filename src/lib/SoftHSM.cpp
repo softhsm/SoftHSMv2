@@ -154,6 +154,10 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 			else if (keyType == CKK_ML_DSA)
 				*p11object = new P11MLDSAPublicKeyObj();
 #endif
+#ifdef WITH_SLH_DSA
+			else if (keyType == CKK_SLH_DSA)
+				*p11object = new P11SLHDSAPublicKeyObj();
+#endif
 			else
 				return CKR_ATTRIBUTE_VALUE_INVALID;
 			break;
@@ -174,6 +178,10 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 #ifdef WITH_ML_DSA
 			else if (keyType == CKK_ML_DSA)
 				*p11object = new P11MLDSAPrivateKeyObj();
+#endif
+#ifdef WITH_SLH_DSA
+			else if (keyType == CKK_SLH_DSA)
+				*p11object = new P11SLHDSAPrivateKeyObj();
 #endif
 			else
 				return CKR_ATTRIBUTE_VALUE_INVALID;
@@ -4252,6 +4260,10 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 	bool isMLDSA = false;
 	MLDSAMechanismParam mldsaParam;
 #endif
+#ifdef WITH_SLH_DSA
+	bool isSLHDSA = false;
+	SLHDSAMechanismParam slhdsaParam;
+#endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
 			mechanism = AsymMech::RSA_PKCS;
@@ -4562,6 +4574,48 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			}
 			break;
 #endif
+#ifdef WITH_SLH_DSA
+		case CKM_SLH_DSA:
+			mechanism = AsymMech::SLHDSA;
+			bAllowMultiPartOp = true;
+			isSLHDSA = true;
+			if (pMechanism->pParameter == NULL_PTR)
+			{
+				if (pMechanism->ulParameterLen != 0)
+				{
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+			}
+			else
+			{
+				if (pMechanism->ulParameterLen != sizeof(CK_SIGN_ADDITIONAL_CONTEXT))
+				{
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
+				CK_RV rv = SLHDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &slhdsaParam.hedgeType);
+				if (rv != CKR_OK) {
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+				if (ckSignAdditionalContext->ulContextLen > 0) {
+					if (ckSignAdditionalContext->pContext == NULL_PTR) {
+						ERROR_MSG("Invalid parameters");
+						return CKR_ARGUMENTS_BAD;
+					}
+					if (ckSignAdditionalContext->ulContextLen > 255) {
+						ERROR_MSG("Invalid parameters");
+						return CKR_ARGUMENTS_BAD;
+					}
+					slhdsaParam.additionalContext = ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
+					DEBUG_MSG("Sign SLHDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)slhdsaParam.additionalContext.size(), slhdsaParam.hedgeType);
+				}
+				mechanismParam = &slhdsaParam;
+			}
+			break;
+#endif
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -4677,6 +4731,30 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 		}
 
 		if (MLDSAUtil::getMLDSAPrivateKey((MLDSAPrivateKey*)privateKey, token, key) != CKR_OK)
+		{
+			asymCrypto->recyclePrivateKey(privateKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+			return CKR_GENERAL_ERROR;
+		}
+	}
+#endif
+#ifdef WITH_SLH_DSA
+	else if (isSLHDSA)
+	{
+		if (keyType != CKK_SLH_DSA)
+			return CKR_KEY_TYPE_INCONSISTENT;
+
+		asymCrypto = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::SLHDSA);
+		if (asymCrypto == NULL) return CKR_MECHANISM_INVALID;
+
+		privateKey = asymCrypto->newPrivateKey();
+		if (privateKey == NULL)
+		{
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+			return CKR_HOST_MEMORY;
+		}
+
+		if (SLHDSAUtil::getSLHDSAPrivateKey((SLHDSAPrivateKey*)privateKey, token, key) != CKR_OK)
 		{
 			asymCrypto->recyclePrivateKey(privateKey);
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
@@ -5353,6 +5431,10 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	bool isMLDSA = false;
 	MLDSAMechanismParam mldsaParam;
 #endif
+#ifdef WITH_SLH_DSA
+	bool isSLHDSA = false;
+	SLHDSAMechanismParam slhdsaParam;
+#endif
 	switch(pMechanism->mechanism) {
 		case CKM_RSA_PKCS:
 			mechanism = AsymMech::RSA_PKCS;
@@ -5661,6 +5743,48 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			}
 			break;
 #endif
+#ifdef WITH_SLH_DSA
+		case CKM_SLH_DSA:
+			mechanism = AsymMech::SLHDSA;
+			bAllowMultiPartOp = false;
+			isSLHDSA = true;
+			if (pMechanism->pParameter == NULL_PTR)
+			{
+				if (pMechanism->ulParameterLen != 0)
+				{
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+			}
+			else
+			{
+				if (pMechanism->ulParameterLen != sizeof(CK_SIGN_ADDITIONAL_CONTEXT))
+				{
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
+				CK_RV rv = SLHDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &slhdsaParam.hedgeType);
+				if (rv != CKR_OK) {
+					ERROR_MSG("Invalid parameters");
+					return CKR_ARGUMENTS_BAD;
+				}
+				if (ckSignAdditionalContext->ulContextLen > 0) {
+					if (ckSignAdditionalContext->pContext == NULL_PTR) {
+						ERROR_MSG("Invalid parameters");
+						return CKR_ARGUMENTS_BAD;
+					}
+					if (ckSignAdditionalContext->ulContextLen > 255) {
+						ERROR_MSG("Invalid parameters");
+						return CKR_ARGUMENTS_BAD;
+					}
+					slhdsaParam.additionalContext = ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
+					DEBUG_MSG("Verify SLHDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)slhdsaParam.additionalContext.size(), slhdsaParam.hedgeType);
+				}
+				mechanismParam = &slhdsaParam;
+			}
+			break;
+#endif
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
@@ -5776,6 +5900,30 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 		}
 
 		if (MLDSAUtil::getMLDSAPublicKey((MLDSAPublicKey*)publicKey, token, key) != CKR_OK)
+		{
+			asymCrypto->recyclePublicKey(publicKey);
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+			return CKR_GENERAL_ERROR;
+		}
+	}
+#endif
+#ifdef WITH_SLH_DSA
+	else if (isSLHDSA)
+	{
+		if (keyType != CKK_SLH_DSA)
+			return CKR_KEY_TYPE_INCONSISTENT;
+
+		asymCrypto = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::SLHDSA);
+		if (asymCrypto == NULL) return CKR_MECHANISM_INVALID;
+
+		publicKey = asymCrypto->newPublicKey();
+		if (publicKey == NULL)
+		{
+			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);
+			return CKR_HOST_MEMORY;
+		}
+
+		if (SLHDSAUtil::getSLHDSAPublicKey((SLHDSAPublicKey*)publicKey, token, key) != CKR_OK)
 		{
 			asymCrypto->recyclePublicKey(publicKey);
 			CryptoFactory::i()->recycleAsymmetricAlgorithm(asymCrypto);

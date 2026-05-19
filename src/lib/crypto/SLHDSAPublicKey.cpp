@@ -24,6 +24,10 @@ SLHDSAPublicKey::SLHDSAPublicKey()
 /** \brief isOfType */
 bool SLHDSAPublicKey::isOfType(const char* inType)
 {
+	if (inType == NULL)
+	{
+		return false;
+	}
 	return !strcmp(type, inType);
 }
 
@@ -98,7 +102,7 @@ bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
 	ByteString deserializedParam = ByteString::chainDeserialise(serialised);
 
-	if ((deserializedValue.size() == 0) || (deserializedParam.size() == 0))
+	if (deserializedValue.size() == 0)
 	{
 		return false;
 	}
@@ -107,6 +111,10 @@ bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 	if (deserializedParam.size() == sizeof(unsigned long))
 	{
 		memcpy(&paramSet, deserializedParam.const_byte_str(), sizeof(unsigned long));
+	}
+	else if (deserializedParam.size() != 0)
+	{
+		return false;
 	}
 
 	setValue(deserializedValue);
