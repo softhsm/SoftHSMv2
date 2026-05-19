@@ -72,6 +72,12 @@ OSSLSLHDSAPublicKey& OSSLSLHDSAPublicKey::operator=(OSSLSLHDSAPublicKey&& other)
 /** \brief setFromOSSL */
 bool OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 {
+	if (inEVPPKEY == NULL)
+	{
+		ERROR_MSG("inEVPPKEY is NULL");
+		return false;
+	}
+
 	// let's use max pub length
 	uint8_t localPub[SLHDSAParameters::SLH_DSA_SHA2_256F_PUB_LENGTH];
 	size_t pub_len;
