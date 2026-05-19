@@ -137,6 +137,11 @@ void OSSLSLHDSAPublicKey::createOSSLKey()
 	ByteString localValue = getValue();
 
 	const char* name = OSSL::slhdsaParameterSet2Name(getParameterSet());
+	if (name == NULL)
+	{
+		ERROR_MSG("Unknown SLH-DSA parameter set (%lu)", getParameterSet());
+		return;
+	}
 
 	int selection = 0;
 	EVP_PKEY_CTX *ctx = NULL;
