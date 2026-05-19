@@ -271,6 +271,52 @@ CK_RV SignVerifyTests::generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hS
 }
 #endif
 
+#ifdef WITH_SLH_DSA
+CK_RV SignVerifyTests::generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk) {
+	CK_MECHANISM mechanism = { CKM_SLH_DSA_KEY_PAIR_GEN, NULL_PTR, 0 };
+	CK_KEY_TYPE keyType = CKK_SLH_DSA;
+	CK_BYTE label[] = { 0x12, 0x34 }; // dummy
+	CK_BYTE id[] = { 123 } ; // dummy
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+
+	CK_ATTRIBUTE pukAttribs[] =
+	{
+		{ CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet) },
+		{ CKA_LABEL, &label[0], sizeof(label) },
+		{ CKA_ID, &id[0], sizeof(id) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_VERIFY, &bTrue, sizeof(bTrue) },
+		{ CKA_ENCRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_WRAP, &bFalse, sizeof(bFalse) },
+		{ CKA_TOKEN, &bTokenPuk, sizeof(bTokenPuk) },
+		{ CKA_PRIVATE, &bPrivatePuk, sizeof(bPrivatePuk) }
+	};
+	CK_ATTRIBUTE prkAttribs[] =
+	{
+		{ CKA_LABEL, &label[0], sizeof(label) },
+		{ CKA_ID, &id[0], sizeof(id) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_SIGN, &bTrue, sizeof(bTrue) },
+		{ CKA_DECRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_UNWRAP, &bFalse, sizeof(bFalse) },
+		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) },
+		{ CKA_TOKEN, &bTokenPrk, sizeof(bTokenPrk) },
+		{ CKA_PRIVATE, &bPrivatePrk, sizeof(bPrivatePrk) },
+		{ CKA_EXTRACTABLE, &bFalse, sizeof(bFalse) }
+	};
+
+	hPuk = CK_INVALID_HANDLE;
+	hPrk = CK_INVALID_HANDLE;
+	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
+}
+#endif
+
+
+
 void SignVerifyTests::signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param /* = NULL_PTR */, CK_ULONG paramLen /* = 0 */)
 {
 	CK_RV rv;

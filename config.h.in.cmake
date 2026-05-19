@@ -154,6 +154,9 @@
 /* Compile with ML-DSA support */
 #cmakedefine WITH_ML_DSA @WITH_ML_DSA@
 
+/* Compile with SLH-DSA support */
+#cmakedefine WITH_SLH_DSA @WITH_SLH_DSA@
+
 /* Compile with FIPS 140-2 mode */
 #cmakedefine WITH_FIPS @WITH_FIPS@
 
