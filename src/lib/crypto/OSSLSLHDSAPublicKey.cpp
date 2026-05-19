@@ -75,7 +75,8 @@ bool OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 	// let's use max pub length
 	uint8_t localPub[SLHDSAParameters::SLH_DSA_SHA2_256F_PUB_LENGTH];
 	size_t pub_len;
-	int rv = EVP_PKEY_get_octet_string_param(inEVPPKEY, OSSL_PKEY_PARAM_PUB_KEY,
+	// Note: OpenSSL does not modify the key in this API, but the signature may lack const in some versions.
+	int rv = EVP_PKEY_get_octet_string_param(const_cast<EVP_PKEY*>(inEVPPKEY), OSSL_PKEY_PARAM_PUB_KEY,
 	         localPub, sizeof(localPub), &pub_len);
 
 	if(rv <= 0)

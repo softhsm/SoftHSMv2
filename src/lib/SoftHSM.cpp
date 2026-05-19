@@ -8089,7 +8089,10 @@ CK_RV SoftHSM::C_UnwrapKey
 				osobject->abortTransaction();
 
 			if (!bOK)
-				rv = CKR_FUNCTION_FAILED;
+			{
+				if (rv == CKR_OK)
+					rv = CKR_FUNCTION_FAILED;
+			}
 		}
 		else
 			rv = CKR_FUNCTION_FAILED;
