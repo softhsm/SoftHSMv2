@@ -11,7 +11,7 @@ jobs:
     name: Linux with Botan
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare
         run: |
           sudo apt-get update -qq
@@ -31,7 +31,7 @@ jobs:
     name: Linux with OpenSSL 1.1.1
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare
         run: |
           sudo apt-get update -qq
@@ -58,7 +58,7 @@ jobs:
     name: Linux with OpenSSL 3.0
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare
         run: |
           sudo apt-get update -qq
@@ -79,7 +79,7 @@ jobs:
     name: Linux with OpenSSL 3.5.6
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare
         env:
           OPENSSL_VERSION: 3.5.6
@@ -127,7 +127,7 @@ jobs:
           - backend: botan
             extra-options: --with-botan=$(brew --prefix botan@2)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare
         run: |
           brew install automake libtool cppunit botan@2
@@ -190,8 +190,8 @@ jobs:
             build-options: "-DENABLE_MLDSA=ON"
             mldsa-test: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/checkout@v6
+      - uses: ilammy/msvc-dev-cmd@v1.13.0
         with:
           arch: ${{ matrix.arch }}
       - name: Create vcpkg.json
