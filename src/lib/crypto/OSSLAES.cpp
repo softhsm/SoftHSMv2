@@ -262,6 +262,18 @@ const EVP_CIPHER* OSSLAES::getCipher() const
 				return EVP_aes_256_gcm();
 		};
 	}
+	else if (currentCipherMode == SymMode::CCM)
+	{
+		switch(currentKey->getBitLen())
+		{
+			case 128:
+				return EVP_aes_128_ccm();
+			case 192:
+				return EVP_aes_192_ccm();
+			case 256:
+				return EVP_aes_256_ccm();
+		};
+	}
 
 	ERROR_MSG("Invalid AES cipher mode %i", currentCipherMode);
 
