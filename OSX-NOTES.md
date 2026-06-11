@@ -43,14 +43,15 @@ Now we need to install some dependencies
 
 	$ brew install automake
 	$ brew install pkg-config
-	$ brew install openssl
+	$ brew install openssl@3.6
 	$ brew install sqlite
 	$ brew install cppunit
 	$ brew install libtool
 
+OpenSSL 3.6+ required for AES-CCM ref issue #22773
+
 openssl, sqlite, and libtool are pre-installed on the system. The versions downloaded
 by brew are stored in an alternative location under /usr/local
-
 The only brew warning of note is for libtool:
 
 	==> Caveats
