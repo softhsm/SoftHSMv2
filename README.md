@@ -38,6 +38,7 @@ Minimum required versions:
 
 - Botan 2.0.0
 - OpenSSL 1.0.0
+**OpenSSL 3.6+ required for AES-CCM**  [ref issue #22773](https://github.com/openssl/openssl/issues/22773)
 
 If you are using Botan, use at least version 2.6.0. This will improve
 the performance when doing public key operations.
