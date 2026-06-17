@@ -1215,8 +1215,12 @@ void AESTests::testCCM()
 		}
 	};
 
-
-	for (int i = 0; i < 12; i++)
+	#ifdef WITH_BOTAN
+		const int test128Size = 13;
+	#else
+		const int test128Size = 12;
+	#endif
+	for (int i = 0; i < test128Size; i++)
 	{
 		ByteString keyData128(test128[i][0]);
 
@@ -1254,7 +1258,8 @@ void AESTests::testCCM()
 
 		// Check that we can get the plain text
 		shsmPlainText.wipe();
-		int dataSize = shsmCipherText.size() - tagBits > 0 ? shsmCipherText.size() - tagBits : 0;
+		size_t cipherSize = shsmCipherText.size();
+		size_t dataSize = cipherSize > tagBits ? cipherSize - tagBits : 0;
 		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->decryptInit(&aesKey128, SymMode::CCM, IV, false, dataSize, AAD, tagBits));
 
 		CPPUNIT_ASSERT_MESSAGE("Failure at i=" + std::to_string(i), aes->decryptUpdate(shsmCipherText, OB));
