@@ -75,23 +75,33 @@ jobs:
         run: |
           make check || (find . -name test-suite.log -exec cat {} \; && false)
 
-  linux_ossl_35:
-    name: Linux with OpenSSL 3.5.6
+  linux_ossl_source:
+    name: Linux with OpenSSL ${{ matrix.version }}
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: "3.5.7"
+            sha256: "a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8"
+            dir: /usr/local/openssl-3.5
+          - version: "4.0.1"
+            sha256: "2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09"
+            dir: /usr/local/openssl-4.0
     steps:
       - uses: actions/checkout@v6
       - name: Prepare
         env:
-          OPENSSL_VERSION: 3.5.6
-          OPENSSL_SHA256: "deae7c80cba99c4b4f940ecadb3c3338b13cb77418409238e57d7f31f2a3b736"
-          OPENSSL_INSTALL_DIR: /usr/local/openssl-3.5
-          LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
-          PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
+          OPENSSL_VERSION: ${{ matrix.version }}
+          OPENSSL_SHA256: ${{ matrix.sha256 }}
+          OPENSSL_INSTALL_DIR: ${{ matrix.dir }}
+          LDFLAGS: "-Wl,-rpath,${{ matrix.dir }}/lib64 -L${{ matrix.dir }}/lib64"
+          PKG_CONFIG_PATH: "${{ matrix.dir }}/lib64/pkgconfig"
         run: |
           set -x
           sudo apt-get update -qq
           sudo apt-get install -y libcppunit-dev p11-kit build-essential checkinstall zlib1g-dev sudo autoconf libtool git
-          # Install OpenSSL 3.5
+          # Install OpenSSL from source
           curl -L -O https://github.com/openssl/openssl/releases/download/openssl-${{ env.OPENSSL_VERSION }}/openssl-${{ env.OPENSSL_VERSION }}.tar.gz
           echo "${OPENSSL_SHA256}  openssl-${{ env.OPENSSL_VERSION }}.tar.gz" | sha256sum -c -
           tar -xf openssl-${{ env.OPENSSL_VERSION }}.tar.gz
@@ -105,9 +115,9 @@ jobs:
         env:
           # Once all OpenSSL deprecations fixed, uncomment this
           #   CXXFLAGS: -Werror
-          OPENSSL_INSTALL_DIR: /usr/local/openssl-3.5
-          LDFLAGS: "-Wl,-rpath,/usr/local/openssl-3.5/lib64 -L/usr/local/openssl-3.5/lib64"
-          PKG_CONFIG_PATH: "/usr/local/openssl-3.5/lib64/pkgconfig"
+          OPENSSL_INSTALL_DIR: ${{ matrix.dir }}
+          LDFLAGS: "-Wl,-rpath,${{ matrix.dir }}/lib64 -L${{ matrix.dir }}/lib64"
+          PKG_CONFIG_PATH: "${{ matrix.dir }}/lib64/pkgconfig"
         run: |
           set -x
           ./autogen.sh
