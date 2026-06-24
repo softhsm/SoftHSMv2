@@ -14,6 +14,16 @@
 
 #include "config.h"
 
+struct Hedge
+{
+	enum Type
+	{
+		HEDGE_PREFERRED,
+		HEDGE_REQUIRED,
+		DETERMINISTIC_REQUIRED
+	};
+};
+
 class MechanismParam
 {
 public:
