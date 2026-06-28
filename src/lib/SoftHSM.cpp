@@ -8435,6 +8435,16 @@ CK_RV SoftHSM::C_EncapsulateKey
 		return CKR_GENERAL_ERROR;
 	}
 
+	if (pCipherText == NULL_PTR)
+	{
+		unsigned long ctLen = ((MLKEMPublicKey*)publicKey)->getOutputLength();
+		cipher->recyclePublicKey(publicKey);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		if (ctLen == 0) return CKR_GENERAL_ERROR;
+		*pulCipherTextLen = ctLen;
+		return CKR_OK;
+	}
+
 	SymmetricKey *secret = NULL;
 
 	if (cipher->encapsulate(publicKey, cipherText, &secret, keyType, mech))
@@ -8486,6 +8496,25 @@ CK_RV SoftHSM::C_EncapsulateKey
 						case CKA_VALUE:
 							INFO_MSG("CKA_VALUE must not be included");
 							rv = CKR_ATTRIBUTE_READ_ONLY;
+							break;
+						case CKA_VALUE_LEN:
+							byteLen = *(CK_ULONG*)pTemplate[i].pValue;
+							if (byteLen > 32 || byteLen == 0)
+							{
+								INFO_MSG("CKA_VALUE_LEN must be less than or equal to 32");
+								*pulCipherTextLen = 0;
+								rv = CKR_WRAPPED_KEY_LEN_RANGE;
+							}
+							if (keyType == CKK_AES)
+							{
+								if (byteLen != 16 && byteLen != 24 && byteLen != 32)
+								{
+									INFO_MSG("CKA_VALUE_LEN must be 16, 24 or 32 for AES");
+									*pulCipherTextLen = 0;
+									rv = CKR_ATTRIBUTE_VALUE_INVALID;
+								}
+								break;
+							}
 							break;
 						case CKA_CHECK_VALUE:
 							if (pTemplate[i].ulValueLen > 0)
@@ -8650,7 +8679,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 	CK_BBOOL isDecapsulationKeyOnToken = decapsulationKey->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isDecapsulationKeyPrivate = decapsulationKey->getBooleanValue(CKA_PRIVATE, true);
 
-	// Check user credentials for the wrapping key
+	// Check user credentials for the decapsulation key
 	rv = haveRead(session->getState(), isDecapsulationKeyOnToken, isDecapsulationKeyPrivate);
 	if (rv != CKR_OK)
 	{
@@ -8661,7 +8690,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 	}
 
 	// Check if the wrapping key can be used for decapsulation
-	if (decapsulationKey->getBooleanValue(CKA_DECAPSULATE, false) == false)
+	if (!decapsulationKey->getBooleanValue(CKA_DECAPSULATE, false))
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the wrapping key
@@ -8717,6 +8746,12 @@ CK_RV SoftHSM::C_DecapsulateKey
 	AsymmetricAlgorithm* cipher = CryptoFactory::i()->getAsymmetricAlgorithm(algo);
 	if (cipher == NULL) return CKR_MECHANISM_INVALID;
 
+	if (ulCipherTextLen <= 0 || pCipherText == NULL_PTR)
+	{
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+
 	PrivateKey* privateKey = cipher->newPrivateKey();
 
 	if (MLKEMUtil::getMLKEMPrivateKey((MLKEMPrivateKey*)privateKey, token, decapsulationKey) != CKR_OK)
@@ -8762,7 +8797,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 			}
 		}
 
-		rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, phKey, OBJECT_OP_UNWRAP);
+		rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, phKey, OBJECT_OP_DECAPSULATE);
 
 		// Store the attributes that are being supplied
 		if (rv == CKR_OK)
@@ -8779,12 +8814,31 @@ CK_RV SoftHSM::C_DecapsulateKey
 					{
 						case CKA_VALUE:
 							INFO_MSG("CKA_VALUE must not be included");
-							return CKR_ATTRIBUTE_READ_ONLY;
+							rv = CKR_ATTRIBUTE_READ_ONLY;
+							break;
+						case CKA_VALUE_LEN:
+							byteLen = *(CK_ULONG*)pTemplate[i].pValue;
+							if (byteLen > 32 || byteLen == 0)
+							{
+								INFO_MSG("CKA_VALUE_LEN must be less than or equal to 32");
+								rv = CKR_WRAPPED_KEY_LEN_RANGE;
+								break;
+							}
+							if (keyType == CKK_AES)
+							{
+								if (byteLen != 16 && byteLen != 24 && byteLen != 32)
+								{
+									INFO_MSG("CKA_VALUE_LEN must be 16, 24 or 32 for AES");
+									rv = CKR_ATTRIBUTE_VALUE_INVALID;
+								}
+								break;
+							}
+							break;
 						case CKA_CHECK_VALUE:
 							if (pTemplate[i].ulValueLen > 0)
 							{
 								INFO_MSG("CKA_CHECK_VALUE must be a no-value (0 length) entry");
-								return CKR_ATTRIBUTE_VALUE_INVALID;
+								rv = CKR_ATTRIBUTE_VALUE_INVALID;
 							}
 							checkValue = false;
 							break;
@@ -8795,55 +8849,59 @@ CK_RV SoftHSM::C_DecapsulateKey
 
 				bool bOK = true;
 
-				// Common Attributes
-				bOK = bOK && osobject->setAttribute(CKA_LOCAL,false);
-				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,false);
-				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE,false);
-
-				// Secret Attributes
-				ByteString secretValue = secret->getKeyBits();
-				ByteString value;
-				ByteString plainKCV;
-				ByteString kcv;
-
-				// Truncate value when requested, remove from the leading end
-				if (byteLen < secretValue.size())
-					secretValue.resize(byteLen);
-				// Get the KCV
-				switch (keyType)
+				if (rv == CKR_OK)
 				{
-					case CKK_GENERIC_SECRET:
-						secret->setBitLen(byteLen * 8);
-						plainKCV = secret->getKeyCheckValue();
-						break;
-					case CKK_AES:
-						secret->setBitLen(byteLen * 8);
-						plainKCV = ((AESKey*)secret)->getKeyCheckValue();
-						break;
-					default:
-						bOK = false;
-						break;
-				}
 
-				if (isPrivate)
-				{
-					token->encrypt(secretValue, value);
-					token->encrypt(plainKCV, kcv);
-				}
-				else
-				{
-					value = secretValue;
-					kcv = plainKCV;
-				}
-				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-				if (checkValue)
-					bOK = bOK && osobject->setAttribute(CKA_CHECK_VALUE, kcv);
-				if (bOK) {
-					bOK = osobject->commitTransaction();
-					DEBUG_MSG("phKey: %lx", phKey);
-				}
-				else {
-					osobject->abortTransaction();
+					// Common Attributes
+					bOK = bOK && osobject->setAttribute(CKA_LOCAL,false);
+					bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,false);
+					bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE,false);
+
+					// Secret Attributes
+					ByteString secretValue = secret->getKeyBits();
+					ByteString value;
+					ByteString plainKCV;
+					ByteString kcv;
+
+					// Truncate value when requested, remove from the leading end
+					if (byteLen < secretValue.size())
+						secretValue.resize(byteLen);
+					// Get the KCV
+					switch (keyType)
+					{
+						case CKK_GENERIC_SECRET:
+							secret->setBitLen(byteLen * 8);
+							plainKCV = secret->getKeyCheckValue();
+							break;
+						case CKK_AES:
+							secret->setBitLen(byteLen * 8);
+							plainKCV = ((AESKey*)secret)->getKeyCheckValue();
+							break;
+						default:
+							bOK = false;
+							break;
+					}
+
+					if (isPrivate)
+					{
+						token->encrypt(secretValue, value);
+						token->encrypt(plainKCV, kcv);
+					}
+					else
+					{
+						value = secretValue;
+						kcv = plainKCV;
+					}
+					bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+					if (checkValue)
+						bOK = bOK && osobject->setAttribute(CKA_CHECK_VALUE, kcv);
+					if (bOK) {
+						bOK = osobject->commitTransaction();
+						DEBUG_MSG("phKey: %lx", phKey);
+					}
+					else {
+						osobject->abortTransaction();
+					}
 				}
 
 				if (!bOK)

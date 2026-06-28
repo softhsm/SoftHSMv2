@@ -21,6 +21,7 @@ set(SOURCES p11test.cpp
             UserTests.cpp
             ObjectTests.cpp
             DeriveTests.cpp
+            EncapDecapTests.cpp
             SignVerifyTests.cpp
             AsymEncryptDecryptTests.cpp
             AsymWrapUnwrapTests.cpp
