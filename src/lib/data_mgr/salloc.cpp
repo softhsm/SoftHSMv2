@@ -71,7 +71,7 @@ void* salloc(size_t len)
 #ifndef _WIN32
 		free(ptr);
 #else
-		VirtualFree((const void*) pre, MEM_RELEASE);
+		VirtualFree((const void*) pre, 0, MEM_RELEASE);
 #endif
 
 		return NULL;
@@ -116,7 +116,7 @@ void sfree(void* ptr)
 #ifndef _WIN32
 	munlock((const void*) ptr, len);
 #else
-	VirtualFree((const void*) pre, MEM_RELEASE);
+	VirtualFree((const void*) pre, 0, MEM_RELEASE);
 #endif
 
 #endif // SENSITIVE_NON_PAGED
