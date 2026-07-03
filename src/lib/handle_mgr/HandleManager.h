@@ -35,6 +35,8 @@
 
 #include "MutexFactory.h"
 #include "Handle.h"
+#include "OSObject.h"
+#include "Session.h"
 #include "cryptoki.h"
 
 #include <map>
@@ -49,23 +51,23 @@ public:
 
     virtual ~HandleManager();
 
-    CK_SESSION_HANDLE addSession(CK_SLOT_ID slotID, CK_VOID_PTR session);
-    CK_VOID_PTR getSession(const CK_SESSION_HANDLE hSession);
+    CK_SESSION_HANDLE addSession(CK_SLOT_ID slotID, Session *session);
+    Session *getSession(const CK_SESSION_HANDLE hSession);
 
     // Add the session object and return a handle. For objects that have already been registered, check that the
     // slotID matches. The hSession may be different as the object may be added as part of a find objects operation.
-    CK_OBJECT_HANDLE addSessionObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate, CK_VOID_PTR object);
+    CK_OBJECT_HANDLE addSessionObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate, OSObject *object);
 
     // Add the token object and return a handle. For objects that have already been registered, check that the
     // slotID mathces.
-    CK_OBJECT_HANDLE addTokenObject(CK_SLOT_ID slotID, bool isPrivate, CK_VOID_PTR object);
+    CK_OBJECT_HANDLE addTokenObject(CK_SLOT_ID slotID, bool isPrivate, OSObject *object);
 
     // Get the object pointer associated with the given object handle.
-    CK_VOID_PTR getObject(const CK_OBJECT_HANDLE hObject);
+    OSObject *getObject(const CK_OBJECT_HANDLE hObject);
 
     // Get the object handle for the object pointer that has been previously registered.
     // When the object is not found CK_INVALID_HANDLE is returned.
-    CK_OBJECT_HANDLE getObjectHandle(CK_VOID_PTR object);
+    CK_OBJECT_HANDLE getObjectHandle(OSObject *object);
 
     // Remove the given object handle.
     void destroyObject(const CK_OBJECT_HANDLE hObject);
@@ -86,17 +88,17 @@ public:
 
 private:
     Mutex* handlesMutex;
-    std::map< CK_ULONG, Handle> handles;
-    std::map< CK_VOID_PTR, CK_ULONG> objects;
+    std::map<CK_ULONG, Handle> handles;
+    std::map<OSObject *, CK_ULONG> objects;
     CK_ULONG handleCounter;
 
     // Secondary indexes for efficient cleanup without full-map scans.
     // Maps a session handle to the set of object handles created in that session.
-    std::map< CK_SESSION_HANDLE, std::set<CK_ULONG> > sessionObjectHandles;
+    std::map<CK_SESSION_HANDLE, std::set<CK_ULONG> > sessionObjectHandles;
     // Maps a slot ID to the set of all handles (sessions + objects) for that slot.
-    std::map< CK_SLOT_ID, std::set<CK_ULONG> > slotHandles;
+    std::map<CK_SLOT_ID, std::set<CK_ULONG> > slotHandles;
     // Tracks the number of open sessions per slot to avoid counting scans.
-    std::map< CK_SLOT_ID, CK_ULONG> slotSessionCount;
+    std::map<CK_SLOT_ID, CK_ULONG> slotSessionCount;
 };
 
 #endif // !_SOFTHSM_V2_HANDLEMANAGER_H

@@ -2096,9 +2096,23 @@ CK_RV SoftHSM::C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 	// Check if we are out of memory
 	if (findOp == NULL_PTR) return CKR_HOST_MEMORY;
 
+	std::set<OSObject*> tokenObjects;
+	std::set<OSObject*> sessionObjects;
+	token->getObjects(tokenObjects);
+	sessionObjectStore->getObjects(slot->getSlotID(), sessionObjects);
+
+	struct SessionObjReleaser {
+		std::set<OSObject*>& s;
+		~SessionObjReleaser()
+		{
+			for (auto* o : s)
+				o->release();
+		}
+	} sessionObjectGuard{sessionObjects};
+
 	std::set<OSObject*> allObjects;
-	token->getObjects(allObjects);
-	sessionObjectStore->getObjects(slot->getSlotID(),allObjects);
+	allObjects.insert(tokenObjects.begin(), tokenObjects.end());
+	allObjects.insert(sessionObjects.begin(), sessionObjects.end());
 
 	std::set<CK_OBJECT_HANDLE> handles;
 	std::set<OSObject*>::iterator it;

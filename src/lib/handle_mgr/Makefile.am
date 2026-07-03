@@ -6,6 +6,7 @@ AM_CPPFLAGS =				-I$(srcdir)/.. \
 					-I$(srcdir)/../data_mgr \
 					-I$(srcdir)/../object_store \
 					-I$(srcdir)/../pkcs11 \
+					-I$(srcdir)/../session_mgr \
 					-I$(srcdir)/../slot_mgr
 
 noinst_LTLIBRARIES =			libsofthsm_handlemgr.la
