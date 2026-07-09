@@ -74,16 +74,18 @@ void FileTests::testExistNotExist()
 	// Test pre-condition
 	CPPUNIT_ASSERT(!exists("nonExistentFile"));
 
-	// Attempt to open a file known not to exist
+	// Check the 'exists' static routine, then attempt to open a file known not to exist
 #ifndef _WIN32
+	CPPUNIT_ASSERT(!File::exists("testdir/nonExistentFile"));
 	File doesntExist("testdir/nonExistentFile", DEFAULT_UMASK);
 #else
+	CPPUNIT_ASSERT(!File::exists("testdir\\nonExistentFile"));
 	File doesntExist("testdir\\nonExistentFile", DEFAULT_UMASK);
 #endif
 
 	CPPUNIT_ASSERT(!doesntExist.isValid());
 
-	// Attempt to open a file known to exist
+	// Check the 'exists' static routine, then attempt to open a file known to exist
 #ifndef _WIN32
 	CPPUNIT_ASSERT(!system("echo someStuff > testdir/existingFile"));
 #else
@@ -92,8 +94,10 @@ void FileTests::testExistNotExist()
 	CPPUNIT_ASSERT(exists("existingFile"));
 
 #ifndef _WIN32
+	CPPUNIT_ASSERT(File::exists("testdir/existingFile"));
 	File exists("testdir/existingFile", DEFAULT_UMASK);
 #else
+	CPPUNIT_ASSERT(File::exists("testdir\\existingFile"));
 	File exists("testdir\\existingFile", DEFAULT_UMASK);
 #endif
 

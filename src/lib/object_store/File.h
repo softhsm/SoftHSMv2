@@ -47,6 +47,11 @@ public:
 	// Destructor
 	virtual ~File();
 
+	// Check if a file exists without trying to open it
+	// May be used when a routine just wants to check file existence,
+	// and does not want to throw an error by trying to open it.
+	static bool exists(const std::string& path);
+
 	// Check if the file is valid
 	bool isValid();
 
