@@ -825,6 +825,7 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_AES_CBC_PAD"]		= CKM_AES_CBC_PAD;
 	t["CKM_AES_CTR"]		= CKM_AES_CTR;
 	t["CKM_AES_GCM"]		= CKM_AES_GCM;
+	t["CKM_AES_CCM"]		= CKM_AES_CCM;
 	t["CKM_AES_KEY_WRAP"]		= CKM_AES_KEY_WRAP;
 #ifdef HAVE_AES_KEY_WRAP_PAD
 	t["CKM_AES_KEY_WRAP_PAD"]	= CKM_AES_KEY_WRAP_PAD;
@@ -1253,6 +1254,7 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_AES_ECB:
 		case CKM_AES_CTR:
 		case CKM_AES_GCM:
+		case CKM_AES_CCM:
 			pInfo->ulMinKeySize = 16;
 			pInfo->ulMaxKeySize = 32;
 			pInfo->flags |= CKF_ENCRYPT | CKF_DECRYPT;
@@ -2287,6 +2289,7 @@ static bool isSymMechanism(CK_MECHANISM_PTR pMechanism)
 		case CKM_AES_CBC_PAD:
 		case CKM_AES_CTR:
 		case CKM_AES_GCM:
+		case CKM_AES_CCM:
 			return true;
 		default:
 			return false;
@@ -2348,6 +2351,7 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 	size_t counterBits = 0;
 	ByteString aad;
 	size_t tagBytes = 0;
+	size_t msgLenBytes = 0;
 	switch(pMechanism->mechanism) {
 #ifndef WITH_FIPS
 		case CKM_DES_ECB:
@@ -2505,6 +2509,40 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			tagBytes = tagBytes / 8;
+			break;
+		case CKM_AES_CCM:
+			if (keyType != CKK_AES)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			algo = SymAlgo::AES;
+			mode = SymMode::CCM;
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_CCM_PARAMS))
+			{
+				DEBUG_MSG("CCM mode requires parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			if (CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen < 7 || CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen > 13) {
+				DEBUG_MSG("Invalid ulNonceLen value, is %#5d should be 7 ≤ ulNonceLen ≤ 13.", CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen);
+				return CKR_ARGUMENTS_BAD;
+			}
+			iv.resize(CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen);
+			memcpy(&iv[0], CK_CCM_PARAMS_PTR(pMechanism->pParameter)->nonce, CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen);
+			aad.resize(CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
+			if (CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen > 0)
+				memcpy(&aad[0], CK_CCM_PARAMS_PTR(pMechanism->pParameter)->aad, CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
+			tagBytes = CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulMACLen;
+			counterBits = CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulDataLen;
+			msgLenBytes = 15 - CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen;
+			if (msgLenBytes < 8 && counterBits >= (1ULL << (8 * msgLenBytes)))
+			{
+				DEBUG_MSG("ulDataLen %lu exceeds CCM limit for msgLenBytes=%zu", counterBits, msgLenBytes);
+				return CKR_ARGUMENTS_BAD;
+			}
+			if (tagBytes != 4 && tagBytes != 6 && tagBytes != 8 && tagBytes != 10 && tagBytes != 12 && tagBytes != 14 && tagBytes != 16)
+			{
+				DEBUG_MSG("Invalid ulMACLen value, is %#5d should be 4, 6, 8, 10, 12, 14, or 16", tagBytes);
+				return CKR_ARGUMENTS_BAD;
+			}
 			break;
 		default:
 			return CKR_MECHANISM_INVALID;
@@ -3261,6 +3299,34 @@ CK_RV SoftHSM::SymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				return CKR_ARGUMENTS_BAD;
 			}
 			tagBytes = tagBytes / 8;
+			break;
+		case CKM_AES_CCM:
+			if (keyType != CKK_AES)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			algo = SymAlgo::AES;
+			mode = SymMode::CCM;
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_CCM_PARAMS))
+			{
+				DEBUG_MSG("CCM mode requires parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			if (CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen < 7 && CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen > 13) {
+				DEBUG_MSG("Invalid ulNonceLen value, is %#5d should be 7 ≤ ulNonceLen ≤ 13.", CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen);
+				return CKR_ARGUMENTS_BAD;
+			}
+			iv.resize(CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen);
+			memcpy(&iv[0], CK_CCM_PARAMS_PTR(pMechanism->pParameter)->nonce, CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulNonceLen);
+			aad.resize(CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
+			if (CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen > 0)
+				memcpy(&aad[0], CK_CCM_PARAMS_PTR(pMechanism->pParameter)->aad, CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
+			tagBytes = CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulMACLen;
+			counterBits = CK_CCM_PARAMS_PTR(pMechanism->pParameter)->ulDataLen;
+			if (tagBytes != 16 && tagBytes != 14 && tagBytes != 12 && tagBytes != 10 && tagBytes != 8)
+			{
+				DEBUG_MSG("Invalid ulDataLen value, is %#5d should be 16, 14, 12, 10 or 8", tagBytes);
+				return CKR_ARGUMENTS_BAD;
+			}
 			break;
 		default:
 			return CKR_MECHANISM_INVALID;

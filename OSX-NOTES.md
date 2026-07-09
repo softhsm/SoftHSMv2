@@ -50,7 +50,6 @@ Now we need to install some dependencies
 
 openssl, sqlite, and libtool are pre-installed on the system. The versions downloaded
 by brew are stored in an alternative location under /usr/local
-
 The only brew warning of note is for libtool:
 
 	==> Caveats
