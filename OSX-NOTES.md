@@ -48,8 +48,19 @@ Now we need to install some dependencies
 	$ brew install cppunit
 	$ brew install libtool
 
-openssl, sqlite, and libtool are pre-installed on the system. The versions downloaded
-by brew are stored in an alternative location under /usr/local
+openssl, sqlite, and libtool are pre-installed on the system. The versions
+downloaded by brew are stored in an alternative location, which differs by
+CPU architecture:
+
+  - Intel Macs: /usr/local
+  - Apple Silicon Macs (M1 and later): /opt/homebrew
+
+In addition, recent versions of Homebrew install OpenSSL as a versioned keg
+named openssl@3 rather than plain openssl. You can always find the correct
+path for your machine with:
+
+	brew --prefix openssl@3
+	brew --prefix sqlite
 
 The only brew warning of note is for libtool:
 
@@ -86,9 +97,29 @@ options available for building issue the following command:
 In the example below I will enable the optional token object store database
 backend.
 
+The paths to the Homebrew libraries depend on your CPU architecture (see the
+Homebrew section above). On an Intel Mac:
+
 	$ ./configure --with-objectstore-backend-db \
-		--with-openssl=/usr/local/opt/openssl \
+		--with-openssl=/usr/local/opt/openssl@3 \
 		--with-sqlite3=/usr/local/opt/sqlite
+
+On an Apple Silicon Mac:
+
+	$ ./configure --with-objectstore-backend-db \
+		--with-openssl=/opt/homebrew/opt/openssl@3 \
+		--with-sqlite3=/opt/homebrew/opt/sqlite
+
+Alternatively, the following form works on both architectures:
+
+	$ ./configure --with-objectstore-backend-db \
+		--with-openssl=$(brew --prefix openssl@3) \
+		--with-sqlite3=$(brew --prefix sqlite)
+
+If configure fails with "Can't find OpenSSL headers", double-check that the
+path passed to --with-openssl actually contains include/openssl/ssl.h. A
+common cause is using the /usr/local paths from an older version of these
+notes on an Apple Silicon machine.
 
 Now if for some reason the compilers are not found, do the following at the
 command line.
@@ -97,8 +128,8 @@ command line.
 	$ export CPP="xcrun cpp"
 	$ export CXX="xcrun g++"
 	$ ./configure --with-objectstore-backend-db \
-		--with-openssl=/usr/local/opt/openssl \
-		--with-sqlite3=/usr/local/opt/sqlite
+		--with-openssl=$(brew --prefix openssl@3) \
+		--with-sqlite3=$(brew --prefix sqlite)
 
 By exporting these environment variables we are instructing configure to use
 the compilers stored inside the installed XCode.app.
