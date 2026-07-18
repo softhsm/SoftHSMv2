@@ -59,8 +59,8 @@ In addition, recent versions of Homebrew install OpenSSL as a versioned keg
 named openssl@3 rather than plain openssl. You can always find the correct
 path for your machine with:
 
-	$ brew --prefix openssl@3
-	$ brew --prefix sqlite
+	brew --prefix openssl@3
+	brew --prefix sqlite
 
 The only brew warning of note is for libtool:
 
