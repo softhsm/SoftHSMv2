@@ -38,6 +38,16 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		[enable_mldsa="detect"]
 	)
 
+	# Add SLH-DSA check
+
+	AC_ARG_ENABLE(slhdsa,
+		AS_HELP_STRING([--enable-slhdsa],
+			[Enable support for SLH-DSA (default detect)]
+		),
+		[enable_slhdsa="${enableval}"],
+		[enable_slhdsa="detect"]
+	)
+
 	# Add ML-KEM check
 
 	AC_ARG_ENABLE(mlkem,
@@ -129,6 +139,15 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 			detect-no) enable_mldsa="no";;
 		esac
 
+		case "${enable_slhdsa}" in
+			yes|detect) ACX_OPENSSL_SLHDSA;;
+		esac
+		case "${enable_slhdsa}-${have_lib_openssl_slhdsa_support}" in
+			yes-no) AC_MSG_ERROR([OpenSSL library has no SLH-DSA support]);;
+			detect-yes) enable_slhdsa="yes";;
+			detect-no) enable_slhdsa="no";;
+		esac
+
 		case "${enable_mlkem}" in
 			yes|detect) ACX_OPENSSL_MLKEM;;
 		esac
@@ -206,6 +225,10 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 
 		if test	"x${enable_mldsa}" = "xyes"; then
             AC_MSG_ERROR([Botan does not support ML-DSA])
+        fi
+
+		if test	"x${enable_slhdsa}" = "xyes"; then
+            AC_MSG_ERROR([Botan does not support SLH-DSA])
         fi
 
         if test "x${enable_mlkem}" = "xyes"; then
@@ -289,6 +312,19 @@ AC_DEFUN([ACX_CRYPTO_BACKEND],[
 		AC_MSG_RESULT(no)
 	fi
 	AM_CONDITIONAL([WITH_ML_DSA], [test "x${enable_mldsa}" = "xyes"])
+
+	AC_MSG_CHECKING(for SLH-DSA support)
+	if test "x${enable_slhdsa}" = "xyes"; then
+		AC_MSG_RESULT(yes)
+		AC_DEFINE_UNQUOTED(
+			[WITH_SLH_DSA],
+			[],
+			[Compile with SLH-DSA support]
+		)
+	else
+		AC_MSG_RESULT(no)
+	fi
+	AM_CONDITIONAL([WITH_SLH_DSA], [test "x${enable_slhdsa}" = "xyes"])
 
 	AC_MSG_CHECKING(for ML-KEM support)
 	if test "x${enable_mlkem}" = "xyes"; then
