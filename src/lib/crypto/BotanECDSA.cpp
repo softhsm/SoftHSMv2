@@ -93,6 +93,18 @@ bool BotanECDSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 			case AsymMech::ECDSA_SHA512:
 				hash = HashAlgo::SHA512;
 				break;
+			case AsymMech::ECDSA_SHA3_224:
+				hash = HashAlgo::SHA3_224;
+				break;
+			case AsymMech::ECDSA_SHA3_256:
+				hash = HashAlgo::SHA3_256;
+				break;
+			case AsymMech::ECDSA_SHA3_384:
+				hash = HashAlgo::SHA3_384;
+				break;
+			case AsymMech::ECDSA_SHA3_512:
+				hash = HashAlgo::SHA3_512;
+				break;
 			default:
 				ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
 				return false;
@@ -212,6 +224,18 @@ bool BotanECDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism
 			break;
 		case AsymMech::ECDSA_SHA512:
 			hash = HashAlgo::SHA512;
+			break;
+		case AsymMech::ECDSA_SHA3_224:
+			hash = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::ECDSA_SHA3_256:
+			hash = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::ECDSA_SHA3_384:
+			hash = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::ECDSA_SHA3_512:
+			hash = HashAlgo::SHA3_512;
 			break;
 		default:
 			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
@@ -360,6 +384,18 @@ bool BotanECDSA::verify(PublicKey* publicKey, const ByteString& originalData,
             case AsymMech::ECDSA_SHA512:
                 hash = HashAlgo::SHA512;
                 break;
+            case AsymMech::ECDSA_SHA3_224:
+                hash = HashAlgo::SHA3_224;
+                break;
+            case AsymMech::ECDSA_SHA3_256:
+                hash = HashAlgo::SHA3_256;
+                break;
+            case AsymMech::ECDSA_SHA3_384:
+                hash = HashAlgo::SHA3_384;
+                break;
+            case AsymMech::ECDSA_SHA3_512:
+                hash = HashAlgo::SHA3_512;
+                break;
             default:
                 ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
                 return false;
@@ -476,6 +512,18 @@ bool BotanECDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism
 			break;
 		case AsymMech::ECDSA_SHA512:
 			hash = HashAlgo::SHA512;
+			break;
+		case AsymMech::ECDSA_SHA3_224:
+			hash = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::ECDSA_SHA3_256:
+			hash = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::ECDSA_SHA3_384:
+			hash = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::ECDSA_SHA3_512:
+			hash = HashAlgo::SHA3_512;
 			break;
 		default:
 			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);

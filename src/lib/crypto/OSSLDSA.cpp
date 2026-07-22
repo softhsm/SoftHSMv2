@@ -140,6 +140,18 @@ bool OSSLDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 		case AsymMech::DSA_SHA512:
 			hash = HashAlgo::SHA512;
 			break;
+		case AsymMech::DSA_SHA3_224:
+			hash = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::DSA_SHA3_256:
+			hash = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::DSA_SHA3_384:
+			hash = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::DSA_SHA3_512:
+			hash = HashAlgo::SHA3_512;
+			break;
 		default:
 			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
 
@@ -327,6 +339,18 @@ bool OSSLDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			break;
 		case AsymMech::DSA_SHA512:
 			hash = HashAlgo::SHA512;
+			break;
+		case AsymMech::DSA_SHA3_224:
+			hash = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::DSA_SHA3_256:
+			hash = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::DSA_SHA3_384:
+			hash = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::DSA_SHA3_512:
+			hash = HashAlgo::SHA3_512;
 			break;
 		default:
 			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);

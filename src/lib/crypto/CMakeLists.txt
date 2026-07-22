@@ -99,6 +99,10 @@ if(WITH_OPENSSL)
                         OSSLSHA256.cpp
                         OSSLSHA384.cpp
                         OSSLSHA512.cpp
+                        OSSLSHA3_224.cpp
+                        OSSLSHA3_256.cpp
+                        OSSLSHA3_384.cpp
+                        OSSLSHA3_512.cpp
                         OSSLUtil.cpp
                         )
 endif(WITH_OPENSSL)
@@ -147,6 +151,10 @@ if(WITH_BOTAN)
                         BotanSHA256.cpp
                         BotanSHA384.cpp
                         BotanSHA512.cpp
+                        BotanSHA3_224.cpp
+                        BotanSHA3_256.cpp
+                        BotanSHA3_384.cpp
+                        BotanSHA3_512.cpp
                         BotanSymmetricAlgorithm.cpp
                         BotanUtil.cpp
                         )

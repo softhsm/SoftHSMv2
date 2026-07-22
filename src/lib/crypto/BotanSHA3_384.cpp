@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 SURFnet bv
+ * Copyright (c) 2010 .SE (The Internet Infrastructure Foundation)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,81 +25,20 @@
  */
 
 /*****************************************************************************
- MacAlgorithm.h
+ BotanSHA3_384.cpp
 
- Base class for MAC algorithm classes
+ Botan SHA3-384 implementation
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_MACALGORITHM_H
-#define _SOFTHSM_V2_MACALGORITHM_H
-
-#include <string>
 #include "config.h"
-#include "SymmetricKey.h"
-#include "RNG.h"
+#include "BotanSHA3_384.h"
 
-struct MacAlgo
+int BotanSHA3_384::getHashSize()
 {
-	enum Type
-	{
-		Unknown,
-		HMAC_MD5,
-		HMAC_SHA1,
-		HMAC_SHA224,
-		HMAC_SHA256,
-		HMAC_SHA384,
-		HMAC_SHA512,
-		HMAC_SHA3_224,
-		HMAC_SHA3_256,
-		HMAC_SHA3_384,
-		HMAC_SHA3_512,
-		HMAC_GOST,
-		CMAC_DES,
-		CMAC_AES
-	};
-};
+	return 48;
+}
 
-class MacAlgorithm
+const char* BotanSHA3_384::getHashName() const
 {
-public:
-	// Base constructors
-	MacAlgorithm();
-
-	// Destructor
-	virtual ~MacAlgorithm() { }
-
-	// Signing functions
-	virtual bool signInit(const SymmetricKey* key);
-	virtual bool signUpdate(const ByteString& dataToSign);
-	virtual bool signFinal(ByteString& signature);
-
-	// Verification functions
-	virtual bool verifyInit(const SymmetricKey* key);
-	virtual bool verifyUpdate(const ByteString& originalData);
-	virtual bool verifyFinal(ByteString& signature);
-
-	// Key
-	virtual unsigned long getMinKeySize();
-	virtual unsigned long getMaxKeySize();
-	virtual void recycleKey(SymmetricKey* toRecycle);
-
-	// Return the MAC size
-	virtual size_t getMacSize() const = 0;
-
-protected:
-	// The current key
-	const SymmetricKey* currentKey;
-
-private:
-	// The current operation
-	enum
-	{
-		NONE,
-		SIGN,
-		VERIFY
-	} 
-	currentOperation;
-};
-
-#endif // !_SOFTHSM_V2_MACALGORITHM_H
-
+	return "SHA-3(384)";
+}

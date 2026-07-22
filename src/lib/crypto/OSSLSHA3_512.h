@@ -25,81 +25,23 @@
  */
 
 /*****************************************************************************
- MacAlgorithm.h
+ OSSLSHA3_512.h
 
- Base class for MAC algorithm classes
+ OpenSSL SHA3-512 implementation
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_MACALGORITHM_H
-#define _SOFTHSM_V2_MACALGORITHM_H
+#ifndef _SOFTHSM_V2_OSSLSHA3_512_H
+#define _SOFTHSM_V2_OSSLSHA3_512_H
 
-#include <string>
 #include "config.h"
-#include "SymmetricKey.h"
-#include "RNG.h"
+#include "OSSLEVPHashAlgorithm.h"
+#include <openssl/evp.h>
 
-struct MacAlgo
+class OSSLSHA3_512 : public OSSLEVPHashAlgorithm
 {
-	enum Type
-	{
-		Unknown,
-		HMAC_MD5,
-		HMAC_SHA1,
-		HMAC_SHA224,
-		HMAC_SHA256,
-		HMAC_SHA384,
-		HMAC_SHA512,
-		HMAC_SHA3_224,
-		HMAC_SHA3_256,
-		HMAC_SHA3_384,
-		HMAC_SHA3_512,
-		HMAC_GOST,
-		CMAC_DES,
-		CMAC_AES
-	};
-};
-
-class MacAlgorithm
-{
-public:
-	// Base constructors
-	MacAlgorithm();
-
-	// Destructor
-	virtual ~MacAlgorithm() { }
-
-	// Signing functions
-	virtual bool signInit(const SymmetricKey* key);
-	virtual bool signUpdate(const ByteString& dataToSign);
-	virtual bool signFinal(ByteString& signature);
-
-	// Verification functions
-	virtual bool verifyInit(const SymmetricKey* key);
-	virtual bool verifyUpdate(const ByteString& originalData);
-	virtual bool verifyFinal(ByteString& signature);
-
-	// Key
-	virtual unsigned long getMinKeySize();
-	virtual unsigned long getMaxKeySize();
-	virtual void recycleKey(SymmetricKey* toRecycle);
-
-	// Return the MAC size
-	virtual size_t getMacSize() const = 0;
-
+	virtual int getHashSize();
 protected:
-	// The current key
-	const SymmetricKey* currentKey;
-
-private:
-	// The current operation
-	enum
-	{
-		NONE,
-		SIGN,
-		VERIFY
-	} 
-	currentOperation;
+	virtual const EVP_MD* getEVPHash() const;
 };
 
-#endif // !_SOFTHSM_V2_MACALGORITHM_H
-
+#endif // !_SOFTHSM_V2_OSSLSHA3_512_H

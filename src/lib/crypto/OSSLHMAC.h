@@ -79,6 +79,34 @@ protected:
 	virtual size_t getMacSize() const;
 };
 
+class OSSLHMACSHA3_224 : public OSSLEVPMacAlgorithm
+{
+protected:
+	virtual const EVP_MD* getEVPHash() const;
+	virtual size_t getMacSize() const;
+};
+
+class OSSLHMACSHA3_256 : public OSSLEVPMacAlgorithm
+{
+protected:
+	virtual const EVP_MD* getEVPHash() const;
+	virtual size_t getMacSize() const;
+};
+
+class OSSLHMACSHA3_384 : public OSSLEVPMacAlgorithm
+{
+protected:
+	virtual const EVP_MD* getEVPHash() const;
+	virtual size_t getMacSize() const;
+};
+
+class OSSLHMACSHA3_512 : public OSSLEVPMacAlgorithm
+{
+protected:
+	virtual const EVP_MD* getEVPHash() const;
+	virtual size_t getMacSize() const;
+};
+
 #ifdef WITH_GOST
 class OSSLHMACGOSTR3411 : public OSSLEVPMacAlgorithm
 {
