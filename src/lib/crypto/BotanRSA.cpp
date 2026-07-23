@@ -1503,7 +1503,7 @@ std::string BotanRSA::getCipherRawPss(size_t bitLength, size_t dataSize, const M
 	}
 
 	size_t sLen = rsaPssMecahnismParam->sLen;
-	if (sLen > ((bitLength+6)/8-2-20))
+	if (sLen > ((bitLength+6)/8-2-allowedLen))
 	{
 		ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
 			  (unsigned long)sLen, bitLength);
