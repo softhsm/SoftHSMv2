@@ -157,6 +157,9 @@
 /* Compile with ML-KEM support */
 #cmakedefine WITH_ML_KEM @WITH_ML_KEM@
 
+/* Compile with SHA3 support */
+#cmakedefine WITH_SHA3 @WITH_SHA3@
+
 /* Compile with FIPS 140-2 mode */
 #cmakedefine WITH_FIPS @WITH_FIPS@
 
