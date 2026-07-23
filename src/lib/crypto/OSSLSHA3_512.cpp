@@ -31,6 +31,7 @@
  *****************************************************************************/
 
 #include "config.h"
+#ifdef WITH_SHA3
 #include "OSSLSHA3_512.h"
 #include <openssl/evp.h>
 
@@ -43,3 +44,4 @@ const EVP_MD* OSSLSHA3_512::getEVPHash() const
 {
 	return EVP_sha3_512();
 }
+#endif

@@ -93,6 +93,7 @@ size_t BotanHMACSHA512::getMacSize() const
 	return 64;
 }
 
+#ifdef WITH_SHA3
 std::string BotanHMACSHA3_224::getAlgorithm() const
 {
 	return "HMAC(SHA-3(224))";
@@ -132,6 +133,7 @@ size_t BotanHMACSHA3_512::getMacSize() const
 {
 	return 64;
 }
+#endif
 
 #ifdef WITH_GOST
 std::string BotanHMACGOSTR3411::getAlgorithm() const

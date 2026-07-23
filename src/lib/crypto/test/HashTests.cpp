@@ -233,6 +233,7 @@ void HashTests::testSHA384()
 	rng = NULL;
 }
 
+#ifdef WITH_SHA3
 void HashTests::testSHA3_224()
 {
 	CPPUNIT_ASSERT((hash = CryptoFactory::i()->getHashAlgorithm(HashAlgo::SHA3_224)) != NULL);
@@ -336,6 +337,7 @@ void HashTests::testSHA3_512()
 	CryptoFactory::i()->recycleHashAlgorithm(hash);
 	hash = NULL;
 }
+#endif
 
 void HashTests::testSHA512()
 {

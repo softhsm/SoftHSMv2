@@ -96,6 +96,7 @@ size_t OSSLHMACSHA512::getMacSize() const
 	return 64;
 }
 
+#ifdef WITH_SHA3
 const EVP_MD* OSSLHMACSHA3_224::getEVPHash() const
 {
 	return EVP_sha3_224();
@@ -135,6 +136,7 @@ size_t OSSLHMACSHA3_512::getMacSize() const
 {
 	return 64;
 }
+#endif
 
 #ifdef WITH_GOST
 const EVP_MD* OSSLHMACGOSTR3411::getEVPHash() const

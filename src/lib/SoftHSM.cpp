@@ -775,10 +775,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256"]			= CKM_SHA256;
 	t["CKM_SHA384"]			= CKM_SHA384;
 	t["CKM_SHA512"]			= CKM_SHA512;
+#ifdef WITH_SHA3
 	t["CKM_SHA3_224"]		= CKM_SHA3_224;
 	t["CKM_SHA3_256"]		= CKM_SHA3_256;
 	t["CKM_SHA3_384"]		= CKM_SHA3_384;
 	t["CKM_SHA3_512"]		= CKM_SHA3_512;
+#endif
 #ifndef WITH_FIPS
 	t["CKM_MD5_HMAC"]		= CKM_MD5_HMAC;
 #endif
@@ -787,10 +789,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256_HMAC"]		= CKM_SHA256_HMAC;
 	t["CKM_SHA384_HMAC"]		= CKM_SHA384_HMAC;
 	t["CKM_SHA512_HMAC"]		= CKM_SHA512_HMAC;
+#ifdef WITH_SHA3
 	t["CKM_SHA3_224_HMAC"]		= CKM_SHA3_224_HMAC;
 	t["CKM_SHA3_256_HMAC"]		= CKM_SHA3_256_HMAC;
 	t["CKM_SHA3_384_HMAC"]		= CKM_SHA3_384_HMAC;
 	t["CKM_SHA3_512_HMAC"]		= CKM_SHA3_512_HMAC;
+#endif
 	t["CKM_RSA_PKCS_KEY_PAIR_GEN"]	= CKM_RSA_PKCS_KEY_PAIR_GEN;
 	t["CKM_RSA_PKCS"]		= CKM_RSA_PKCS;
 	t["CKM_RSA_X_509"]		= CKM_RSA_X_509;
@@ -804,10 +808,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256_RSA_PKCS"]	= CKM_SHA256_RSA_PKCS;
 	t["CKM_SHA384_RSA_PKCS"]	= CKM_SHA384_RSA_PKCS;
 	t["CKM_SHA512_RSA_PKCS"]	= CKM_SHA512_RSA_PKCS;
+#ifdef WITH_SHA3
 	t["CKM_SHA3_224_RSA_PKCS"]	= CKM_SHA3_224_RSA_PKCS;
 	t["CKM_SHA3_256_RSA_PKCS"]	= CKM_SHA3_256_RSA_PKCS;
 	t["CKM_SHA3_384_RSA_PKCS"]	= CKM_SHA3_384_RSA_PKCS;
 	t["CKM_SHA3_512_RSA_PKCS"]	= CKM_SHA3_512_RSA_PKCS;
+#endif
 #ifdef WITH_RAW_PSS
 	t["CKM_RSA_PKCS_PSS"]		= CKM_RSA_PKCS_PSS;
 #endif
@@ -816,10 +822,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256_RSA_PKCS_PSS"]	= CKM_SHA256_RSA_PKCS_PSS;
 	t["CKM_SHA384_RSA_PKCS_PSS"]	= CKM_SHA384_RSA_PKCS_PSS;
 	t["CKM_SHA512_RSA_PKCS_PSS"]	= CKM_SHA512_RSA_PKCS_PSS;
+#ifdef WITH_SHA3
 	t["CKM_SHA3_224_RSA_PKCS_PSS"]	= CKM_SHA3_224_RSA_PKCS_PSS;
 	t["CKM_SHA3_256_RSA_PKCS_PSS"]	= CKM_SHA3_256_RSA_PKCS_PSS;
 	t["CKM_SHA3_384_RSA_PKCS_PSS"]	= CKM_SHA3_384_RSA_PKCS_PSS;
 	t["CKM_SHA3_512_RSA_PKCS_PSS"]	= CKM_SHA3_512_RSA_PKCS_PSS;
+#endif
 	t["CKM_GENERIC_SECRET_KEY_GEN"]	= CKM_GENERIC_SECRET_KEY_GEN;
 #ifndef WITH_FIPS
 	t["CKM_DES_KEY_GEN"]		= CKM_DES_KEY_GEN;
@@ -860,10 +868,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_DSA_SHA256"]		= CKM_DSA_SHA256;
 	t["CKM_DSA_SHA384"]		= CKM_DSA_SHA384;
 	t["CKM_DSA_SHA512"]		= CKM_DSA_SHA512;
+#ifdef WITH_SHA3
 	t["CKM_DSA_SHA3_224"]		= CKM_DSA_SHA3_224;
 	t["CKM_DSA_SHA3_256"]		= CKM_DSA_SHA3_256;
 	t["CKM_DSA_SHA3_384"]		= CKM_DSA_SHA3_384;
 	t["CKM_DSA_SHA3_512"]		= CKM_DSA_SHA3_512;
+#endif
 	t["CKM_DH_PKCS_KEY_PAIR_GEN"]	= CKM_DH_PKCS_KEY_PAIR_GEN;
 	t["CKM_DH_PKCS_PARAMETER_GEN"]	= CKM_DH_PKCS_PARAMETER_GEN;
 	t["CKM_DH_PKCS_DERIVE"]		= CKM_DH_PKCS_DERIVE;
@@ -875,10 +885,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_ECDSA_SHA256"]		= CKM_ECDSA_SHA256;
 	t["CKM_ECDSA_SHA384"]		= CKM_ECDSA_SHA384;
 	t["CKM_ECDSA_SHA512"]		= CKM_ECDSA_SHA512;
+#ifdef WITH_SHA3
 	t["CKM_ECDSA_SHA3_224"]		= CKM_ECDSA_SHA3_224;
 	t["CKM_ECDSA_SHA3_256"]		= CKM_ECDSA_SHA3_256;
 	t["CKM_ECDSA_SHA3_384"]		= CKM_ECDSA_SHA3_384;
 	t["CKM_ECDSA_SHA3_512"]		= CKM_ECDSA_SHA3_512;
+#endif
 #endif
 #if defined(WITH_ECC) || defined(WITH_EDDSA)
 	t["CKM_ECDH1_DERIVE"]		= CKM_ECDH1_DERIVE;
@@ -1146,10 +1158,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_SHA256:
 		case CKM_SHA384:
 		case CKM_SHA512:
+#ifdef WITH_SHA3
 		case CKM_SHA3_224:
 		case CKM_SHA3_256:
 		case CKM_SHA3_384:
 		case CKM_SHA3_512:
+#endif
 			// Key size is not in use
 			pInfo->ulMinKeySize = 0;
 			pInfo->ulMaxKeySize = 0;
@@ -1187,6 +1201,7 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			pInfo->ulMaxKeySize = 512;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_HMAC:
 			pInfo->ulMinKeySize = 28;
 			pInfo->ulMaxKeySize = 512;
@@ -1207,6 +1222,7 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			pInfo->ulMaxKeySize = 512;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
 			break;
+#endif
 		case CKM_RSA_PKCS_KEY_PAIR_GEN:
 			pInfo->ulMinKeySize = rsaMinSize;
 			pInfo->ulMaxKeySize = rsaMaxSize;
@@ -1230,10 +1246,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_SHA256_RSA_PKCS:
 		case CKM_SHA384_RSA_PKCS:
 		case CKM_SHA512_RSA_PKCS:
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_RSA_PKCS:
 		case CKM_SHA3_256_RSA_PKCS:
 		case CKM_SHA3_384_RSA_PKCS:
 		case CKM_SHA3_512_RSA_PKCS:
+#endif
 #ifdef WITH_RAW_PSS
 		case CKM_RSA_PKCS_PSS:
 #endif
@@ -1242,10 +1260,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_SHA256_RSA_PKCS_PSS:
 		case CKM_SHA384_RSA_PKCS_PSS:
 		case CKM_SHA512_RSA_PKCS_PSS:
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_RSA_PKCS_PSS:
 		case CKM_SHA3_256_RSA_PKCS_PSS:
 		case CKM_SHA3_384_RSA_PKCS_PSS:
 		case CKM_SHA3_512_RSA_PKCS_PSS:
+#endif
 			pInfo->ulMinKeySize = rsaMinSize;
 			pInfo->ulMaxKeySize = rsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
@@ -1369,10 +1389,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_DSA_SHA256:
 		case CKM_DSA_SHA384:
 		case CKM_DSA_SHA512:
+#ifdef WITH_SHA3
 		case CKM_DSA_SHA3_224:
 		case CKM_DSA_SHA3_256:
 		case CKM_DSA_SHA3_384:
 		case CKM_DSA_SHA3_512:
+#endif
 			pInfo->ulMinKeySize = dsaMinSize;
 			pInfo->ulMaxKeySize = dsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
@@ -1405,10 +1427,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_ECDSA_SHA256:
 		case CKM_ECDSA_SHA384:
 		case CKM_ECDSA_SHA512:
+#ifdef WITH_SHA3
 		case CKM_ECDSA_SHA3_224:
 		case CKM_ECDSA_SHA3_256:
 		case CKM_ECDSA_SHA3_384:
 		case CKM_ECDSA_SHA3_512:
+#endif
 			pInfo->ulMinKeySize = ecdsaMinSize;
 			pInfo->ulMaxKeySize = ecdsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY | CKF_EC_COMMOM;
@@ -3911,6 +3935,7 @@ CK_RV SoftHSM::C_DigestInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 		case CKM_SHA512:
 			algo = HashAlgo::SHA512;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224:
 			algo = HashAlgo::SHA3_224;
 			break;
@@ -3923,6 +3948,7 @@ CK_RV SoftHSM::C_DigestInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 		case CKM_SHA3_512:
 			algo = HashAlgo::SHA3_512;
 			break;
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411:
 			algo = HashAlgo::GOST;
@@ -4176,10 +4202,12 @@ static bool isMacMechanism(CK_MECHANISM_PTR pMechanism)
 		case CKM_SHA256_HMAC:
 		case CKM_SHA384_HMAC:
 		case CKM_SHA512_HMAC:
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_HMAC:
 		case CKM_SHA3_256_HMAC:
 		case CKM_SHA3_384_HMAC:
 		case CKM_SHA3_512_HMAC:
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411_HMAC:
 #endif
@@ -4281,6 +4309,7 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 			minSize = 64;
 			algo = MacAlgo::HMAC_SHA512;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_HMAC:
 			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_224_HMAC)
 				return CKR_KEY_TYPE_INCONSISTENT;
@@ -4305,6 +4334,7 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 			minSize = 64;
 			algo = MacAlgo::HMAC_SHA3_512;
 			break;
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411_HMAC:
 			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_GOST28147)
@@ -4476,6 +4506,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_RSA_PKCS:
 			mechanism = AsymMech::RSA_SHA3_224_PKCS;
 			bAllowMultiPartOp = true;
@@ -4496,6 +4527,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#endif
 #ifdef WITH_RAW_PSS
 		case CKM_RSA_PKCS_PSS:
 			if (pMechanism->pParameter == NULL_PTR ||
@@ -4533,6 +4565,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
 					allowedMgf = CKG_MGF1_SHA512;
 					break;
+#ifdef WITH_SHA3
 				case CKM_SHA3_224:
 					rsaPssParam.hashAlg = HashAlgo::SHA3_224;
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
@@ -4553,6 +4586,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
 					allowedMgf = CKG_MGF1_SHA3_512;
 					break;
+#endif
 				default:
 					ERROR_MSG("Invalid RSA-PSS hash");
 					return CKR_ARGUMENTS_BAD;
@@ -4654,6 +4688,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_RSA_PKCS_PSS:
 			if (pMechanism->pParameter == NULL_PTR ||
 			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
@@ -4722,6 +4757,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#endif
 		case CKM_DSA:
 			mechanism = AsymMech::DSA;
 			bAllowMultiPartOp = false;
@@ -4752,6 +4788,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isDSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_DSA_SHA3_224:
 			mechanism = AsymMech::DSA_SHA3_224;
 			bAllowMultiPartOp = true;
@@ -4772,6 +4809,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isDSA = true;
 			break;
+#endif
 #ifdef WITH_ECC
 		case CKM_ECDSA:
 			mechanism = AsymMech::ECDSA;
@@ -4803,6 +4841,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_ECDSA_SHA3_224:
 			mechanism = AsymMech::ECDSA_SHA3_224;
 			bAllowMultiPartOp = true;
@@ -4823,6 +4862,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
+#endif
 #endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3410:
@@ -5543,6 +5583,7 @@ CK_RV SoftHSM::MacVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 			minSize = 64;
 			algo = MacAlgo::HMAC_SHA512;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_HMAC:
 			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_224_HMAC)
 				return CKR_KEY_TYPE_INCONSISTENT;
@@ -5567,6 +5608,7 @@ CK_RV SoftHSM::MacVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 			minSize = 64;
 			algo = MacAlgo::HMAC_SHA3_512;
 			break;
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411_HMAC:
 			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_GOST28147)
@@ -5738,6 +5780,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_RSA_PKCS:
 			mechanism = AsymMech::RSA_SHA3_224_PKCS;
 			bAllowMultiPartOp = true;
@@ -5758,6 +5801,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#endif
 #ifdef WITH_RAW_PSS
 		case CKM_RSA_PKCS_PSS:
 			if (pMechanism->pParameter == NULL_PTR ||
@@ -5795,6 +5839,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
 					expectedMgf = CKG_MGF1_SHA512;
 					break;
+#ifdef WITH_SHA3
 				case CKM_SHA3_224:
 					rsaPssParam.hashAlg = HashAlgo::SHA3_224;
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
@@ -5815,6 +5860,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
 					expectedMgf = CKG_MGF1_SHA3_512;
 					break;
+#endif
 				default:
 					return CKR_ARGUMENTS_BAD;
 			}
@@ -5915,6 +5961,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_SHA3_224_RSA_PKCS_PSS:
 			if (pMechanism->pParameter == NULL_PTR ||
 			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
@@ -5983,6 +6030,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#endif
 		case CKM_DSA:
 			mechanism = AsymMech::DSA;
 			bAllowMultiPartOp = false;
@@ -6013,6 +6061,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isDSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_DSA_SHA3_224:
 			mechanism = AsymMech::DSA_SHA3_224;
 			bAllowMultiPartOp = true;
@@ -6033,6 +6082,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isDSA = true;
 			break;
+#endif
 #ifdef WITH_ECC
 		case CKM_ECDSA:
 			mechanism = AsymMech::ECDSA;
@@ -6064,6 +6114,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
+#ifdef WITH_SHA3
 		case CKM_ECDSA_SHA3_224:
 			mechanism = AsymMech::ECDSA_SHA3_224;
 			bAllowMultiPartOp = true;
@@ -6084,6 +6135,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
+#endif
 #endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3410:
@@ -15336,6 +15388,7 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 		mechanismParam->hashAlg = HashAlgo::SHA512;
 		if (hashLen) *hashLen = 64;
 		break;
+#ifdef WITH_SHA3
 	case CKM_SHA3_224:
 		mechanismParam->hashAlg = HashAlgo::SHA3_224;
 		if (hashLen) *hashLen = 28;
@@ -15352,6 +15405,7 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 		mechanismParam->hashAlg = HashAlgo::SHA3_512;
 		if (hashLen) *hashLen = 64;
 		break;
+#endif
 	default:
 	    ERROR_MSG("hash algorithm not supported for OAEP");
 		return CKR_ARGUMENTS_BAD;
@@ -15373,6 +15427,7 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 	case CKG_MGF1_SHA512:
 		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA512;
 		break;
+#ifdef WITH_SHA3
 	case CKG_MGF1_SHA3_224:
 		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
 		break;
@@ -15385,6 +15440,7 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 	case CKG_MGF1_SHA3_512:
 		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
 		break;
+#endif
 	default:
 	    ERROR_MSG("mgf algorithm not supported for OAEP");
 		return CKR_ARGUMENTS_BAD;

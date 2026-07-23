@@ -253,6 +253,7 @@ void AsymEncryptDecryptTests::testRsaEncryptDecrypt()
 	oaepParams.pSourceData = (void*)EncryptLabel;
 	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
 	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+#ifdef WITH_SHA3
 	oaepParams = { CKM_SHA3_224, CKG_MGF1_SHA3_224, 1, NULL_PTR, 0  };
 	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
 	oaepParams.pSourceData = (void*)EncryptLabel;
@@ -273,4 +274,5 @@ void AsymEncryptDecryptTests::testRsaEncryptDecrypt()
 	oaepParams.pSourceData = (void*)EncryptLabel;
 	oaepParams.ulSourceDataLen = strlen(EncryptLabel);
 	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
+#endif
 }

@@ -177,6 +177,7 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 				hash = EVP_sha512();
 				allowedLen = 64;
 				break;
+#ifdef WITH_SHA3
 			case HashAlgo::SHA3_224:
 				hash = EVP_sha3_224();
 				allowedLen = 28;
@@ -193,6 +194,7 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 				hash = EVP_sha3_512();
 				allowedLen = 64;
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -214,6 +216,7 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
 			case AsymRSAMGF::MGF1_SHA3_224:
 				mgf = EVP_sha3_224();
 				break;
@@ -226,6 +229,7 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 			case AsymRSAMGF::MGF1_SHA3_512:
 				mgf = EVP_sha3_512();
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -790,6 +794,7 @@ bool OSSLRSA::signFinal(ByteString& signature)
 			hash = EVP_sha512();
 			rsaPadding = RSA_PKCS1_PADDING;
 			break;
+#ifdef WITH_SHA3
 		case AsymMech::RSA_SHA3_224_PKCS:
 			hash = EVP_sha3_224();
 			rsaPadding = RSA_PKCS1_PADDING;
@@ -806,6 +811,7 @@ bool OSSLRSA::signFinal(ByteString& signature)
 			hash = EVP_sha3_512();
 			rsaPadding = RSA_PKCS1_PADDING;
 			break;
+#endif
 		case AsymMech::RSA_SHA1_PKCS_PSS:
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha1();
@@ -826,6 +832,7 @@ bool OSSLRSA::signFinal(ByteString& signature)
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha512();
 			break;
+#ifdef WITH_SHA3
 		case AsymMech::RSA_SHA3_224_PKCS_PSS:
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha3_224();
@@ -842,6 +849,7 @@ bool OSSLRSA::signFinal(ByteString& signature)
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha3_512();
 			break;
+#endif
 		case AsymMech::RSA_SSL:
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_md5_sha1();
@@ -985,6 +993,7 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 				hash = EVP_sha512();
 				allowedLen = 64;
 				break;
+#ifdef WITH_SHA3
 			case HashAlgo::SHA3_224:
 				hash = EVP_sha3_224();
 				allowedLen = 28;
@@ -1001,6 +1010,7 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 				hash = EVP_sha3_512();
 				allowedLen = 64;
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -1021,6 +1031,7 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
 			case AsymRSAMGF::MGF1_SHA3_224:
 				mgf = EVP_sha3_224();
 				break;
@@ -1033,6 +1044,7 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 			case AsymRSAMGF::MGF1_SHA3_512:
 				mgf = EVP_sha3_512();
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -1585,6 +1597,7 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_sha512();
 			break;
+#ifdef WITH_SHA3
 		case AsymMech::RSA_SHA3_224_PKCS:
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_sha3_224();
@@ -1601,6 +1614,7 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_sha3_512();
 			break;
+#endif
 		case AsymMech::RSA_SHA1_PKCS_PSS:
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha1();
@@ -1621,6 +1635,7 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha512();
 			break;
+#ifdef WITH_SHA3
 		case AsymMech::RSA_SHA3_224_PKCS_PSS:
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha3_224();
@@ -1637,6 +1652,7 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha3_512();
 			break;
+#endif
 		case AsymMech::RSA_SSL:
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_md5_sha1();
@@ -1753,6 +1769,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 				hash = EVP_sha512();
 				hashLen = 64;
 				break;
+#ifdef WITH_SHA3
 			case HashAlgo::SHA3_224:
 				hash = EVP_sha3_224();
 				hashLen = 28;
@@ -1769,6 +1786,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 				hash = EVP_sha3_512();
 				hashLen = 64;
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -1789,6 +1807,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
 			case AsymRSAMGF::MGF1_SHA3_224:
 				mgf = EVP_sha3_224();
 				break;
@@ -1801,6 +1820,7 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			case AsymRSAMGF::MGF1_SHA3_512:
 				mgf = EVP_sha3_512();
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -1951,6 +1971,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			case HashAlgo::SHA512:
 				hash = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
 			case HashAlgo::SHA3_224:
 				hash = EVP_sha3_224();
 				break;
@@ -1963,6 +1984,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			case HashAlgo::SHA3_512:
 				hash = EVP_sha3_512();
 				break;
+#endif
 			default:
 				return false;
 		}
@@ -1983,6 +2005,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
 			case AsymRSAMGF::MGF1_SHA3_224:
 				mgf = EVP_sha3_224();
 				break;
@@ -1995,6 +2018,7 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			case AsymRSAMGF::MGF1_SHA3_512:
 				mgf = EVP_sha3_512();
 				break;
+#endif
 			default:
 				return false;
 		}

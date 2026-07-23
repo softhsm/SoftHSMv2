@@ -31,6 +31,7 @@
  *****************************************************************************/
 
 #include "config.h"
+#ifdef WITH_SHA3
 #include "BotanSHA3_224.h"
 
 int BotanSHA3_224::getHashSize()
@@ -42,3 +43,4 @@ const char* BotanSHA3_224::getHashName() const
 {
 	return "SHA-3(224)";
 }
+#endif
