@@ -1,6 +1,4 @@
 AC_DEFUN([ACX_OPENSSL_SHA3],[
-	AC_MSG_CHECKING(for OpenSSL SHA3 support)
-
 	tmp_CPPFLAGS=$CPPFLAGS
 	tmp_LIBS=$LIBS
 
@@ -8,7 +6,7 @@ AC_DEFUN([ACX_OPENSSL_SHA3],[
 	LIBS="$CRYPTO_LIBS $LIBS"
 
 	AC_LANG_PUSH([C])
-	AC_CACHE_VAL([acx_cv_lib_openssl_sha3_support],[
+	AC_CACHE_CHECK([for OpenSSL SHA3 support], [acx_cv_lib_openssl_sha3_support],[
 		acx_cv_lib_openssl_sha3_support=no
 		AC_LINK_IFELSE([
 			AC_LANG_SOURCE([[
@@ -25,10 +23,8 @@ AC_DEFUN([ACX_OPENSSL_SHA3],[
 				}
 			]])
 		],[
-			AC_MSG_RESULT([yes])
 			acx_cv_lib_openssl_sha3_support=yes
 		],[
-			AC_MSG_RESULT([no])
 			acx_cv_lib_openssl_sha3_support=no
 		])
 	])
