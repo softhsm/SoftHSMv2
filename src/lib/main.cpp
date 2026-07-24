@@ -49,6 +49,8 @@
 #define PKCS_API
 #endif
 
+extern int objects_deleted;
+
 // PKCS #11 function list
 static CK_FUNCTION_LIST functionList =
 {
@@ -248,6 +250,8 @@ PKCS_API CK_RV C_Initialize(CK_VOID_PTR pInitArgs)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Initialize(pInitArgs);
 	}
 	catch (...)
@@ -263,6 +267,8 @@ PKCS_API CK_RV C_Finalize(CK_VOID_PTR pReserved)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Finalize(pReserved);
 	}
 	catch (...)
@@ -278,6 +284,8 @@ PKCS_API CK_RV C_GetInfo(CK_INFO_PTR pInfo)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetInfo(pInfo);
 	}
 	catch (...)
@@ -293,6 +301,8 @@ PKCS_API CK_RV C_GetFunctionList(CK_FUNCTION_LIST_PTR_PTR ppFunctionList)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		if (ppFunctionList == NULL_PTR) return CKR_ARGUMENTS_BAD;
 
 		*ppFunctionList = &functionList;
@@ -312,6 +322,8 @@ PKCS_API CK_RV C_GetSlotList(CK_BBOOL tokenPresent, CK_SLOT_ID_PTR pSlotList, CK
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetSlotList(tokenPresent, pSlotList, pulCount);
 	}
 	catch (...)
@@ -327,6 +339,8 @@ PKCS_API CK_RV C_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetSlotInfo(slotID, pInfo);
 	}
 	catch (...)
@@ -342,6 +356,8 @@ PKCS_API CK_RV C_GetTokenInfo(CK_SLOT_ID slotID, CK_TOKEN_INFO_PTR pInfo)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetTokenInfo(slotID, pInfo);
 	}
 	catch (...)
@@ -357,6 +373,8 @@ PKCS_API CK_RV C_GetMechanismList(CK_SLOT_ID slotID, CK_MECHANISM_TYPE_PTR pMech
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetMechanismList(slotID, pMechanismList, pulCount);
 	}
 	catch (...)
@@ -372,6 +390,8 @@ PKCS_API CK_RV C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetMechanismInfo(slotID, type, pInfo);
 	}
 	catch (...)
@@ -387,6 +407,8 @@ PKCS_API CK_RV C_InitToken(CK_SLOT_ID slotID, CK_UTF8CHAR_PTR pPin, CK_ULONG ulP
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_InitToken(slotID, pPin, ulPinLen, pLabel);
 	}
 	catch (...)
@@ -402,6 +424,8 @@ PKCS_API CK_RV C_InitPIN(CK_SESSION_HANDLE hSession, CK_UTF8CHAR_PTR pPin, CK_UL
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_InitPIN(hSession, pPin, ulPinLen);
 	}
 	catch (...)
@@ -417,6 +441,8 @@ PKCS_API CK_RV C_SetPIN(CK_SESSION_HANDLE hSession, CK_UTF8CHAR_PTR pOldPin, CK_
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SetPIN(hSession, pOldPin, ulOldLen, pNewPin, ulNewLen);
 	}
 	catch (...)
@@ -432,6 +458,8 @@ PKCS_API CK_RV C_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags, CK_VOID_PTR pApp
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_OpenSession(slotID, flags, pApplication, notify, phSession);
 	}
 	catch (...)
@@ -447,6 +475,8 @@ PKCS_API CK_RV C_CloseSession(CK_SESSION_HANDLE hSession)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_CloseSession(hSession);
 	}
 	catch (...)
@@ -462,6 +492,8 @@ PKCS_API CK_RV C_CloseAllSessions(CK_SLOT_ID slotID)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_CloseAllSessions(slotID);
 	}
 	catch (...)
@@ -477,6 +509,8 @@ PKCS_API CK_RV C_GetSessionInfo(CK_SESSION_HANDLE hSession, CK_SESSION_INFO_PTR 
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetSessionInfo(hSession, pInfo);
 	}
 	catch (...)
@@ -492,6 +526,8 @@ PKCS_API CK_RV C_GetOperationState(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pOper
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetOperationState(hSession, pOperationState, pulOperationStateLen);
 	}
 	catch (...)
@@ -507,6 +543,8 @@ PKCS_API CK_RV C_SetOperationState(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pOper
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SetOperationState(hSession, pOperationState, ulOperationStateLen, hEncryptionKey, hAuthenticationKey);
 	}
 	catch (...)
@@ -522,6 +560,8 @@ PKCS_API CK_RV C_Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType, CK_UTF
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Login(hSession, userType, pPin, ulPinLen);
 	}
 	catch (...)
@@ -537,6 +577,8 @@ PKCS_API CK_RV C_Logout(CK_SESSION_HANDLE hSession)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Logout(hSession);
 	}
 	catch (...)
@@ -552,6 +594,8 @@ PKCS_API CK_RV C_CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTemp
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_CreateObject(hSession, pTemplate, ulCount, phObject);
 	}
 	catch (...)
@@ -567,6 +611,8 @@ PKCS_API CK_RV C_CopyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_CopyObject(hSession, hObject, pTemplate, ulCount, phNewObject);
 	}
 	catch (...)
@@ -582,6 +628,8 @@ PKCS_API CK_RV C_DestroyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObj
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DestroyObject(hSession, hObject);
 	}
 	catch (...)
@@ -597,6 +645,8 @@ PKCS_API CK_RV C_GetObjectSize(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObj
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetObjectSize(hSession, hObject, pulSize);
 	}
 	catch (...)
@@ -612,6 +662,8 @@ PKCS_API CK_RV C_GetAttributeValue(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE 
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetAttributeValue(hSession, hObject, pTemplate, ulCount);
 	}
 	catch (...)
@@ -627,6 +679,8 @@ PKCS_API CK_RV C_SetAttributeValue(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE 
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SetAttributeValue(hSession, hObject, pTemplate, ulCount);
 	}
 	catch (...)
@@ -642,6 +696,8 @@ PKCS_API CK_RV C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_FindObjectsInit(hSession, pTemplate, ulCount);
 	}
 	catch (...)
@@ -657,6 +713,8 @@ PKCS_API CK_RV C_FindObjects(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE_PTR ph
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_FindObjects(hSession, phObject, ulMaxObjectCount, pulObjectCount);
 	}
 	catch (...)
@@ -672,6 +730,8 @@ PKCS_API CK_RV C_FindObjectsFinal(CK_SESSION_HANDLE hSession)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_FindObjectsFinal(hSession);
 	}
 	catch (...)
@@ -687,6 +747,8 @@ PKCS_API CK_RV C_EncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_EncryptInit(hSession, pMechanism, hObject);
 	}
 	catch (...)
@@ -702,6 +764,8 @@ PKCS_API CK_RV C_Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Encrypt(hSession, pData, ulDataLen, pEncryptedData, pulEncryptedDataLen);
 	}
 	catch (...)
@@ -717,6 +781,8 @@ PKCS_API CK_RV C_EncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_EncryptUpdate(hSession, pData, ulDataLen, pEncryptedData, pulEncryptedDataLen);
 	}
 	catch (...)
@@ -732,6 +798,8 @@ PKCS_API CK_RV C_EncryptFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncrypted
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_EncryptFinal(hSession, pEncryptedData, pulEncryptedDataLen);
 	}
 	catch (...)
@@ -747,6 +815,8 @@ PKCS_API CK_RV C_DecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DecryptInit(hSession, pMechanism, hObject);
 	}
 	catch (...)
@@ -762,6 +832,8 @@ PKCS_API CK_RV C_Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Decrypt(hSession, pEncryptedData, ulEncryptedDataLen, pData, pulDataLen);
 	}
 	catch (...)
@@ -777,6 +849,8 @@ PKCS_API CK_RV C_DecryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncrypte
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DecryptUpdate(hSession, pEncryptedData, ulEncryptedDataLen, pData, pDataLen);
 	}
 	catch (...)
@@ -792,6 +866,8 @@ PKCS_API CK_RV C_DecryptFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DecryptFinal(hSession, pData, pDataLen);
 	}
 	catch (...)
@@ -807,6 +883,8 @@ PKCS_API CK_RV C_DigestInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DigestInit(hSession, pMechanism);
 	}
 	catch (...)
@@ -822,6 +900,8 @@ PKCS_API CK_RV C_Digest(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG 
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Digest(hSession, pData, ulDataLen, pDigest, pulDigestLen);
 	}
 	catch (...)
@@ -837,6 +917,8 @@ PKCS_API CK_RV C_DigestUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart, CK_
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DigestUpdate(hSession, pPart, ulPartLen);
 	}
 	catch (...)
@@ -852,6 +934,8 @@ PKCS_API CK_RV C_DigestKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DigestKey(hSession, hObject);
 	}
 	catch (...)
@@ -867,6 +951,8 @@ PKCS_API CK_RV C_DigestFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pDigest, CK
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DigestFinal(hSession, pDigest, pulDigestLen);
 	}
 	catch (...)
@@ -882,6 +968,8 @@ PKCS_API CK_RV C_SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanis
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SignInit(hSession, pMechanism, hKey);
 	}
 	catch (...)
@@ -897,6 +985,8 @@ PKCS_API CK_RV C_Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG ul
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Sign(hSession, pData, ulDataLen, pSignature, pulSignatureLen);
 	}
 	catch (...)
@@ -912,6 +1002,8 @@ PKCS_API CK_RV C_SignUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart, CK_UL
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SignUpdate(hSession, pPart, ulPartLen);
 	}
 	catch (...)
@@ -927,6 +1019,8 @@ PKCS_API CK_RV C_SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature, C
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SignFinal(hSession, pSignature, pulSignatureLen);
 	}
 	catch (...)
@@ -942,6 +1036,8 @@ PKCS_API CK_RV C_SignRecoverInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pM
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SignRecoverInit(hSession, pMechanism, hKey);
 	}
 	catch (...)
@@ -957,6 +1053,8 @@ PKCS_API CK_RV C_SignRecover(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_U
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SignRecover(hSession, pData, ulDataLen, pSignature, pulSignatureLen);
 	}
 	catch (...)
@@ -972,6 +1070,8 @@ PKCS_API CK_RV C_VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_VerifyInit(hSession, pMechanism, hKey);
 	}
 	catch (...)
@@ -987,6 +1087,8 @@ PKCS_API CK_RV C_Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData, CK_ULONG 
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_Verify(hSession, pData, ulDataLen, pSignature, ulSignatureLen);
 	}
 	catch (...)
@@ -1002,6 +1104,8 @@ PKCS_API CK_RV C_VerifyUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart, CK_
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_VerifyUpdate(hSession, pPart, ulPartLen);
 	}
 	catch (...)
@@ -1017,6 +1121,8 @@ PKCS_API CK_RV C_VerifyFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_VerifyFinal(hSession, pSignature, ulSignatureLen);
 	}
 	catch (...)
@@ -1032,6 +1138,8 @@ PKCS_API CK_RV C_VerifyRecoverInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR 
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_VerifyRecoverInit(hSession, pMechanism, hKey);
 	}
 	catch (...)
@@ -1047,6 +1155,8 @@ PKCS_API CK_RV C_VerifyRecover(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignatur
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_VerifyRecover(hSession, pSignature, ulSignatureLen, pData, pulDataLen);
 	}
 	catch (...)
@@ -1062,6 +1172,8 @@ PKCS_API CK_RV C_DigestEncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPa
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DigestEncryptUpdate(hSession, pPart, ulPartLen, pEncryptedPart, pulEncryptedPartLen);
 	}
 	catch (...)
@@ -1077,6 +1189,8 @@ PKCS_API CK_RV C_DecryptDigestUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPa
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DecryptDigestUpdate(hSession, pPart, ulPartLen, pDecryptedPart, pulDecryptedPartLen);
 	}
 	catch (...)
@@ -1092,6 +1206,8 @@ PKCS_API CK_RV C_SignEncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SignEncryptUpdate(hSession, pPart, ulPartLen, pEncryptedPart, pulEncryptedPartLen);
 	}
 	catch (...)
@@ -1107,6 +1223,8 @@ PKCS_API CK_RV C_DecryptVerifyUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEn
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DecryptVerifyUpdate(hSession, pEncryptedPart, ulEncryptedPartLen, pPart, pulPartLen);
 	}
 	catch (...)
@@ -1122,6 +1240,8 @@ PKCS_API CK_RV C_GenerateKey(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GenerateKey(hSession, pMechanism, pTemplate, ulCount, phKey);
 	}
 	catch (...)
@@ -1147,6 +1267,8 @@ PKCS_API CK_RV C_GenerateKeyPair
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GenerateKeyPair(hSession, pMechanism, pPublicKeyTemplate, ulPublicKeyAttributeCount, pPrivateKeyTemplate, ulPrivateKeyAttributeCount, phPublicKey, phPrivateKey);
 	}
 	catch (...)
@@ -1170,6 +1292,8 @@ PKCS_API CK_RV C_WrapKey
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_WrapKey(hSession, pMechanism, hWrappingKey, hKey, pWrappedKey, pulWrappedKeyLen);
 	}
 	catch (...)
@@ -1195,6 +1319,8 @@ PKCS_API CK_RV C_UnwrapKey
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_UnwrapKey(hSession, pMechanism, hUnwrappingKey, pWrappedKey, ulWrappedKeyLen, pTemplate, ulCount, phKey);
 	}
 	catch (...)
@@ -1218,6 +1344,8 @@ PKCS_API CK_RV C_DeriveKey
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_DeriveKey(hSession, pMechanism, hBaseKey, pTemplate, ulCount, phKey);
 	}
 	catch (...)
@@ -1233,6 +1361,8 @@ PKCS_API CK_RV C_SeedRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSeed, CK_UL
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_SeedRandom(hSession, pSeed, ulSeedLen);
 	}
 	catch (...)
@@ -1248,6 +1378,8 @@ PKCS_API CK_RV C_GenerateRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pRandomD
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GenerateRandom(hSession, pRandomData, ulRandomLen);
 	}
 	catch (...)
@@ -1263,6 +1395,8 @@ PKCS_API CK_RV C_GetFunctionStatus(CK_SESSION_HANDLE hSession)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_GetFunctionStatus(hSession);
 	}
 	catch (...)
@@ -1278,6 +1412,8 @@ PKCS_API CK_RV C_CancelFunction(CK_SESSION_HANDLE hSession)
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_CancelFunction(hSession);
 	}
 	catch (...)
@@ -1293,6 +1429,8 @@ PKCS_API CK_RV C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot, CK_VOID_
 {
 	try
 	{
+		if (objects_deleted == 1)
+			return CKR_FUNCTION_FAILED;
 		return SoftHSM::i()->C_WaitForSlotEvent(flags, pSlot, pReserved);
 	}
 	catch (...)
