@@ -144,6 +144,34 @@ bool BotanRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 	return true;
 }
 
+// Validate an RSA-PSS mechanism parameter against the expected hash/MGF algorithm and
+// check that the requested salt length fits the key size. Returns the salt length in sLen
+// on success; logs an ERROR_MSG and returns false otherwise.
+bool BotanRSA::checkPssParams(const MechanismParam* mechanismParam, HashAlgo::Type hashAlg,
+			       AsymRSAMGF::Type mgfAlg, size_t digestSize, size_t keyBitLength,
+			       size_t& sLen)
+{
+	if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+	{
+		ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
+		return false;
+	}
+	const RSAPssMechanismParam* pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
+	if ((pssParam->hashAlg != hashAlg) || (pssParam->mgfAlg != mgfAlg))
+	{
+		ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
+		return false;
+	}
+	sLen = pssParam->sLen;
+	if (sLen > ((keyBitLength+6)/8-2-digestSize))
+	{
+		ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
+			  (unsigned long)sLen, keyBitLength);
+		return false;
+	}
+	return true;
+}
+
 bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			const MechanismParam* mechanismParam /*= NULL */)
 {
@@ -166,7 +194,6 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 	std::string emsa;
 	std::ostringstream request;
 	size_t sLen;
-	const RSAPssMechanismParam* pssParam = NULL;
 
 	switch (mechanism)
 	{
@@ -201,27 +228,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = "EMSA3(SHA-3(512))";
 			break;
 		case AsymMech::RSA_SHA1_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA1, AsymRSAMGF::MGF1_SHA1, 20, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA1)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA1))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-20))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -230,27 +238,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA224_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA224, AsymRSAMGF::MGF1_SHA224, 28, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA224)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA224))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-28))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -259,27 +248,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA256_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA256, AsymRSAMGF::MGF1_SHA256, 32, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA256)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA256))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-32))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -288,27 +258,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA384_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA384, AsymRSAMGF::MGF1_SHA384, 48, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA384)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA384))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-48))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -317,27 +268,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA512_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA512, AsymRSAMGF::MGF1_SHA512, 64, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA512)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA512))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-64))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -346,27 +278,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_224_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_224, AsymRSAMGF::MGF1_SHA3_224, 28, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_224)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_224))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-28))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -375,27 +288,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_256_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_256, AsymRSAMGF::MGF1_SHA3_256, 32, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_256)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_256))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-32))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -404,27 +298,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_384_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_384, AsymRSAMGF::MGF1_SHA3_384, 48, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_384)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_384))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-48))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -433,27 +308,8 @@ bool BotanRSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_512_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_512, AsymRSAMGF::MGF1_SHA3_512, 64, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_512)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_512))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength()+6)/8-2-64))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -674,7 +530,6 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 	std::string emsa;
 	std::ostringstream request;
 	size_t sLen;
-	const RSAPssMechanismParam* pssParam = NULL;
 
 	switch (mechanism)
 	{
@@ -709,27 +564,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = "EMSA3(SHA-3(512))";
 			break;
 		case AsymMech::RSA_SHA1_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA1, AsymRSAMGF::MGF1_SHA1, 20, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA1)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA1))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-20))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -738,27 +574,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA224_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA224, AsymRSAMGF::MGF1_SHA224, 28, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA224)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA224))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-28))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -767,27 +584,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA256_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA256, AsymRSAMGF::MGF1_SHA256, 32, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA256)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA256))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-32))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -796,27 +594,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA384_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA384, AsymRSAMGF::MGF1_SHA384, 48, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA384)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA384))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-48))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -825,27 +604,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA512_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA512, AsymRSAMGF::MGF1_SHA512, 64, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA512)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA512))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-64))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -854,27 +614,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_224_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_224, AsymRSAMGF::MGF1_SHA3_224, 28, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_224)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_224))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-28))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -883,27 +624,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_256_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_256, AsymRSAMGF::MGF1_SHA3_256, 32, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_256)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_256))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-32))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -912,27 +634,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_384_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_384, AsymRSAMGF::MGF1_SHA3_384, 48, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_384)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_384))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-48))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -941,27 +644,8 @@ bool BotanRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			emsa = request.str();
 			break;
 		case AsymMech::RSA_SHA3_512_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!checkPssParams(mechanismParam, HashAlgo::SHA3_512, AsymRSAMGF::MGF1_SHA3_512, 64, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA3_512)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA3_512))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength()+6)/8-2-64))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
