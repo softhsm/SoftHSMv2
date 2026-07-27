@@ -83,6 +83,7 @@ private:
 	HashAlgorithm* pCurrentHash;
 	HashAlgorithm* pSecondHash;
 	size_t sLen;
+	bool checkPssParams(const MechanismParam* mechanismParam, HashAlgo::Type hashAlg, AsymRSAMGF::Type mgfAlg, size_t digestSize, size_t keyBitLength, size_t& sLen);
 };
 
 #endif // !_SOFTHSM_V2_OSSLRSA_H
