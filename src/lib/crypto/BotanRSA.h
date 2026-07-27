@@ -87,7 +87,6 @@ private:
 	std::string getCipherRawPss(size_t bitLength, size_t dataSize, const MechanismParam* mechanismParam);
 #endif
     std::string getCipherOaep(size_t bitLength, size_t dataSize, const MechanismParam* mechanismParam);
-	bool checkPssParams(const MechanismParam* mechanismParam, HashAlgo::Type hashAlg, AsymRSAMGF::Type mgfAlg, size_t digestSize, size_t keyBitLength, size_t& sLen);
 };
 
 #endif // !_SOFTHSM_V2_BOTANRSA_H

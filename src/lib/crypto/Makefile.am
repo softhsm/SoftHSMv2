@@ -43,6 +43,7 @@ libsofthsm_crypto_la_SOURCES =	AESKey.cpp \
 				RSAParameters.cpp \
 				RSAPrivateKey.cpp \
 				RSAPublicKey.cpp \
+				RSAUtil.cpp \
 				SymmetricAlgorithm.cpp \
 				SymmetricKey.cpp
 libsofthsm_crypto_la_LIBADD =	@CRYPTO_LIBS@

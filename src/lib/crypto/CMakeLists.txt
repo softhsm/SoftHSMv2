@@ -43,6 +43,7 @@ set(SOURCES AESKey.cpp
             RSAParameters.cpp
             RSAPrivateKey.cpp
             RSAPublicKey.cpp
+            RSAUtil.cpp
             SymmetricAlgorithm.cpp
             SymmetricKey.cpp
             )
