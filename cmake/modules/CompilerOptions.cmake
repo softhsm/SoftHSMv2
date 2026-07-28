@@ -239,6 +239,11 @@ if(WITH_CRYPTO_BACKEND STREQUAL "botan")
         message(STATUS "Botan: Support for GOST is disabled")
     endif(ENABLE_GOST)
 
+    # Botan has supported SHA3 since well before its minimum required
+    # version, so no version detection is needed.
+    set(WITH_SHA3 1)
+    message(STATUS "Botan: SHA3 is supported")
+
     if(ENABLE_FIPS)
         message(FATAL_ERROR "Botan does not support FIPS 140-2 mode")
     endif(ENABLE_FIPS)
@@ -411,6 +416,22 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
     else(ENABLE_MLKEM)
         message(STATUS "OpenSSL: Support for ML-KEM is disabled")
     endif(ENABLE_MLKEM)
+
+    # acx_openssl_sha3.m4
+    set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_sha3.c)
+    try_run(RUN_SHA3 COMPILE_RESULT
+            "${CMAKE_BINARY_DIR}/prebuild_santity_tests" ${testfile}
+            LINK_LIBRARIES ${CRYPTO_LIBS}
+            CMAKE_FLAGS
+                "-DINCLUDE_DIRECTORIES=${CRYPTO_INCLUDES}"
+            )
+    if(COMPILE_RESULT AND RUN_SHA3 EQUAL 0)
+        set(WITH_SHA3 1)
+        message(STATUS "OpenSSL: Found SHA3")
+    else()
+        set(error_msg "OpenSSL: Cannot find SHA3! OpenSSL library has no SHA3 support (requires OpenSSL >= 1.1.1 or LibreSSL >= 3.8.0)!")
+        message(FATAL_ERROR ${error_msg})
+    endif()
 
     # acx_openssl_gost.m4
     if(ENABLE_GOST)
