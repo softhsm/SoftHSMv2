@@ -294,18 +294,18 @@ OSSLCryptoFactory::~OSSLCryptoFactory()
 // Return the one-and-only instance
 OSSLCryptoFactory* OSSLCryptoFactory::i()
 {
-	if (!instance.get())
+	if (!instance->get())
 	{
-		instance.reset(new OSSLCryptoFactory());
+		instance->reset(new OSSLCryptoFactory());
 	}
 
-	return instance.get();
+	return instance->get();
 }
 
 // This will destroy the one-and-only instance.
 void OSSLCryptoFactory::reset()
 {
-	instance.reset();
+	instance->reset();
 }
 
 #ifdef WITH_FIPS

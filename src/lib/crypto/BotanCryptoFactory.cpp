@@ -89,18 +89,18 @@ BotanCryptoFactory::~BotanCryptoFactory()
 // Return the one-and-only instance
 BotanCryptoFactory* BotanCryptoFactory::i()
 {
-	if (!instance.get())
+	if (!instance->get())
 	{
-		instance.reset(new BotanCryptoFactory());
+		instance->reset(new BotanCryptoFactory());
 	}
 
-	return instance.get();
+	return instance->get();
 }
 
 // This will destroy the one-and-only instance.
 void BotanCryptoFactory::reset()
 {
-	instance.reset();
+	instance->reset();
 }
 
 // Create a concrete instance of a symmetric algorithm
