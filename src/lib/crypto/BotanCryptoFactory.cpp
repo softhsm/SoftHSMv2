@@ -48,6 +48,12 @@
 #include "BotanSHA256.h"
 #include "BotanSHA384.h"
 #include "BotanSHA512.h"
+#ifdef WITH_SHA3
+#include "BotanSHA3_224.h"
+#include "BotanSHA3_256.h"
+#include "BotanSHA3_384.h"
+#include "BotanSHA3_512.h"
+#endif
 #ifdef WITH_GOST
 #include "BotanGOST.h"
 #include "BotanGOSTR3411.h"
@@ -177,6 +183,16 @@ HashAlgorithm* BotanCryptoFactory::getHashAlgorithm(HashAlgo::Type algorithm)
 			return new BotanSHA384();
 		case HashAlgo::SHA512:
 			return new BotanSHA512();
+#ifdef WITH_SHA3
+		case HashAlgo::SHA3_224:
+			return new BotanSHA3_224();
+		case HashAlgo::SHA3_256:
+			return new BotanSHA3_256();
+		case HashAlgo::SHA3_384:
+			return new BotanSHA3_384();
+		case HashAlgo::SHA3_512:
+			return new BotanSHA3_512();
+#endif
 #ifdef WITH_GOST
 		case HashAlgo::GOST:
 			return new BotanGOSTR3411();
@@ -209,6 +225,16 @@ MacAlgorithm* BotanCryptoFactory::getMacAlgorithm(MacAlgo::Type algorithm)
 			return new BotanHMACSHA384();
 		case MacAlgo::HMAC_SHA512:
 			return new BotanHMACSHA512();
+#ifdef WITH_SHA3
+		case MacAlgo::HMAC_SHA3_224:
+			return new BotanHMACSHA3_224();
+		case MacAlgo::HMAC_SHA3_256:
+			return new BotanHMACSHA3_256();
+		case MacAlgo::HMAC_SHA3_384:
+			return new BotanHMACSHA3_384();
+		case MacAlgo::HMAC_SHA3_512:
+			return new BotanHMACSHA3_512();
+#endif
 #ifdef WITH_GOST
 		case MacAlgo::HMAC_GOST:
 			return new BotanHMACGOSTR3411();

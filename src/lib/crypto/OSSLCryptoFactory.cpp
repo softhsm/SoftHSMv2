@@ -42,6 +42,12 @@
 #include "OSSLSHA256.h"
 #include "OSSLSHA384.h"
 #include "OSSLSHA512.h"
+#ifdef WITH_SHA3
+#include "OSSLSHA3_224.h"
+#include "OSSLSHA3_256.h"
+#include "OSSLSHA3_384.h"
+#include "OSSLSHA3_512.h"
+#endif
 #include "OSSLCMAC.h"
 #include "OSSLHMAC.h"
 #include "OSSLRSA.h"
@@ -393,6 +399,16 @@ HashAlgorithm* OSSLCryptoFactory::getHashAlgorithm(HashAlgo::Type algorithm)
 			return new OSSLSHA384();
 		case HashAlgo::SHA512:
 			return new OSSLSHA512();
+#ifdef WITH_SHA3
+		case HashAlgo::SHA3_224:
+			return new OSSLSHA3_224();
+		case HashAlgo::SHA3_256:
+			return new OSSLSHA3_256();
+		case HashAlgo::SHA3_384:
+			return new OSSLSHA3_384();
+		case HashAlgo::SHA3_512:
+			return new OSSLSHA3_512();
+#endif
 #ifdef WITH_GOST
 		case HashAlgo::GOST:
 			return new OSSLGOSTR3411();
@@ -423,6 +439,16 @@ MacAlgorithm* OSSLCryptoFactory::getMacAlgorithm(MacAlgo::Type algorithm)
 			return new OSSLHMACSHA384();
 		case MacAlgo::HMAC_SHA512:
 			return new OSSLHMACSHA512();
+#ifdef WITH_SHA3
+		case MacAlgo::HMAC_SHA3_224:
+			return new OSSLHMACSHA3_224();
+		case MacAlgo::HMAC_SHA3_256:
+			return new OSSLHMACSHA3_256();
+		case MacAlgo::HMAC_SHA3_384:
+			return new OSSLHMACSHA3_384();
+		case MacAlgo::HMAC_SHA3_512:
+			return new OSSLHMACSHA3_512();
+#endif
 #ifdef WITH_GOST
 		case MacAlgo::HMAC_GOST:
 			return new OSSLHMACGOSTR3411();

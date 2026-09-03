@@ -388,7 +388,13 @@ void SignVerifyTests::testRsaSignVerify()
 		{ CKM_SHA224, CKG_MGF1_SHA224, 28 },
 		{ CKM_SHA256, CKG_MGF1_SHA256, 32 },
 		{ CKM_SHA384, CKG_MGF1_SHA384, 0  },
-		{ CKM_SHA512, CKG_MGF1_SHA512, 0  }
+		{ CKM_SHA512, CKG_MGF1_SHA512, 0  },
+#ifdef WITH_SHA3
+		{ CKM_SHA3_224, CKG_MGF1_SHA3_224, 28 },
+		{ CKM_SHA3_256, CKG_MGF1_SHA3_256, 32 },
+		{ CKM_SHA3_384, CKG_MGF1_SHA3_384, 48 },
+		{ CKM_SHA3_512, CKG_MGF1_SHA3_512, 64 }
+#endif
 	};
 
 	// Just make sure that we finalize any previous tests
@@ -431,6 +437,12 @@ void SignVerifyTests::testRsaSignVerify()
 	signVerifyMulti(CKM_SHA256_RSA_PKCS, hSessionRO, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA384_RSA_PKCS, hSessionRO, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA512_RSA_PKCS, hSessionRO, hPuk,hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS, hSessionRO, hPuk,hPrk);
+#endif
 
 #ifdef WITH_RAW_PSS
 	signVerifySingleData(20, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
@@ -438,6 +450,12 @@ void SignVerifyTests::testRsaSignVerify()
 	signVerifySingleData(32, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifySingleData(48, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifySingleData(64, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+#ifdef WITH_SHA3
+	signVerifySingleData(28, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifySingleData(32, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[6], sizeof(params[6]));
+	signVerifySingleData(48, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[7], sizeof(params[7]));
+	signVerifySingleData(64, CKM_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[8], sizeof(params[8]));
+#endif
 #endif
 
 	signVerifyMulti(CKM_SHA1_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
@@ -445,6 +463,12 @@ void SignVerifyTests::testRsaSignVerify()
 	signVerifyMulti(CKM_SHA256_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifyMulti(CKM_SHA384_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifyMulti(CKM_SHA512_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[6], sizeof(params[6]));
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[7], sizeof(params[7]));
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS_PSS, hSessionRO, hPuk,hPrk, &params[8], sizeof(params[8]));
+#endif
 
 	// Private Session Keys
 	rv = generateRSA(hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
@@ -460,11 +484,23 @@ void SignVerifyTests::testRsaSignVerify()
 	signVerifyMulti(CKM_SHA256_RSA_PKCS, hSessionRW, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA384_RSA_PKCS, hSessionRW, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA512_RSA_PKCS, hSessionRW, hPuk,hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS, hSessionRW, hPuk,hPrk);
+#endif
 	signVerifyMulti(CKM_SHA1_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifyMulti(CKM_SHA224_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifyMulti(CKM_SHA256_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifyMulti(CKM_SHA384_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifyMulti(CKM_SHA512_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[4], sizeof(params[4]));
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[6], sizeof(params[6]));
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[7], sizeof(params[7]));
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[8], sizeof(params[8]));
+#endif
 
 	// Public Token Keys
 	rv = generateRSA(hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
@@ -480,11 +516,23 @@ void SignVerifyTests::testRsaSignVerify()
 	signVerifyMulti(CKM_SHA256_RSA_PKCS, hSessionRW, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA384_RSA_PKCS, hSessionRW, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA512_RSA_PKCS, hSessionRW, hPuk,hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS, hSessionRW, hPuk,hPrk);
+#endif
 	signVerifyMulti(CKM_SHA1_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifyMulti(CKM_SHA224_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifyMulti(CKM_SHA256_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifyMulti(CKM_SHA384_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifyMulti(CKM_SHA512_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[4], sizeof(params[4]));
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[6], sizeof(params[6]));
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[7], sizeof(params[7]));
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[8], sizeof(params[8]));
+#endif
 
 	// Private Token Keys
 	rv = generateRSA(hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
@@ -500,11 +548,23 @@ void SignVerifyTests::testRsaSignVerify()
 	signVerifyMulti(CKM_SHA256_RSA_PKCS, hSessionRW, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA384_RSA_PKCS, hSessionRW, hPuk,hPrk);
 	signVerifyMulti(CKM_SHA512_RSA_PKCS, hSessionRW, hPuk,hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS, hSessionRW, hPuk,hPrk);
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS, hSessionRW, hPuk,hPrk);
+#endif
 	signVerifyMulti(CKM_SHA1_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifyMulti(CKM_SHA224_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifyMulti(CKM_SHA256_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifyMulti(CKM_SHA384_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifyMulti(CKM_SHA512_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[4], sizeof(params[4]));
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_SHA3_224_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SHA3_256_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[6], sizeof(params[6]));
+	signVerifyMulti(CKM_SHA3_384_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[7], sizeof(params[7]));
+	signVerifyMulti(CKM_SHA3_512_RSA_PKCS_PSS, hSessionRW, hPuk,hPrk, &params[8], sizeof(params[8]));
+#endif
 }
 
 #ifdef WITH_ECC
@@ -549,12 +609,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -564,12 +636,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -579,12 +663,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	// Private Session Keys
 	rv = generateEC("P-256", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
@@ -595,12 +691,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-384", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -610,12 +718,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-521", hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -625,12 +745,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	// Public Token Keys
 	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
@@ -641,12 +773,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -656,12 +800,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -671,12 +827,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	// Private Token Keys
 	rv = generateEC("P-256", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
@@ -687,12 +855,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-384", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -702,12 +882,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	rv = generateEC("P-521", hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
@@ -717,12 +909,24 @@ void SignVerifyTests::testEcSignVerify()
 	signVerifySingle(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifySingle(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifySingle(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifySingle(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 
 	signVerifyMulti(CKM_ECDSA_SHA1, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA224, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA256, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA384, hSessionRO, hPuk, hPrk);
 	signVerifyMulti(CKM_ECDSA_SHA512, hSessionRO, hPuk, hPrk);
+#ifdef WITH_SHA3
+	signVerifyMulti(CKM_ECDSA_SHA3_224, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_256, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_384, hSessionRO, hPuk, hPrk);
+	signVerifyMulti(CKM_ECDSA_SHA3_512, hSessionRO, hPuk, hPrk);
+#endif
 }
 #endif
 
@@ -1067,6 +1271,24 @@ void SignVerifyTests::testMacSignVerify()
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	macSignVerify(CKM_SHA384_HMAC, hSessionRO, hKey);
 
+#ifdef WITH_SHA3
+	rv = generateKey(hSessionRW,CKK_SHA3_224_HMAC,IN_SESSION,IS_PUBLIC,hKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	macSignVerify(CKM_SHA3_224_HMAC, hSessionRO, hKey);
+
+	rv = generateKey(hSessionRW,CKK_SHA3_256_HMAC,IN_SESSION,IS_PUBLIC,hKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	macSignVerify(CKM_SHA3_256_HMAC, hSessionRO, hKey);
+
+	rv = generateKey(hSessionRW,CKK_SHA3_384_HMAC,IN_SESSION,IS_PUBLIC,hKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	macSignVerify(CKM_SHA3_384_HMAC, hSessionRO, hKey);
+
+	rv = generateKey(hSessionRW,CKK_SHA3_512_HMAC,IN_SESSION,IS_PUBLIC,hKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	macSignVerify(CKM_SHA3_512_HMAC, hSessionRO, hKey);
+
+#endif
 	rv = generateKey(hSessionRW,CKK_SHA512_HMAC,IN_SESSION,IS_PUBLIC,hKey);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	macSignVerify(CKM_SHA512_HMAC, hSessionRO, hKey);
@@ -1264,7 +1486,11 @@ void SignVerifyTests::testSignInitWrongKeyType()
 	}
 
 	// DSA mechanisms with EC key
-	CK_MECHANISM_TYPE dsaMechs[] = { CKM_DSA, CKM_DSA_SHA1, CKM_DSA_SHA256 };
+	CK_MECHANISM_TYPE dsaMechs[] = { CKM_DSA, CKM_DSA_SHA1, CKM_DSA_SHA256
+#ifdef WITH_SHA3
+		, CKM_DSA_SHA3_256
+#endif
+	};
 	for (size_t i = 0; i < sizeof(dsaMechs)/sizeof(dsaMechs[0]); i++)
 	{
 		CK_MECHANISM mechanism = { dsaMechs[i], NULL_PTR, 0 };
@@ -1358,7 +1584,11 @@ void SignVerifyTests::testVerifyInitWrongKeyType()
 	}
 
 	// DSA mechanisms with EC key
-	CK_MECHANISM_TYPE dsaMechs[] = { CKM_DSA, CKM_DSA_SHA1, CKM_DSA_SHA256 };
+	CK_MECHANISM_TYPE dsaMechs[] = { CKM_DSA, CKM_DSA_SHA1, CKM_DSA_SHA256
+#ifdef WITH_SHA3
+		, CKM_DSA_SHA3_256
+#endif
+	};
 	for (size_t i = 0; i < sizeof(dsaMechs)/sizeof(dsaMechs[0]); i++)
 	{
 		CK_MECHANISM mechanism = { dsaMechs[i], NULL_PTR, 0 };

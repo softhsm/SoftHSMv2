@@ -170,6 +170,18 @@ bool BotanDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
 		case AsymMech::DSA_SHA512:
 			emsa = "EMSA1(SHA-512)";
 			break;
+		case AsymMech::DSA_SHA3_224:
+			emsa = "EMSA1(SHA-3(224))";
+			break;
+		case AsymMech::DSA_SHA3_256:
+			emsa = "EMSA1(SHA-3(256))";
+			break;
+		case AsymMech::DSA_SHA3_384:
+			emsa = "EMSA1(SHA-3(384))";
+			break;
+		case AsymMech::DSA_SHA3_512:
+			emsa = "EMSA1(SHA-3(512))";
+			break;
 		default:
 			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
 
@@ -383,6 +395,18 @@ bool BotanDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			break;
 		case AsymMech::DSA_SHA512:
 			emsa = "EMSA1(SHA-512)";
+			break;
+		case AsymMech::DSA_SHA3_224:
+			emsa = "EMSA1(SHA-3(224))";
+			break;
+		case AsymMech::DSA_SHA3_256:
+			emsa = "EMSA1(SHA-3(256))";
+			break;
+		case AsymMech::DSA_SHA3_384:
+			emsa = "EMSA1(SHA-3(384))";
+			break;
+		case AsymMech::DSA_SHA3_512:
+			emsa = "EMSA1(SHA-3(512))";
 			break;
 		default:
 			ERROR_MSG("Invalid mechanism supplied (%i)", mechanism);
