@@ -700,6 +700,24 @@ CK_RV SymmetricAlgorithmTests::generateAesKey(CK_SESSION_HANDLE hSession, CK_BBO
 			     &hKey) );
 }
 
+CK_RV SymmetricAlgorithmTests::generateChaCha20Key(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey)
+{
+	CK_MECHANISM mechanism = { CKM_CHACHA20_KEY_GEN, NULL_PTR, 0 };
+	// CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_ATTRIBUTE keyAttribs[] = {
+		{ CKA_TOKEN, &bToken, sizeof(bToken) },
+		{ CKA_PRIVATE, &bPrivate, sizeof(bPrivate) },
+		{ CKA_ENCRYPT, &bTrue, sizeof(bTrue) },
+		{ CKA_DECRYPT, &bTrue, sizeof(bTrue) },
+	};
+
+	hKey = CK_INVALID_HANDLE;
+	return CRYPTOKI_F_PTR( C_GenerateKey(hSession, &mechanism,
+			     keyAttribs, sizeof(keyAttribs)/sizeof(CK_ATTRIBUTE),
+			     &hKey) );
+}
+
 
 inline CK_RV SymmetricAlgorithmTests::importDesKey(CK_SESSION_HANDLE hSession, CK_BBOOL bToken, CK_BBOOL bPrivate, CK_OBJECT_HANDLE &hKey, const Bytes & vKeyValue )
 {
@@ -1736,6 +1754,67 @@ void SymmetricAlgorithmTests::testAesEncryptDecrypt()
 	encryptDecrypt({CKM_AES_GCM,&gcmParamsWithoutAAD,sizeof(gcmParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST);
 }
 
+
+void SymmetricAlgorithmTests::testChaCha20Poly1305EncryptDecrypt()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSessionRO;
+
+	CK_BYTE chachaNonce[] = {
+		0xCA, 0xFE, 0xBA, 0xBE, 0xFA, 0xCE,
+		0xDB, 0xAD, 0xDE, 0xCA, 0xF8, 0x88
+	};
+	CK_BYTE chachaAAD[] = {
+		0xFE, 0xED, 0xFA, 0xCE, 0xDE, 0xAD, 0xBE, 0xEF,
+		0xFE, 0xED, 0xFA, 0xCE, 0xDE, 0xAD, 0xBE, 0xEF,
+		0xAB, 0xAD, 0xDA, 0xD2
+	};
+	CK_SALSA20_CHACHA20_POLY1305_PARAMS chachaParamsWithAAD =
+	{
+		&chachaNonce[0],
+		sizeof(chachaNonce)*8,
+		&chachaAAD[0],
+		sizeof(chachaAAD)
+	};
+	CK_SALSA20_CHACHA20_POLY1305_PARAMS chachaParamsWithoutAAD =
+	{
+		&chachaNonce[0],
+		sizeof(chachaNonce)*8,
+		NULL_PTR,
+		0
+	};
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	// Initialize the library and start the test.
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Open read-only session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, &hSessionRO) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Login USER into the session so we can create a private object
+	rv = CRYPTOKI_F_PTR( C_Login(hSessionRO,CKU_USER,m_userPin1,m_userPin1Length) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+
+	CK_OBJECT_HANDLE hKey = CK_INVALID_HANDLE;
+
+	rv = generateChaCha20Key(hSessionRO,IN_SESSION,IS_PUBLIC,hKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// ChaCha20-Poly1305 is a stream cipher; reuse the AES block size purely
+	// to size the multi-part chunks exercised by the test helper.
+	const int blockSize(0x10);
+
+	encryptDecrypt({CKM_CHACHA20_POLY1305,&chachaParamsWithAAD,sizeof(chachaParamsWithAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST-1);
+	encryptDecrypt({CKM_CHACHA20_POLY1305,&chachaParamsWithAAD,sizeof(chachaParamsWithAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST+1);
+	encryptDecrypt({CKM_CHACHA20_POLY1305,&chachaParamsWithAAD,sizeof(chachaParamsWithAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST);
+	encryptDecrypt({CKM_CHACHA20_POLY1305,&chachaParamsWithoutAAD,sizeof(chachaParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST-1);
+	encryptDecrypt({CKM_CHACHA20_POLY1305,&chachaParamsWithoutAAD,sizeof(chachaParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST+1);
+	encryptDecrypt({CKM_CHACHA20_POLY1305,&chachaParamsWithoutAAD,sizeof(chachaParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST);
+}
 
 void SymmetricAlgorithmTests::testAesWrapUnwrap()
 {
