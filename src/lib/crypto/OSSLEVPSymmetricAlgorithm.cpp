@@ -492,6 +492,9 @@ bool OSSLEVPSymmetricAlgorithm::decryptFinal(ByteString& data)
 		{
 			ERROR_MSG("EVP_DecryptUpdate failed: %s", ERR_error_string(ERR_get_error(), NULL));
 
+			// The tag has not been verified yet; do not leave unauthenticated plaintext behind
+			data.wipe();
+
 			clean();
 
 			return false;
@@ -510,6 +513,10 @@ bool OSSLEVPSymmetricAlgorithm::decryptFinal(ByteString& data)
 	if (!rv)
 	{
 		ERROR_MSG("EVP_DecryptFinal failed (0x%08X): %s", rv, ERR_error_string(ERR_get_error(), NULL));
+
+		// The tag has not been verified (or verification failed); do not leave
+		// unauthenticated plaintext behind
+		data.wipe();
 
 		clean();
 

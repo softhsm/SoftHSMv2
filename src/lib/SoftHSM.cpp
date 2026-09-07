@@ -2626,18 +2626,36 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				DEBUG_MSG("ChaCha20-Poly1305 requires parameters");
 				return CKR_ARGUMENTS_BAD;
 			}
+#if defined(WITH_OPENSSL)
+			// The OpenSSL backend's ChaCha20-Poly1305 IV length is fixed at
+			// 96 bits; other lengths are silently truncated/over-read by EVP.
+			if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits != 96)
+#else
 			if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits == 0 ||
 			    CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits % 8 != 0 ||
 			    CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits > 192)
+#endif
 			{
 				DEBUG_MSG("Invalid ulNonceBits");
 				return CKR_MECHANISM_PARAM_INVALID;
+			}
+			if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pNonce == NULL_PTR)
+			{
+				DEBUG_MSG("ChaCha20-Poly1305 requires a nonce");
+				return CKR_ARGUMENTS_BAD;
 			}
 			iv.resize(CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits / 8);
 			memcpy(&iv[0], CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pNonce, iv.size());
 			aad.resize(CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
 			if (aad.size() > 0)
+			{
+				if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pAAD == NULL_PTR)
+				{
+					DEBUG_MSG("Invalid AAD parameter");
+					return CKR_ARGUMENTS_BAD;
+				}
 				memcpy(&aad[0], CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pAAD, aad.size());
+			}
 			tagBytes = 16;
 			break;
 		default:
@@ -3407,18 +3425,36 @@ CK_RV SoftHSM::SymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				DEBUG_MSG("ChaCha20-Poly1305 requires parameters");
 				return CKR_ARGUMENTS_BAD;
 			}
+#if defined(WITH_OPENSSL)
+			// The OpenSSL backend's ChaCha20-Poly1305 IV length is fixed at
+			// 96 bits; other lengths are silently truncated/over-read by EVP.
+			if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits != 96)
+#else
 			if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits == 0 ||
 			    CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits % 8 != 0 ||
 			    CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits > 192)
+#endif
 			{
 				DEBUG_MSG("Invalid ulNonceBits");
 				return CKR_MECHANISM_PARAM_INVALID;
+			}
+			if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pNonce == NULL_PTR)
+			{
+				DEBUG_MSG("ChaCha20-Poly1305 requires a nonce");
+				return CKR_ARGUMENTS_BAD;
 			}
 			iv.resize(CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulNonceBits / 8);
 			memcpy(&iv[0], CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pNonce, iv.size());
 			aad.resize(CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
 			if (aad.size() > 0)
+			{
+				if (CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pAAD == NULL_PTR)
+				{
+					DEBUG_MSG("Invalid AAD parameter");
+					return CKR_ARGUMENTS_BAD;
+				}
 				memcpy(&aad[0], CK_SALSA20_CHACHA20_POLY1305_PARAMS_PTR(pMechanism->pParameter)->pAAD, aad.size());
+			}
 			tagBytes = 16;
 			break;
 		default:
@@ -10011,8 +10047,8 @@ CK_RV SoftHSM::generateChaCha20
 			ByteString kcv;
 			if (isPrivate)
 			{
-				token->encrypt(key->getKeyBits(), value);
-				token->encrypt(key->getKeyCheckValue(), kcv);
+				bOK = bOK && token->encrypt(key->getKeyBits(), value);
+				bOK = bOK && token->encrypt(key->getKeyCheckValue(), kcv);
 			}
 			else
 			{
