@@ -17,6 +17,8 @@ objstoretest_SOURCES =		objstoretest.cpp \
 				DirectoryTests.cpp \
 				UUIDTests.cpp \
 				FileTests.cpp \
+				ObjectFileTestsRefresh.cpp \
+				ObjectFileTestsNoRefresh.cpp \
 				ObjectFileTests.cpp \
 				OSTokenTests.cpp \
 				ObjectStoreTests.cpp \

@@ -25,34 +25,32 @@
  */
 
 /*****************************************************************************
- ObjectFileTests.h
+ ObjectObjectFileTests.cpp
 
  Contains test cases to test the object file implementation
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OBJECTFILETESTS_H
-#define _SOFTHSM_V2_OBJECTFILETESTS_H
+#include "ObjectFileTestsNoRefresh.h"
 
+CPPUNIT_TEST_SUITE_REGISTRATION(ObjectFileTestsNoRefresh);
 
-class ObjectFileTests 
+ObjectFileTestsNoRefresh::ObjectFileTestsNoRefresh() : ObjectFileTests(false) {}
+
+void ObjectFileTestsNoRefresh::setUp()
 {
-public:
-	ObjectFileTests(bool doRefresh);
-    void testBoolAttr();
-	void testULongAttr();
-	void testByteStrAttr();
-	void testMechTypeSetAttr();
-	void testAttrMapAttr();
-	void testMixedAttr();
-	void testDoubleAttr();
-	void testRefresh();
-	void testCorruptFile();
-	void testTransactions();
-	void testDestroyObjectFails();
+#ifndef _WIN32
+	CPPUNIT_ASSERT(!system("mkdir testdir"));
+#else
+	system("mkdir testdir 2> nul");
+#endif
+}
 
-private:
-	const bool doRefresh;
-};
-
-#endif // !_SOFTHSM_V2_OBJECTFILETESTS_H
+void ObjectFileTestsNoRefresh::tearDown()
+{
+#ifndef _WIN32
+	CPPUNIT_ASSERT(!system("rm -rf testdir"));
+#else
+	CPPUNIT_ASSERT(!system("rmdir /s /q testdir 2> nul"));
+#endif
+}
 

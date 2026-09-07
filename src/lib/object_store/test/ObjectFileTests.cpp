@@ -43,26 +43,10 @@
 #include "RNG.h"
 #include "cryptoki.h"
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ObjectFileTests);
-
 // FIXME: all pathnames in this file are *NIX/BSD specific
 
-void ObjectFileTests::setUp()
+ObjectFileTests::ObjectFileTests(const bool _doRefresh) : doRefresh(_doRefresh)
 {
-#ifndef _WIN32
-	CPPUNIT_ASSERT(!system("mkdir testdir"));
-#else
-	system("mkdir testdir 2> nul");
-#endif
-}
-
-void ObjectFileTests::tearDown()
-{
-#ifndef _WIN32
-	CPPUNIT_ASSERT(!system("rm -rf testdir"));
-#else
-	CPPUNIT_ASSERT(!system("rmdir /s /q testdir 2> nul"));
-#endif
 }
 
 void ObjectFileTests::testBoolAttr()
@@ -75,7 +59,7 @@ void ObjectFileTests::testBoolAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		bool value1 = true;
 		bool value2 = false;
@@ -104,7 +88,7 @@ void ObjectFileTests::testBoolAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_TOKEN));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_SENSITIVE));
@@ -145,7 +129,7 @@ void ObjectFileTests::testULongAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		unsigned long value1 = 0x12345678;
 		unsigned long value2 = 0x87654321;
@@ -174,7 +158,7 @@ void ObjectFileTests::testULongAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_MODULUS_BITS));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_PRIME_BITS));
@@ -221,7 +205,7 @@ void ObjectFileTests::testByteStrAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		OSAttribute attr1(value1);
 		OSAttribute attr2(value2);
@@ -244,7 +228,7 @@ void ObjectFileTests::testByteStrAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_MODULUS));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_COEFFICIENT));
@@ -284,7 +268,7 @@ void ObjectFileTests::testMechTypeSetAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		std::set<CK_MECHANISM_TYPE> set;
 		set.insert(CKM_SHA256);
@@ -302,7 +286,7 @@ void ObjectFileTests::testMechTypeSetAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_ALLOWED_MECHANISMS));
@@ -333,7 +317,7 @@ void ObjectFileTests::testAttrMapAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		bool value1 = true;
 		unsigned long value2 = 0x87654321;
@@ -361,7 +345,7 @@ void ObjectFileTests::testAttrMapAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_WRAP_TEMPLATE));
 		CPPUNIT_ASSERT(!testObject.attributeExists(CKA_UNWRAP_TEMPLATE));
@@ -399,7 +383,7 @@ void ObjectFileTests::testMixedAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		bool value1 = true;
 		unsigned long value2 = 0x87654321;
@@ -423,7 +407,7 @@ void ObjectFileTests::testMixedAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_TOKEN));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_PRIME_BITS));
@@ -462,7 +446,7 @@ void ObjectFileTests::testDoubleAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		bool value1 = true;
 		unsigned long value2 = 0x87654321;
@@ -486,7 +470,7 @@ void ObjectFileTests::testDoubleAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_TOKEN));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_PRIME_BITS));
@@ -513,7 +497,7 @@ void ObjectFileTests::testDoubleAttr()
 		OSAttribute attr4(value4a);
 
 		// Change the attributes
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.setAttribute(CKA_TOKEN, attr1));
 		CPPUNIT_ASSERT(testObject.setAttribute(CKA_PRIME_BITS, attr2));
@@ -540,7 +524,7 @@ void ObjectFileTests::testDoubleAttr()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_TOKEN));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_PRIME_BITS));
@@ -582,7 +566,7 @@ void ObjectFileTests::testRefresh()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		bool value1 = true;
 		unsigned long value2 = 0x87654321;
@@ -606,7 +590,7 @@ void ObjectFileTests::testRefresh()
 		ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_TOKEN));
 		CPPUNIT_ASSERT(testObject.attributeExists(CKA_PRIME_BITS));
@@ -633,7 +617,7 @@ void ObjectFileTests::testRefresh()
 		OSAttribute attr4(value4a);
 
 		// Change the attributes
-		CPPUNIT_ASSERT(testObject.isValid());
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 		CPPUNIT_ASSERT(testObject.setAttribute(CKA_TOKEN, attr1));
 		CPPUNIT_ASSERT(testObject.setAttribute(CKA_PRIME_BITS, attr2));
@@ -658,7 +642,7 @@ void ObjectFileTests::testRefresh()
 		ObjectFile testObject2(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-		CPPUNIT_ASSERT(testObject2.isValid());
+		CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 
 		// Check the attributes on the second instance
 		CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).isBooleanAttribute());
@@ -683,11 +667,11 @@ void ObjectFileTests::testRefresh()
 		CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ID).isByteStringAttribute());
 		CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ID).getByteStringValue() == id);
 
-		// Now check that the first instance also knows about it
-		CPPUNIT_ASSERT(testObject.isValid());
-		CPPUNIT_ASSERT(testObject.attributeExists(CKA_ID));
-		CPPUNIT_ASSERT(testObject.getAttribute(CKA_ID).isByteStringAttribute());
-		CPPUNIT_ASSERT(testObject.getAttribute(CKA_ID).getByteStringValue() == id);
+		// Now check that the first instance also knows about it. If doRequest==false the object will no be changed.
+		CPPUNIT_ASSERT(testObject.isValid(doRefresh));
+		CPPUNIT_ASSERT(testObject.attributeExists(CKA_ID) == doRefresh);
+		CPPUNIT_ASSERT(testObject.getAttribute(CKA_ID).isByteStringAttribute() == doRefresh);
+		CPPUNIT_ASSERT((testObject.getAttribute(CKA_ID).getByteStringValue() == id) == doRefresh);
 
 		// Now change another attribute
 		unsigned long value2a = 0x89898989;
@@ -700,10 +684,10 @@ void ObjectFileTests::testRefresh()
 		CPPUNIT_ASSERT(testObject.getAttribute(CKA_PRIME_BITS).isUnsignedLongAttribute());
 		CPPUNIT_ASSERT(testObject.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a);
 
-		// Now check that the second instance also knows about the change
-		CPPUNIT_ASSERT(testObject2.isValid());
+		// Now check that the second instance also knows about the change. If doRequest==false the object will no be changed.
+		CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 		CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).isUnsignedLongAttribute());
-		CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a);
+		CPPUNIT_ASSERT((testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a) == doRefresh);
 	}
 }
 
@@ -728,7 +712,7 @@ void ObjectFileTests::testCorruptFile()
 	ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-	CPPUNIT_ASSERT(!testObject.isValid());
+	CPPUNIT_ASSERT(!testObject.isValid(doRefresh));
 }
 
 void ObjectFileTests::testTransactions()
@@ -740,7 +724,7 @@ void ObjectFileTests::testTransactions()
 	ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-	CPPUNIT_ASSERT(testObject.isValid());
+	CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 	bool value1 = true;
 	unsigned long value2 = 0x87654321;
@@ -766,7 +750,7 @@ void ObjectFileTests::testTransactions()
 	ObjectFile testObject2(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock");
 #endif
 
-	CPPUNIT_ASSERT(testObject2.isValid());
+	CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 
 	// Check that it has the same attributes
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).isBooleanAttribute());
@@ -813,7 +797,7 @@ void ObjectFileTests::testTransactions()
 	CPPUNIT_ASSERT(testObject.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a);
 
 	// Verify that they are unchanged on the other instance
-	CPPUNIT_ASSERT(testObject2.isValid());
+	CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).isBooleanAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).isUnsignedLongAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).isByteStringAttribute());
@@ -827,17 +811,17 @@ void ObjectFileTests::testTransactions()
 	// Commit the transaction
 	CPPUNIT_ASSERT(testObject.commitTransaction());
 
-	// Verify that they have now changed on the other instance
-	CPPUNIT_ASSERT(testObject2.isValid());
+	// Verify that they have now changed on the other instance. If doRefresh==false then no change will be done.
+	CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).isBooleanAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).isUnsignedLongAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).isByteStringAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).isMechanismTypeSetAttribute());
 
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).getBooleanValue() == value1a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).getByteStringValue() == value3a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_TOKEN).getBooleanValue() == value1a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_VALUE).getByteStringValue() == value3a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a) == doRefresh);
 
 	// Start transaction on object
 	CPPUNIT_ASSERT(testObject.startTransaction(ObjectFile::ReadWrite));
@@ -860,16 +844,16 @@ void ObjectFileTests::testTransactions()
 	CPPUNIT_ASSERT(testObject.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4);
 
 	// Verify that they are unchanged on the other instance
-	CPPUNIT_ASSERT(testObject2.isValid());
+	CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).isBooleanAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).isUnsignedLongAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).isByteStringAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).isMechanismTypeSetAttribute());
 
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).getBooleanValue() == value1a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).getByteStringValue() == value3a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_TOKEN).getBooleanValue() == value1a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_VALUE).getByteStringValue() == value3a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a) == doRefresh);
 
 	// Abort the transaction
 	CPPUNIT_ASSERT(testObject.abortTransaction());
@@ -885,16 +869,16 @@ void ObjectFileTests::testTransactions()
 	CPPUNIT_ASSERT(testObject.getAttribute(CKA_VALUE).getByteStringValue() == value3a);
 	CPPUNIT_ASSERT(testObject.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a);
 
-	CPPUNIT_ASSERT(testObject2.isValid());
+	CPPUNIT_ASSERT(testObject2.isValid(doRefresh));
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).isBooleanAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).isUnsignedLongAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).isByteStringAttribute());
 	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).isMechanismTypeSetAttribute());
 
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_TOKEN).getBooleanValue() == value1a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_VALUE).getByteStringValue() == value3a);
-	CPPUNIT_ASSERT(testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_TOKEN).getBooleanValue() == value1a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == value2a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_VALUE).getByteStringValue() == value3a) == doRefresh);
+	CPPUNIT_ASSERT((testObject2.getAttribute(CKA_ALLOWED_MECHANISMS).getMechanismTypeSetValue() == value4a) == doRefresh);
 }
 
 void ObjectFileTests::testDestroyObjectFails()
@@ -906,7 +890,7 @@ void ObjectFileTests::testDestroyObjectFails()
 	ObjectFile testObject(NULL, "testdir\\test.object", DEFAULT_UMASK, "testdir\\test.lock", true);
 #endif
 
-	CPPUNIT_ASSERT(testObject.isValid());
+	CPPUNIT_ASSERT(testObject.isValid(doRefresh));
 
 	OSObject* testIF = (OSObject*) &testObject;
 
