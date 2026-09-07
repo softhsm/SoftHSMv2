@@ -201,11 +201,30 @@ private:
 	// Constructor
 	SoftHSM();
 
-	// The one-and-only instance
+	// The one-and-only instance.
+	//
+	// Smart pointers must not be used directly as class-level
+	// static storage: their destructor runs as part of the C++
+	// runtime's ordinary static-object teardown at process exit, an
+	// indeterminate time relative to unrelated code's own cleanup
+	// (see the "Static and Global Variables" section of the Google
+	// C++ Style Guide, which explicitly recommends "a pointer that
+	// is never freed" for exactly this situation). Concretely here:
+	// a PKCS#11 caller (e.g. a provider) may still be closing its
+	// own open sessions via C_CloseSession() when this destructor
+	// fires, and would then be operating on an already-destroyed
+	// singleton.
+	//
+	// The smart pointer itself is therefore heap-allocated once and
+	// deliberately never freed - the same "leaky singleton" idiom
+	// used by e.g. Drake's never_destroyed<T> - while still using it
+	// (not a raw pointer) to own and manage the SoftHSM object's own
+	// lifetime, which is destroyed exactly once, only via the
+	// explicit C_Finalize()/reset() path below.
 #ifdef HAVE_CXX11
-	static std::unique_ptr<SoftHSM> instance;
+	static std::unique_ptr<SoftHSM>* instance;
 #else
-	static std::auto_ptr<SoftHSM> instance;
+	static std::auto_ptr<SoftHSM>* instance;
 #endif
 
 	// Is the SoftHSM PKCS #11 library initialised?

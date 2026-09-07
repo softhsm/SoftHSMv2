@@ -81,11 +81,15 @@ private:
 	// Constructor
 	BotanCryptoFactory();
 
-	// The one-and-only instance
+	// The one-and-only instance.
+	//
+	// A pointer to a heap-allocated, deliberately never-freed smart
+	// pointer, not a smart pointer directly: see the rationale
+	// beside SoftHSM::instance in SoftHSM.h.
 #ifdef HAVE_CXX11
-	static std::unique_ptr<BotanCryptoFactory> instance;
+	static std::unique_ptr<BotanCryptoFactory>* instance;
 #else
-	static std::auto_ptr<BotanCryptoFactory> instance;
+	static std::auto_ptr<BotanCryptoFactory>* instance;
 #endif
 
 	// Thread specific RNG
