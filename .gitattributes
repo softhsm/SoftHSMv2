@@ -1,0 +1,3 @@
+# shell files have unix(LF) end-of-line conversion
+
+*.sh text eol=lf
