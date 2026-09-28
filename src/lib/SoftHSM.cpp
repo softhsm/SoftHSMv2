@@ -127,6 +127,28 @@ std::auto_ptr<SoftHSM> SoftHSM::instance(NULL);
 
 #endif
 
+// Key types that are handled as generic secret key objects
+static bool isGenericSecretKeyType(CK_KEY_TYPE keyType)
+{
+	switch (keyType)
+	{
+		case CKK_GENERIC_SECRET:
+		case CKK_MD5_HMAC:
+		case CKK_SHA_1_HMAC:
+		case CKK_SHA224_HMAC:
+		case CKK_SHA256_HMAC:
+		case CKK_SHA384_HMAC:
+		case CKK_SHA512_HMAC:
+		case CKK_SHA3_224_HMAC:
+		case CKK_SHA3_256_HMAC:
+		case CKK_SHA3_384_HMAC:
+		case CKK_SHA3_512_HMAC:
+			return true;
+		default:
+			return false;
+	}
+}
+
 static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERTIFICATE_TYPE certType, P11Object **p11object)
 {
 	switch(objClass) {
@@ -191,17 +213,7 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 				return CKR_ATTRIBUTE_VALUE_INVALID;
 			break;
 		case CKO_SECRET_KEY:
-			if ((keyType == CKK_GENERIC_SECRET) ||
-			    (keyType == CKK_MD5_HMAC) ||
-			    (keyType == CKK_SHA_1_HMAC) ||
-			    (keyType == CKK_SHA224_HMAC) ||
-			    (keyType == CKK_SHA256_HMAC) ||
-			    (keyType == CKK_SHA384_HMAC) ||
-			    (keyType == CKK_SHA512_HMAC) ||
-			    (keyType == CKK_SHA3_224_HMAC) ||
-			    (keyType == CKK_SHA3_256_HMAC) ||
-			    (keyType == CKK_SHA3_384_HMAC) ||
-			    (keyType == CKK_SHA3_512_HMAC))
+			if (isGenericSecretKeyType(keyType))
 			{
 				P11GenericSecretKeyObj* key = new P11GenericSecretKeyObj();
 				*p11object = key;
@@ -8390,6 +8402,12 @@ CK_RV SoftHSM::C_UnwrapKey
 	};
 	CK_ULONG secretAttribsCount = 4;
 
+	// Block cipher ECB and CBC without padding use CKA_VALUE_LEN, if the
+	// key type supports it, to truncate the unwrapped key value
+	bool isUnpadded = pMechanism->mechanism == CKM_DES3_ECB || pMechanism->mechanism == CKM_DES3_CBC;
+	CK_ULONG valueLen = 0;
+	bool haveValueLen = false;
+
 	// Add the additional
 	if (ulCount > (maxAttribs - secretAttribsCount))
 		return CKR_TEMPLATE_INCONSISTENT;
@@ -8402,6 +8420,17 @@ CK_RV SoftHSM::C_UnwrapKey
 			case CKA_PRIVATE:
 			case CKA_KEY_TYPE:
 				continue;
+			case CKA_VALUE_LEN:
+				if (isUnpadded && isGenericSecretKeyType(keyType))
+				{
+					if (pTemplate[i].pValue == NULL_PTR || pTemplate[i].ulValueLen != sizeof(CK_ULONG))
+						return CKR_ATTRIBUTE_VALUE_INVALID;
+					valueLen = *(CK_ULONG*)pTemplate[i].pValue;
+					haveValueLen = true;
+					continue;
+				}
+				secretAttribs[secretAttribsCount++] = pTemplate[i];
+				break;
 			default:
 				secretAttribs[secretAttribsCount++] = pTemplate[i];
 		}
@@ -8477,8 +8506,8 @@ CK_RV SoftHSM::C_UnwrapKey
 	}
 
 	// Block cipher ECB and CBC without padding: truncate the trailing
-	// null bytes added when wrapping, based on the key type
-	if (pMechanism->mechanism == CKM_DES3_ECB || pMechanism->mechanism == CKM_DES3_CBC)
+	// null bytes added when wrapping, based on the key type or CKA_VALUE_LEN
+	if (isUnpadded)
 	{
 		size_t keyLen = keydata.size();
 		switch (keyType)
@@ -8491,6 +8520,14 @@ CK_RV SoftHSM::C_UnwrapKey
 				break;
 			case CKK_DES3:
 				keyLen = 24;
+				break;
+			default:
+				if (haveValueLen)
+				{
+					if (valueLen == 0 || valueLen > keydata.size())
+						return CKR_TEMPLATE_INCONSISTENT;
+					keyLen = valueLen;
+				}
 				break;
 		}
 		if (keyLen > keydata.size())
@@ -8529,6 +8566,8 @@ CK_RV SoftHSM::C_UnwrapKey
 				else
 					value = keydata;
 				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+				if (osobject->attributeExists(CKA_VALUE_LEN))
+					bOK = bOK && osobject->setAttribute(CKA_VALUE_LEN, (unsigned long)keydata.size());
 			}
 			else if (keyType == CKK_RSA)
 			{

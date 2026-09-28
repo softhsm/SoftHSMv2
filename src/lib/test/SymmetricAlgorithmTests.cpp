@@ -2168,6 +2168,49 @@ void SymmetricAlgorithmTests::testDesWrapUnwrap()
 	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &ecbMechanism, hDes3, wrapped, 16, des3Attribs, des3AttribsCount - 1, &hNew) );
 	CPPUNIT_ASSERT(rv == CKR_WRAPPED_KEY_INVALID);
 
+	// ECB and CBC truncate a generic secret to CKA_VALUE_LEN of the template
+	const CK_BYTE secretWrapped[] = {
+		0x30, 0x32, 0x92, 0x53, 0xbd, 0x29, 0x65, 0x40,
+		0x2e, 0xa4, 0x37, 0xbe, 0x92, 0x66, 0x17, 0x8c,
+		0x12, 0x3e, 0x17, 0x52, 0xb2, 0x69, 0x1a, 0x27
+	};
+	CK_KEY_TYPE genericType = CKK_GENERIC_SECRET;
+	CK_KEY_TYPE aesType = CKK_AES;
+	CK_ULONG secretLen = static_cast<CK_ULONG>(secretValue.size());
+	CK_ATTRIBUTE secretAttribs[] = {
+		{ CKA_CLASS, &secretClass, sizeof(secretClass) },
+		{ CKA_KEY_TYPE, &genericType, sizeof(genericType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_PRIVATE, &bTrue, sizeof(bTrue) },
+		{ CKA_SENSITIVE, &bFalse, sizeof(bFalse) },
+		{ CKA_EXTRACTABLE, &bTrue, sizeof(bTrue) },
+		{ CKA_VALUE_LEN, &secretLen, sizeof(secretLen) }
+	};
+	const CK_ULONG secretAttribsCount = sizeof(secretAttribs)/sizeof(CK_ATTRIBUTE);
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &ecbMechanism, hDes3, const_cast<CK_BYTE_PTR>(secretWrapped), sizeof(secretWrapped), secretAttribs, secretAttribsCount, &hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CK_ULONG unwrappedLen = 0;
+	CK_ATTRIBUTE secretCheck[] = {
+		{ CKA_VALUE, value, sizeof(value) },
+		{ CKA_VALUE_LEN, &unwrappedLen, sizeof(unwrappedLen) }
+	};
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hNew, secretCheck, 2) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(secretCheck[0].ulValueLen == secretLen);
+	CPPUNIT_ASSERT(memcmp(value, secretValue.data(), secretLen) == 0);
+	CPPUNIT_ASSERT(unwrappedLen == secretLen);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	// ...and fail if CKA_VALUE_LEN is longer than the unwrapped value
+	secretLen = sizeof(secretWrapped) + 8;
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &ecbMechanism, hDes3, const_cast<CK_BYTE_PTR>(secretWrapped), sizeof(secretWrapped), secretAttribs, secretAttribsCount, &hNew) );
+	CPPUNIT_ASSERT(rv == CKR_TEMPLATE_INCONSISTENT);
+	// CKA_VALUE_LEN is still not allowed when unwrapping an AES key
+	secretLen = 16;
+	secretAttribs[1].pValue = &aesType;
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &ecbMechanism, hDes3, const_cast<CK_BYTE_PTR>(secretWrapped), sizeof(secretWrapped), secretAttribs, secretAttribsCount, &hNew) );
+	CPPUNIT_ASSERT(rv == CKR_ATTRIBUTE_READ_ONLY);
+
 	// Invalid padding: the plaintext block is all zeros
 	const CK_BYTE badPadding[] = { 0x30, 0x32, 0x92, 0x53, 0xbd, 0x29, 0x65, 0x40 };
 	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &cbcPadMechanism, hDes3, const_cast<CK_BYTE_PTR>(badPadding), sizeof(badPadding), des2Attribs, sizeof(des2Attribs)/sizeof(CK_ATTRIBUTE), &hNew) );
