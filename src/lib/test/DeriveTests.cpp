@@ -1151,6 +1151,21 @@ void DeriveTests::testMiscDerivations() {
 	CPPUNIT_ASSERT_MESSAGE("Derived key should be always sensitive if both keys are", bAlwaysSensitive == CK_TRUE);
 	CPPUNIT_ASSERT_MESSAGE("Derived key should not be never extractable if one key is not", bNeverExtractable == CK_FALSE);
 
+	// The other key has not been sensitive, so the derived key is not always sensitive
+	CK_OBJECT_HANDLE hNotSensitive = CK_INVALID_HANDLE;
+	genAttribs[2].pValue = &bFalse;
+	genAttribs[3].pValue = &bFalse;
+	rv = CRYPTOKI_F_PTR( C_GenerateKey(hSessionRW, &genMechanism, genAttribs, sizeof(genAttribs)/sizeof(CK_ATTRIBUTE), &hNotSensitive) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	mechanism.pParameter = &hNotSensitive;
+	rv = CRYPTOKI_F_PTR( C_DeriveKey(hSessionRW, &mechanism, hNeverExtractable1,
+									 keyAttribs, 1, &hDerive) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSessionRW, hDerive, derivedAttribs, sizeof(derivedAttribs)/sizeof(CK_ATTRIBUTE)) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT_MESSAGE("Derived key should not be always sensitive if one key is not", bAlwaysSensitive == CK_FALSE);
+	CPPUNIT_ASSERT_MESSAGE("Derived key should be never extractable if both keys are", bNeverExtractable == CK_TRUE);
+
 #undef ASSERT_KEY_IS_NOT_EXTRACTABLE
 #undef ASSERT_KEY_IS_EXTRACTABLE
 }
