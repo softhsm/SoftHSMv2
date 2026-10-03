@@ -208,7 +208,8 @@ void OSSLMLDSAPrivateKey::createOSSLKey()
 
 	*p = OSSL_PARAM_construct_end();
 
-	ctx = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
+	// Use the default provider for internal ML-DSA key reconstruction.
+	ctx = EVP_PKEY_CTX_new_from_name(NULL, name, "provider=default");
 	if (ctx == NULL) {
 		ERROR_MSG("Could not create context");
 		return;
