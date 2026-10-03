@@ -111,12 +111,12 @@ MutexFactory::~MutexFactory()
 // Return the one-and-only instance
 MutexFactory* MutexFactory::i()
 {
-	if (!instance.get())
+	if (!instance->get())
 	{
-		instance.reset(new MutexFactory());
+		instance->reset(new MutexFactory());
 	}
 
-	return instance.get();
+	return instance->get();
 }
 
 // Get a mutex instance

@@ -56,11 +56,11 @@ SecureMemoryRegistry::~SecureMemoryRegistry()
 // Return the one-and-only instance
 SecureMemoryRegistry* SecureMemoryRegistry::i()
 {
-	if (instance.get() == NULL)
+	if (instance->get() == NULL)
 	{
-		instance.reset(new SecureMemoryRegistry());
+		instance->reset(new SecureMemoryRegistry());
 
-		if (instance.get() == NULL)
+		if (instance->get() == NULL)
 		{
 			// This is very bad!
 			ERROR_MSG("failed to instantiate SecureMemoryRegistry");
@@ -68,13 +68,13 @@ SecureMemoryRegistry* SecureMemoryRegistry::i()
 		}
 	}
 
-	return instance.get();
+	return instance->get();
 }
 
 // This will destroy the one-and-only instance.
 void SecureMemoryRegistry::reset()
 {
-	instance.reset();
+	instance->reset();
 }
 
 // Register a block of memory

@@ -105,25 +105,25 @@
 
 #ifdef HAVE_CXX11
 
-std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
-std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);
+std::unique_ptr<MutexFactory>* MutexFactory::instance = new std::unique_ptr<MutexFactory>();
+std::unique_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::unique_ptr<SecureMemoryRegistry>();
 #if defined(WITH_OPENSSL)
-std::unique_ptr<OSSLCryptoFactory> OSSLCryptoFactory::instance(nullptr);
+std::unique_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::unique_ptr<OSSLCryptoFactory>();
 #else
-std::unique_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(nullptr);
+std::unique_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::unique_ptr<BotanCryptoFactory>();
 #endif
-std::unique_ptr<SoftHSM> SoftHSM::instance(nullptr);
+std::unique_ptr<SoftHSM>* SoftHSM::instance = new std::unique_ptr<SoftHSM>();
 
 #else
 
-std::auto_ptr<MutexFactory> MutexFactory::instance(NULL);
-std::auto_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(NULL);
+std::auto_ptr<MutexFactory>* MutexFactory::instance = new std::auto_ptr<MutexFactory>();
+std::auto_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::auto_ptr<SecureMemoryRegistry>();
 #if defined(WITH_OPENSSL)
-std::auto_ptr<OSSLCryptoFactory> OSSLCryptoFactory::instance(NULL);
+std::auto_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::auto_ptr<OSSLCryptoFactory>();
 #else
-std::auto_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(NULL);
+std::auto_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::auto_ptr<BotanCryptoFactory>();
 #endif
-std::auto_ptr<SoftHSM> SoftHSM::instance(NULL);
+std::auto_ptr<SoftHSM>* SoftHSM::instance = new std::auto_ptr<SoftHSM>();
 
 #endif
 
@@ -415,11 +415,11 @@ static void resetMutexFactoryCallbacks()
 // Return the one-and-only instance
 SoftHSM* SoftHSM::i()
 {
-	if (!instance.get())
+	if (!instance->get())
 	{
-		instance.reset(new SoftHSM());
+		instance->reset(new SoftHSM());
 	}
-	else if(instance->detectFork())
+	else if((*instance)->detectFork())
 	{
 		if (Configuration::i()->getBool("library.reset_on_fork", false))
 		{
@@ -428,18 +428,18 @@ SoftHSM* SoftHSM::i()
 			 * the old instance is first destroyed as some
 			 * static structures are erased in the destructor.
 			 */
-			instance.reset(NULL);
-			instance.reset(new SoftHSM());
+			instance->reset(NULL);
+			instance->reset(new SoftHSM());
 		}
 	}
 
-	return instance.get();
+	return instance->get();
 }
 
 void SoftHSM::reset()
 {
-	if (instance.get())
-		instance.reset();
+	if (instance->get())
+		instance->reset();
 }
 
 // Constructor

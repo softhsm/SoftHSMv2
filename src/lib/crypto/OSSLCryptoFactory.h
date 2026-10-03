@@ -89,11 +89,15 @@ private:
 	// Constructor
 	OSSLCryptoFactory();
 
-	// The one-and-only instance
+	// The one-and-only instance.
+	//
+	// A pointer to a heap-allocated, deliberately never-freed smart
+	// pointer, not a smart pointer directly: see the rationale
+	// beside SoftHSM::instance in SoftHSM.h.
 #ifdef HAVE_CXX11
-	static std::unique_ptr<OSSLCryptoFactory> instance;
+	static std::unique_ptr<OSSLCryptoFactory>* instance;
 #else
-	static std::auto_ptr<OSSLCryptoFactory> instance;
+	static std::auto_ptr<OSSLCryptoFactory>* instance;
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
