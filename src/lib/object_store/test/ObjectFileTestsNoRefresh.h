@@ -30,29 +30,36 @@
  Contains test cases to test the object file implementation
  *****************************************************************************/
 
-#ifndef _SOFTHSM_V2_OBJECTFILETESTS_H
-#define _SOFTHSM_V2_OBJECTFILETESTS_H
+#ifndef _SOFTHSM_V2_OBJECTFILETESTSNOREFRESH_H
+#define _SOFTHSM_V2_OBJECTFILETESTSNOREFRESH_H
 
+#include "ObjectFileTests.h"
+#include "test/SessionObjectTests.h"
 
-class ObjectFileTests 
+#include <cppunit/extensions/HelperMacros.h>
+
+class ObjectFileTestsNoRefresh : public ObjectFileTests , public CppUnit::TestFixture
 {
-public:
-	ObjectFileTests(bool doRefresh);
-    void testBoolAttr();
-	void testULongAttr();
-	void testByteStrAttr();
-	void testMechTypeSetAttr();
-	void testAttrMapAttr();
-	void testMixedAttr();
-	void testDoubleAttr();
-	void testRefresh();
-	void testCorruptFile();
-	void testTransactions();
-	void testDestroyObjectFails();
+	CPPUNIT_TEST_SUITE(ObjectFileTestsNoRefresh);
+	CPPUNIT_TEST(testBoolAttr);
+	CPPUNIT_TEST(testULongAttr);
+	CPPUNIT_TEST(testByteStrAttr);
+	CPPUNIT_TEST(testMechTypeSetAttr);
+	CPPUNIT_TEST(testAttrMapAttr);
+	CPPUNIT_TEST(testMixedAttr);
+	CPPUNIT_TEST(testDoubleAttr);
+	CPPUNIT_TEST(testRefresh);
+	CPPUNIT_TEST(testCorruptFile);
+	CPPUNIT_TEST(testTransactions);
+	CPPUNIT_TEST(testDestroyObjectFails);
+	CPPUNIT_TEST_SUITE_END();
 
-private:
-	const bool doRefresh;
+public:
+    ObjectFileTestsNoRefresh();
+
+	void setUp();
+	void tearDown();
 };
 
-#endif // !_SOFTHSM_V2_OBJECTFILETESTS_H
+#endif // !_SOFTHSM_V2_OBJECTFILETESTSNOREFRESH_H
 
