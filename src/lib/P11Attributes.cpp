@@ -1192,7 +1192,7 @@ bool P11AttrStartDate::setDefault()
 }
 
 // Update the value if allowed
-CK_RV P11AttrStartDate::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int /*op*/)
+CK_RV P11AttrStartDate::updateAttr(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op)
 {
 	// Attribute specific checks
 
@@ -1202,9 +1202,7 @@ CK_RV P11AttrStartDate::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_VOID
 	}
 
 	// Store data
-	osobject->setAttribute(type, ByteString((unsigned char*)pValue, ulValueLen));
-
-	return CKR_OK;
+	return P11Attribute::updateAttr(token, isPrivate, pValue, ulValueLen, op);
 }
 
 /*****************************************
@@ -1219,7 +1217,7 @@ bool P11AttrEndDate::setDefault()
 }
 
 // Update the value if allowed
-CK_RV P11AttrEndDate::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int /*op*/)
+CK_RV P11AttrEndDate::updateAttr(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_ULONG ulValueLen, int op)
 {
 	// Attribute specific checks
 
@@ -1229,9 +1227,7 @@ CK_RV P11AttrEndDate::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_VOID_P
 	}
 
 	// Store data
-	osobject->setAttribute(type, ByteString((unsigned char*)pValue, ulValueLen));
-
-	return CKR_OK;
+	return P11Attribute::updateAttr(token, isPrivate, pValue, ulValueLen, op);
 }
 
 /*****************************************
