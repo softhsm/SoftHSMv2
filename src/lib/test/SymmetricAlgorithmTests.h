@@ -44,6 +44,7 @@ class SymmetricAlgorithmTests : public TestsBase
 	CPPUNIT_TEST_SUITE(SymmetricAlgorithmTests);
 	CPPUNIT_TEST(testAesEncryptDecrypt);
 	CPPUNIT_TEST(testChaCha20Poly1305EncryptDecrypt);
+	CPPUNIT_TEST(testChaCha20Poly1305KnownAnswer);
 	CPPUNIT_TEST(testDesEncryptDecrypt);
 #ifdef HAVE_AES_KEY_WRAP
 	CPPUNIT_TEST(testAesWrapUnwrap);
@@ -63,6 +64,7 @@ public:
 	
 	void testAesEncryptDecrypt();
 	void testChaCha20Poly1305EncryptDecrypt();
+	void testChaCha20Poly1305KnownAnswer();
 	void testDesEncryptDecrypt();
 	void testAesWrapUnwrap();
 	void testDesWrapUnwrap();
