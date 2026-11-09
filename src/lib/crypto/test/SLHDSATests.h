@@ -21,6 +21,10 @@ class SLHDSATests : public CppUnit::TestFixture
 	CPPUNIT_TEST_SUITE(SLHDSATests);
 	CPPUNIT_TEST(testKeyGeneration);
 	CPPUNIT_TEST(testSerialisation);
+	CPPUNIT_TEST(testInvalidSerialisation);
+	CPPUNIT_TEST(testKeyReadersRejectLengths);
+	CPPUNIT_TEST(testProviderAliases);
+	CPPUNIT_TEST(testHedgeRngFailure);
 	CPPUNIT_TEST(testPKCS8);
 	CPPUNIT_TEST(testSigningVerifying);
 
@@ -40,6 +44,10 @@ public:
 
 	void testKeyGeneration();
 	void testSerialisation();
+	void testInvalidSerialisation();
+	void testKeyReadersRejectLengths();
+	void testProviderAliases();
+	void testHedgeRngFailure();
 	void testPKCS8();
 	void testSigningVerifying();
 

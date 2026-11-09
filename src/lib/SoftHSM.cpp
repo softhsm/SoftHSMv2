@@ -6354,11 +6354,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					return CKR_ARGUMENTS_BAD;
 				}
 				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-				CK_RV rv = SLHDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &slhdsaParam.hedgeType);
-				if (rv != CKR_OK) {
-					ERROR_MSG("Invalid parameters");
-					return CKR_ARGUMENTS_BAD;
-				}
+				// hedgeVariant affects signing only.
 				if (ckSignAdditionalContext->ulContextLen > 0) {
 					if (ckSignAdditionalContext->pContext == NULL_PTR) {
 						ERROR_MSG("Invalid parameters");
@@ -7300,6 +7296,8 @@ CK_RV SoftHSM::C_GenerateKeyPair
 #ifdef WITH_SLH_DSA
 	if (pMechanism->mechanism == CKM_SLH_DSA_KEY_PAIR_GEN)
 	{
+		if (!isMechanismPermitted(NULL, pMechanism->mechanism))
+			return CKR_MECHANISM_INVALID;
 		return this->generateSLHDSA(hSession,
 									 pPublicKeyTemplate, ulPublicKeyAttributeCount,
 									 pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
@@ -9072,6 +9070,7 @@ CK_RV SoftHSM::C_EncapsulateKey
 
 	if (pMechanism == NULL_PTR) return CKR_ARGUMENTS_BAD;
 	if (hPublicKey == NULL_PTR) return CKR_ARGUMENTS_BAD;
+	if (pulCipherTextLen == NULL_PTR) return CKR_ARGUMENTS_BAD;
 	if (phKey == NULL_PTR) return CKR_ARGUMENTS_BAD;
 
 	*phKey = CK_INVALID_HANDLE;
@@ -9290,6 +9289,7 @@ CK_RV SoftHSM::C_EncapsulateKey
 					{
 						case CKK_GENERIC_SECRET:
 							secret->setBitLen(byteLen * 8);
+							bOK = bOK && secret->setKeyBits(secretValue);
 							plainKCV = secret->getKeyCheckValue();
 							break;
 						case CKK_AES:
@@ -9608,6 +9608,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 					{
 						case CKK_GENERIC_SECRET:
 							secret->setBitLen(byteLen * 8);
+							bOK = bOK && secret->setKeyBits(secretValue);
 							plainKCV = secret->getKeyCheckValue();
 							break;
 						case CKK_AES:
@@ -9639,6 +9640,10 @@ CK_RV SoftHSM::C_DecapsulateKey
 					else {
 						osobject->abortTransaction();
 					}
+				}
+				else
+				{
+					osobject->abortTransaction();
 				}
 
 				if (!bOK)
@@ -14645,6 +14650,33 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 		return rv;
 	}
 
+#ifdef WITH_SLH_DSA
+	if (op == OBJECT_OP_CREATE && keyType == CKK_SLH_DSA &&
+	    (objClass == CKO_PUBLIC_KEY || objClass == CKO_PRIVATE_KEY))
+	{
+		CK_ULONG parameterSet = 0;
+		const CK_ATTRIBUTE* value = NULL;
+		bool hasParameterSet = false;
+		for (CK_ULONG i = 0; i < ulCount; ++i)
+		{
+			if (pTemplate[i].type == CKA_PARAMETER_SET)
+			{
+				if (pTemplate[i].pValue == NULL || pTemplate[i].ulValueLen != sizeof(parameterSet))
+					return CKR_ATTRIBUTE_VALUE_INVALID;
+				memcpy(&parameterSet, pTemplate[i].pValue, sizeof(parameterSet));
+				hasParameterSet = true;
+			}
+			if (pTemplate[i].type == CKA_VALUE) value = &pTemplate[i];
+		}
+		if (!hasParameterSet || value == NULL) return CKR_TEMPLATE_INCOMPLETE;
+		CK_ULONG expectedLength = objClass == CKO_PUBLIC_KEY
+			? SLHDSAParameters::publicKeyLength(parameterSet)
+			: SLHDSAParameters::privateKeyLength(parameterSet);
+		if (expectedLength == 0 || value->pValue == NULL || value->ulValueLen != expectedLength)
+			return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+#endif
+
 	// Change order of attributes
 	const CK_ULONG maxAttribs = 32;
 	CK_ATTRIBUTE attribs[maxAttribs];
@@ -15895,7 +15927,7 @@ CK_RV SoftHSM::generateSLHDSA(
         // SLH-DSA Public Key Attributes
         ByteString value;
         if (isPublicKeyPrivate) {
-          token->encrypt(pub->getValue(), value);
+          bOK = bOK && token->encrypt(pub->getValue(), value);
         } else {
           value = pub->getValue();
         }
@@ -15991,7 +16023,7 @@ CK_RV SoftHSM::generateSLHDSA(
         // SLHDSA Private Key Attributes
         ByteString value;
         if (isPrivateKeyPrivate) {
-          token->encrypt(priv->getValue(), value);
+          bOK = bOK && token->encrypt(priv->getValue(), value);
         } else {
           value = priv->getValue();
         }

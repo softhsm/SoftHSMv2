@@ -25,6 +25,7 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
+#include <openssl/evperr.h>
 #include <string.h>
 
 
@@ -156,9 +157,43 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 		return false;
 	}
 	signature.resize(len);
-	if (EVP_PKEY_sign(sctx, &signature[0], &len, dataToSign.const_byte_str(), dataToSign.size()) <= 0)
+	ERR_clear_error();
+	int signRv = EVP_PKEY_sign(sctx, &signature[0], &len, dataToSign.const_byte_str(), dataToSign.size());
+	unsigned long error = 0;
+	bool rngFailure = false;
+	bool hedgePreferred = slhdsaSignatureParam == NULL ||
+		slhdsaSignatureParam->hedgeType == Hedge::HEDGE_PREFERRED;
+	if (signRv <= 0 && hedgePreferred)
 	{
-		ERROR_MSG("SLH-DSA sign failed (0x%08lX)", ERR_get_error());
+		// EVP adds a generic signature error after the underlying RNG error.
+		unsigned long cause;
+		while ((cause = ERR_get_error()) != 0)
+		{
+			if (error == 0) error = cause;
+			rngFailure |= ERR_GET_LIB(cause) == ERR_LIB_RAND ||
+				(ERR_GET_LIB(cause) == ERR_LIB_EVP && ERR_GET_REASON(cause) == EVP_R_GENERATE_ERROR);
+		}
+	}
+	if (signRv <= 0 && hedgePreferred && rngFailure)
+	{
+		// Retry only RNG failures; required hedging must never fall back.
+		ERR_clear_error();
+		local_random = 1;
+		OSSL_PARAM deterministicParams[] = {
+			OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &local_deterministic),
+			OSSL_PARAM_construct_end()
+		};
+		if (EVP_PKEY_sign_message_init(sctx, sig_alg,
+		        slhdsaSignatureParam ? params : deterministicParams) > 0)
+		{
+			len = signature.size();
+			signRv = EVP_PKEY_sign(sctx, &signature[0], &len, dataToSign.const_byte_str(), dataToSign.size());
+		}
+	}
+	if (signRv <= 0)
+	{
+		unsigned long signError = ERR_get_error();
+		ERROR_MSG("SLH-DSA sign failed (0x%08lX)", signError ? signError : error);
 		EVP_SIGNATURE_free(sig_alg);
 		EVP_PKEY_CTX_free(sctx);
 		return false;

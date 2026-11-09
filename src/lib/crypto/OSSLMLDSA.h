@@ -23,7 +23,7 @@ public:
 	OSSLMLDSA() : message(), parameters(NULL), paramLength(0), mechanismParameters(NULL) { }
 	
 	// Destructor
-	virtual ~OSSLMLDSA() { }
+	virtual ~OSSLMLDSA() { delete mechanismParameters; }
 
 	// Signing functions
 	virtual bool sign(PrivateKey *privateKey, const ByteString &dataToSign, ByteString &signature, const AsymMech::Type mechanism, const MechanismParam* mechanismParam = NULL);

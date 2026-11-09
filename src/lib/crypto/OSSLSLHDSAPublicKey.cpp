@@ -99,8 +99,8 @@ bool OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 
 
 	const char* type_name = EVP_PKEY_get0_type_name(inEVPPKEY);
-	unsigned long paramSet = OSSL::name2slhdsaParameterSet(type_name);
-	if (paramSet == 0)
+	unsigned long paramSet = OSSL::pkey2slhdsaParameterSet(inEVPPKEY);
+	if (paramSet == 0 || pub_len != SLHDSAParameters::publicKeyLength(paramSet))
 	{
 		ERROR_MSG("Unsupported SLH-DSA public key type: %s", type_name ? type_name : "unknown");
 		return false;

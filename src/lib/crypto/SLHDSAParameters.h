@@ -43,6 +43,8 @@ public:
 	// Centralized helpers for parameter set support and signature length
 	static bool isSupported(const unsigned long parameterSet);
 	static unsigned long signatureLength(const unsigned long parameterSet);
+	static unsigned long publicKeyLength(unsigned long parameterSet);
+	static unsigned long privateKeyLength(unsigned long parameterSet);
 
 
 

@@ -23,6 +23,16 @@
 #include "SLHDSAParameters.h"
 #include "SLHDSAPublicKey.h"
 #include "SLHDSAPrivateKey.h"
+#include "SLHDSAUtil.h"
+#include "SessionObject.h"
+#include "OSSLSLHDSAPublicKey.h"
+#include "OSSLSLHDSAPrivateKey.h"
+#include "OSSLUtil.h"
+#include <openssl/rand.h>
+#include <openssl/randerr.h>
+#include <openssl/err.h>
+#include <openssl/evperr.h>
+#include <cstdint>
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SLHDSATests);
 
@@ -516,4 +526,145 @@ void SLHDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 	slhdsa->recycleParameters(p);
 }
 
+
+void SLHDSATests::testInvalidSerialisation()
+{
+	for (unsigned long parameterSet : allParameterSets)
+	{
+		SLHDSAParameters parameters;
+		SLHDSAPublicKey publicKey;
+		OSSLSLHDSAPrivateKey privateKey;
+		for (uint64_t id : {uint64_t(parameterSet), (uint64_t(1) << 32) | parameterSet, UINT64_MAX})
+		{
+			unsigned char bigEndian[8];
+			for (size_t i = 0; i < 8; ++i) bigEndian[7-i] = (id >> (8*i)) & 0xff;
+			ByteString encodedId(bigEndian, sizeof(bigEndian));
+			CPPUNIT_ASSERT_EQUAL(id == parameterSet, parameters.deserialise(encodedId));
+			ByteString nativeId(reinterpret_cast<const unsigned char*>(&id), sizeof(id));
+			for (int delta : {-1, 0, 1})
+			{
+				ByteString value;
+				value.resize(SLHDSAParameters::publicKeyLength(parameterSet) + delta);
+				ByteString serialised = value.serialise() + nativeId.serialise();
+				CPPUNIT_ASSERT_EQUAL(id == parameterSet && delta == 0, publicKey.deserialise(serialised));
+				value.resize(SLHDSAParameters::privateKeyLength(parameterSet) + delta);
+				serialised = value.serialise() + nativeId.serialise();
+				CPPUNIT_ASSERT_EQUAL(id == parameterSet && delta == 0, privateKey.deserialise(serialised));
+			}
+		}
+	}
+}
+
+void SLHDSATests::testKeyReadersRejectLengths()
+{
+	Token token;
+	SessionObject object(NULL, 0, 0);
+	SLHDSAPublicKey publicKey;
+	OSSLSLHDSAPrivateKey privateKey;
+	CPPUNIT_ASSERT(object.setAttribute(CKA_PRIVATE, false));
+	for (unsigned long parameterSet : allParameterSets)
+	{
+		CPPUNIT_ASSERT(object.setAttribute(CKA_PARAMETER_SET, parameterSet));
+		for (int delta : {-1, 0, 1})
+		{
+			ByteString value;
+			value.resize(SLHDSAParameters::publicKeyLength(parameterSet) + delta);
+			CPPUNIT_ASSERT(object.setAttribute(CKA_VALUE, value));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID),
+				SLHDSAUtil::getSLHDSAPublicKey(&publicKey, &token, &object));
+			value.resize(SLHDSAParameters::privateKeyLength(parameterSet) + delta);
+			CPPUNIT_ASSERT(object.setAttribute(CKA_VALUE, value));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID),
+				SLHDSAUtil::getSLHDSAPrivateKey(&privateKey, &token, &object));
+		}
+	}
+}
+
+void SLHDSATests::testProviderAliases()
+{
+	OSSLSLHDSAPublicKey publicKey;
+	OSSLSLHDSAPrivateKey privateKey;
+	for (unsigned long parameterSet : allParameterSets)
+	{
+		// Use the provider's OID alias to create the key.
+		const ASN1_OBJECT* oid = OBJ_nid2obj(OBJ_ln2nid(OSSL::slhdsaParameterSet2Name(parameterSet)));
+		char alias[80];
+		CPPUNIT_ASSERT(OBJ_obj2txt(alias, sizeof(alias), oid, 1) > 0);
+		EVP_PKEY* key = EVP_PKEY_Q_keygen(NULL, NULL, alias);
+		CPPUNIT_ASSERT(key != NULL);
+		CPPUNIT_ASSERT(publicKey.setFromOSSL(key));
+		CPPUNIT_ASSERT(privateKey.setFromOSSL(key));
+		CPPUNIT_ASSERT_EQUAL(parameterSet, publicKey.getParameterSet());
+		CPPUNIT_ASSERT_EQUAL(parameterSet, privateKey.getParameterSet());
+		EVP_PKEY_free(key);
+	}
+	EVP_PKEY* key = EVP_PKEY_Q_keygen(NULL, NULL, "ED25519");
+	CPPUNIT_ASSERT(key != NULL);
+	CPPUNIT_ASSERT(!publicKey.setFromOSSL(key));
+	CPPUNIT_ASSERT(!privateKey.setFromOSSL(key));
+	EVP_PKEY_free(key);
+}
+
+#ifndef OPENSSL_NO_DEPRECATED_3_0
+namespace {
+int rngFailureLibrary;
+int rngFailureReason;
+int rngFailureCalls;
+int failSLHRandomBytes(unsigned char*, int)
+{
+	++rngFailureCalls;
+	ERR_raise(rngFailureLibrary, rngFailureReason);
+	return 0;
+}
+struct RestoreRandomMethod {
+	const RAND_METHOD* method;
+	RestoreRandomMethod() : method(RAND_get_rand_method()) {}
+	~RestoreRandomMethod() { RAND_set_rand_method(method); ERR_clear_error(); }
+};
+}
+#endif
+
+void SLHDSATests::testHedgeRngFailure()
+{
+#ifndef OPENSSL_NO_DEPRECATED_3_0
+	SLHDSAParameters parameters;
+	parameters.setParameterSet(CKP_SLH_DSA_SHA2_128F);
+	AsymmetricKeyPair* pair = NULL;
+	CPPUNIT_ASSERT(slhdsa->generateKeyPair(&pair, &parameters));
+	ByteString message("0102030405");
+	SLHDSAMechanismParam preferred;
+	preferred.hedgeType = Hedge::HEDGE_PREFERRED;
+	preferred.additionalContext = ByteString("aabbcc");
+	SLHDSAMechanismParam deterministic = preferred;
+	deterministic.hedgeType = Hedge::DETERMINISTIC_REQUIRED;
+	SLHDSAMechanismParam required = preferred;
+	required.hedgeType = Hedge::HEDGE_REQUIRED;
+	ByteString expected, actual;
+	CPPUNIT_ASSERT(slhdsa->sign(pair->getPrivateKey(), message, expected, AsymMech::SLHDSA, &deterministic));
+	{
+		RestoreRandomMethod restore;
+		RAND_METHOD failing = *restore.method;
+		failing.bytes = failSLHRandomBytes;
+		CPPUNIT_ASSERT_EQUAL(1, RAND_set_rand_method(&failing));
+		for (int library : {ERR_LIB_RAND, ERR_LIB_EVP})
+		{
+			rngFailureLibrary = library;
+			rngFailureReason = library == ERR_LIB_RAND ? RAND_R_ERROR_INSTANTIATING_DRBG : EVP_R_GENERATE_ERROR;
+			rngFailureCalls = 0;
+			CPPUNIT_ASSERT(slhdsa->sign(pair->getPrivateKey(), message, actual, AsymMech::SLHDSA, &preferred));
+			CPPUNIT_ASSERT(rngFailureCalls > 0);
+			CPPUNIT_ASSERT(actual == expected);
+			CPPUNIT_ASSERT(slhdsa->verify(pair->getPublicKey(), message, actual, AsymMech::SLHDSA, &preferred));
+			CPPUNIT_ASSERT(!slhdsa->sign(pair->getPrivateKey(), message, actual, AsymMech::SLHDSA, &required));
+			CPPUNIT_ASSERT(slhdsa->sign(pair->getPrivateKey(), message, actual, AsymMech::SLHDSA, NULL));
+			CPPUNIT_ASSERT(slhdsa->verify(pair->getPublicKey(), message, actual, AsymMech::SLHDSA, NULL));
+		}
+		// Unrelated provider errors must keep following the signing error path.
+		rngFailureLibrary = ERR_LIB_EVP;
+		rngFailureReason = EVP_R_INVALID_OPERATION;
+		CPPUNIT_ASSERT(!slhdsa->sign(pair->getPrivateKey(), message, actual, AsymMech::SLHDSA, &preferred));
+	}
+	slhdsa->recycleKeyPair(pair);
+#endif
+}
 #endif

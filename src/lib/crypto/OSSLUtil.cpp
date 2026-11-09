@@ -295,10 +295,10 @@ const char* OSSL::slhdsaParameterSet2Name(unsigned long parameterSet) {
 	return NULL;
 }
 
-unsigned long OSSL::name2slhdsaParameterSet(const char* name) {
-	if (!name) return 0;
+unsigned long OSSL::pkey2slhdsaParameterSet(const EVP_PKEY* key) {
+	if (!key) return 0;
 	for (std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.begin(); it != slhdsaAlgNameFromParameterSet.end(); ++it) {
-		if (strcmp(it->second, name) == 0) return it->first;
+		if (EVP_PKEY_is_a(key, it->second)) return it->first;
 	}
 	return 0;
 }

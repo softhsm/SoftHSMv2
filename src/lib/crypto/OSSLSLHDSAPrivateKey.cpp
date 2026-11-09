@@ -94,8 +94,8 @@ bool OSSLSLHDSAPrivateKey::setFromOSSL(const EVP_PKEY* inSLHDSAKEY)
 
 
 	const char* type_name = EVP_PKEY_get0_type_name(inSLHDSAKEY);
-	unsigned long paramSet = OSSL::name2slhdsaParameterSet(type_name);
-	if (paramSet == 0)
+	unsigned long paramSet = OSSL::pkey2slhdsaParameterSet(inSLHDSAKEY);
+	if (paramSet == 0 || priv_len != SLHDSAParameters::privateKeyLength(paramSet))
 	{
 		ERROR_MSG("Unsupported SLH-DSA private key type: %s", type_name ? type_name : "unknown");
 		OPENSSL_cleanse(priv, sizeof(priv));

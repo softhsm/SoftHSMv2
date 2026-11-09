@@ -60,6 +60,8 @@ class SignVerifyTests : public TestsBase
 	CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify, {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
 #endif
 #ifdef WITH_SLH_DSA
+	CPPUNIT_TEST(testSLHDSAImportLengths);
+	CPPUNIT_TEST(testSLHDSAMechanismPolicy);
 	CPPUNIT_TEST_PARAMETERIZED(testSLHDSASignVerify, {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHAKE_128F});
 #endif
 	CPPUNIT_TEST(testSignInitWrongKeyType);
@@ -84,11 +86,16 @@ public:
 #endif
 #ifdef WITH_SLH_DSA
 	void testSLHDSASignVerify(CK_ULONG parameterSet);
+	void testSLHDSAImportLengths();
+	void testSLHDSAMechanismPolicy();
 #endif
 	void testSignInitWrongKeyType();
 	void testVerifyInitWrongKeyType();
 
 protected:
+#ifdef WITH_SLH_DSA
+	void verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE publicKey, CK_BYTE_PTR data, CK_ULONG dataLen, CK_BYTE_PTR signature, CK_ULONG signatureLen, CK_SIGN_ADDITIONAL_CONTEXT* context, bool multipart);
+#endif
 	CK_RV generateRSA(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #ifdef WITH_ECC
 	CK_RV generateEC(const char* curve, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);

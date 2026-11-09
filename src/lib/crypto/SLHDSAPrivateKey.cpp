@@ -15,6 +15,7 @@
 #include "SLHDSAPrivateKey.h"
 #include <string.h>
 #include <cstdint>
+#include <climits>
 
 // Set the type
 /*static*/ const char* SLHDSAPrivateKey::type = "Abstract SLH-DSA private key";
@@ -89,9 +90,11 @@ bool SLHDSAPrivateKey::deserialise(ByteString& serialised)
 
 	uint64_t paramSet64 = 0;
 	memcpy(&paramSet64, deserializedParam.const_byte_str(), sizeof(uint64_t));
-	unsigned long paramSet = (unsigned long)paramSet64;
+	if (paramSet64 > ULONG_MAX) return false;
+	unsigned long paramSet = static_cast<unsigned long>(paramSet64);
 
-	if (!SLHDSAParameters::isSupported(paramSet))
+	if (!SLHDSAParameters::isSupported(paramSet) ||
+	    deserializedValue.size() != SLHDSAParameters::privateKeyLength(paramSet))
 	{
 		return false;
 	}

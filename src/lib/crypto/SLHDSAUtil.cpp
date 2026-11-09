@@ -54,6 +54,9 @@
 		return CKR_ATTRIBUTE_VALUE_INVALID;
 	}
 
+	if (value.size() != SLHDSAParameters::privateKeyLength(parameterSet))
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+
 	privateKey->setParameterSet(parameterSet);
 	privateKey->setValue(value);
 
@@ -99,6 +102,9 @@
 		ERROR_MSG("Invalid SLH-DSA parameter set ID");
 		return CKR_ATTRIBUTE_VALUE_INVALID;
 	}
+
+	if (value.size() != SLHDSAParameters::publicKeyLength(parameterSet))
+		return CKR_ATTRIBUTE_VALUE_INVALID;
 
 	publicKey->setParameterSet(parameterSet);
 	publicKey->setValue(value);

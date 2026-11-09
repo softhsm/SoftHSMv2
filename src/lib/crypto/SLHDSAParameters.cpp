@@ -14,6 +14,7 @@
 #include "SLHDSAParameters.h"
 #include <string.h>
 #include <cstdint>
+#include <climits>
 
 // The type
 /*static*/ const char* SLHDSAParameters::type = "SLH-DSA parameters";
@@ -71,7 +72,8 @@ bool SLHDSAParameters::deserialise(ByteString& serialised)
 		parameter = (parameter << 8) + serialised.const_byte_str()[i];
 	}
 
-	if (!isSupported(parameter))
+	if (parameter > ULONG_MAX ||
+	    !isSupported(static_cast<unsigned long>(parameter)))
 	{
 		return false;
 	}
@@ -133,3 +135,32 @@ bool SLHDSAParameters::deserialise(ByteString& serialised)
 }
 
 
+// Raw key lengths from FIPS 205: public keys contain 2n bytes, private keys 4n.
+unsigned long SLHDSAParameters::publicKeyLength(unsigned long parameterSet)
+{
+	switch (parameterSet)
+	{
+		case CKP_SLH_DSA_SHA2_128S:
+		case CKP_SLH_DSA_SHAKE_128S:
+		case CKP_SLH_DSA_SHA2_128F:
+		case CKP_SLH_DSA_SHAKE_128F:
+			return 32;
+		case CKP_SLH_DSA_SHA2_192S:
+		case CKP_SLH_DSA_SHAKE_192S:
+		case CKP_SLH_DSA_SHA2_192F:
+		case CKP_SLH_DSA_SHAKE_192F:
+			return 48;
+		case CKP_SLH_DSA_SHA2_256S:
+		case CKP_SLH_DSA_SHAKE_256S:
+		case CKP_SLH_DSA_SHA2_256F:
+		case CKP_SLH_DSA_SHAKE_256F:
+			return 64;
+		default:
+			return 0;
+	}
+}
+
+unsigned long SLHDSAParameters::privateKeyLength(unsigned long parameterSet)
+{
+	return 2 * publicKeyLength(parameterSet);
+}
