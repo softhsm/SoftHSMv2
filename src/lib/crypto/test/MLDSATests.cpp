@@ -998,12 +998,16 @@ private:
 };
 }
 
+/** Check that verification parameters are freed exactly once on completion and early destruction. */
 void MLDSATests::testMechanismParametersLifetime()
 {
 	MLDSAParameters parameters;
 	parameters.setParameterSet(CKP_ML_DSA_44);
-	AsymmetricKeyPair* pair = NULL;
-	CPPUNIT_ASSERT(mldsa->generateKeyPair(&pair, &parameters));
+	AsymmetricKeyPair* generatedPair = NULL;
+	bool generated = mldsa->generateKeyPair(&generatedPair, &parameters);
+	auto recycle = [this](AsymmetricKeyPair* key) { mldsa->recycleKeyPair(key); };
+	std::unique_ptr<AsymmetricKeyPair, decltype(recycle)> pair(generatedPair, recycle);
+	CPPUNIT_ASSERT(generated);
 	int liveParameters = 0;
 	{
 		CountedMLDSAParameters context(liveParameters);
@@ -1027,6 +1031,5 @@ void MLDSATests::testMechanismParametersLifetime()
 		}
 	}
 	CPPUNIT_ASSERT_EQUAL(0, liveParameters);
-	mldsa->recycleKeyPair(pair);
 }
 #endif

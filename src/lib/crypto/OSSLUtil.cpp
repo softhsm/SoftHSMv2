@@ -287,6 +287,7 @@ const char* OSSL::mldsaParameterSet2Name(unsigned long parameterSet) {
 #endif
 
 #ifdef WITH_SLH_DSA
+/** Return the OpenSSL algorithm name for an SLH-DSA parameter identifier, or NULL. */
 const char* OSSL::slhdsaParameterSet2Name(unsigned long parameterSet) {
 	std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.find(parameterSet);
 	if (it != slhdsaAlgNameFromParameterSet.end()) {
@@ -295,6 +296,7 @@ const char* OSSL::slhdsaParameterSet2Name(unsigned long parameterSet) {
 	return NULL;
 }
 
+/** Identify an SLH-DSA key through provider aliases; return zero for other key types. */
 unsigned long OSSL::pkey2slhdsaParameterSet(const EVP_PKEY* key) {
 	if (!key) return 0;
 	for (std::map<unsigned long, const char*>::const_iterator it = slhdsaAlgNameFromParameterSet.begin(); it != slhdsaAlgNameFromParameterSet.end(); ++it) {

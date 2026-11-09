@@ -678,6 +678,7 @@ void EncapDecapTests::testMLKEMEncapsulationDecapsulationWithValueLenWrong()
 #endif
 
 #ifdef WITH_ML_KEM
+/** Check truncated ML-KEM secret values and their SHA-1 check values on both sides. */
 void EncapDecapTests::testMLKEMGenericSecretCheckValue()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
@@ -732,6 +733,7 @@ void EncapDecapTests::testMLKEMGenericSecretCheckValue()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
 }
 
+/** Ensure rejected check-value templates release token transactions and invalidate output handles. */
 void EncapDecapTests::testMLKEMInvalidCheckValue()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));

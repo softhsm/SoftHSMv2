@@ -24,6 +24,10 @@ set(WITH_CRYPTO_BACKEND "openssl"
 set(WITH_P11_KIT ""
     CACHE STRING "Specify install path of the p11-kit module, will override path given by pkg-config")
 
+if(WITH_CRYPTO_BACKEND STREQUAL "botan" AND ENABLE_SLHDSA)
+    message(FATAL_ERROR "Botan does not support SLH-DSA")
+endif()
+
 if(WITH_OBJECTSTORE_BACKEND_DB)
     set(HAVE_OBJECTSTORE_BACKEND_DB 1)
     set(WITH_MIGRATE ON)

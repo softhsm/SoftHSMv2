@@ -84,6 +84,7 @@ bool SLHDSAParameters::deserialise(ByteString& serialised)
 }
 
 // Check if the parameter set is supported
+/** Return whether the identifier names one of the twelve PKCS#11 SLH-DSA parameter sets. */
 /*static*/ bool SLHDSAParameters::isSupported(const unsigned long parameterSet)
 {
 	return (parameterSet == SLH_DSA_SHA2_128S_PARAMETER_SET ||
@@ -101,6 +102,7 @@ bool SLHDSAParameters::deserialise(ByteString& serialised)
 }
 
 // Get the signature length for a parameter set
+/** Return the SLH-DSA signature length in bytes, or zero for an unsupported set. */
 /*static*/ unsigned long SLHDSAParameters::signatureLength(const unsigned long parameterSet)
 {
 	switch (parameterSet)
@@ -136,6 +138,7 @@ bool SLHDSAParameters::deserialise(ByteString& serialised)
 
 
 // Raw key lengths from FIPS 205: public keys contain 2n bytes, private keys 4n.
+/** Return the raw public-key length (2n bytes), or zero for an unsupported set. */
 unsigned long SLHDSAParameters::publicKeyLength(unsigned long parameterSet)
 {
 	switch (parameterSet)
@@ -160,6 +163,7 @@ unsigned long SLHDSAParameters::publicKeyLength(unsigned long parameterSet)
 	}
 }
 
+/** Return the raw private-key length (4n bytes), or zero for an unsupported set. */
 unsigned long SLHDSAParameters::privateKeyLength(unsigned long parameterSet)
 {
 	return 2 * publicKeyLength(parameterSet);

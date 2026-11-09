@@ -42,6 +42,7 @@ class ObjectTests : public TestsBase
 {
 	CPPUNIT_TEST_SUITE(ObjectTests);
 	CPPUNIT_TEST(testCreateObject);
+	CPPUNIT_TEST(testFailedCreateObjectCleanup);
 	CPPUNIT_TEST(testCopyObject);
 	CPPUNIT_TEST(testDestroyObject);
 	CPPUNIT_TEST(testGetObjectSize);
@@ -65,6 +66,7 @@ class ObjectTests : public TestsBase
 
 public:
 	void testCreateObject();
+	void testFailedCreateObjectCleanup();
 	void testCopyObject();
 	void testDestroyObject();
 	void testGetObjectSize();

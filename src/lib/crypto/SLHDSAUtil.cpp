@@ -13,6 +13,19 @@
 #ifdef WITH_SLH_DSA
 #include "SLHDSAUtil.h"
 #include "SLHDSAMechanismParam.h"
+#include "OSSLUtil.h"
+#include <openssl/evp.h>
+
+/** Check the selected provider at runtime, including its key-generation operation. */
+bool SLHDSAUtil::isParameterSetAvailable(unsigned long parameterSet)
+{
+	const char* name = OSSL::slhdsaParameterSet2Name(parameterSet);
+	if (name == NULL) return false;
+	EVP_PKEY_CTX* context = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
+	bool available = context != NULL && EVP_PKEY_keygen_init(context) > 0;
+	EVP_PKEY_CTX_free(context);
+	return available;
+}
 
 /** \brief getSLHDSAPrivateKey */
 /*static*/ CK_RV SLHDSAUtil::getSLHDSAPrivateKey(SLHDSAPrivateKey* privateKey, Token* token, OSObject* key)

@@ -27,6 +27,7 @@ class SLHDSATests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testHedgeRngFailure);
 	CPPUNIT_TEST(testPKCS8);
 	CPPUNIT_TEST(testSigningVerifying);
+	CPPUNIT_TEST(testKnownAnswers);
 
 	CPPUNIT_TEST(testSigningVerifyingHedgePreferred);
 	CPPUNIT_TEST(testSigningVerifyingHedgePreferredWithContext);
@@ -50,6 +51,7 @@ public:
 	void testHedgeRngFailure();
 	void testPKCS8();
 	void testSigningVerifying();
+	void testKnownAnswers();
 
 	void testSigningVerifyingHedgePreferred();
 	void testSigningVerifyingHedgePreferredWithContext();

@@ -43,6 +43,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "SignVerifyTests.h"
+#if defined(WITH_SLH_DSA) && !defined(P11_SHARED_LIBRARY)
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#endif
 #ifdef _WIN32
 #include "setenv.h"
 #endif
@@ -275,6 +279,7 @@ CK_RV SignVerifyTests::generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hS
 #endif
 
 #ifdef WITH_SLH_DSA
+/** Generate an SLH-DSA pair with the requested parameter set and object visibility. */
 CK_RV SignVerifyTests::generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk) {
 	CK_MECHANISM mechanism = { CKM_SLH_DSA_KEY_PAIR_GEN, NULL_PTR, 0 };
 	CK_KEY_TYPE keyType = CKK_SLH_DSA;
@@ -320,6 +325,7 @@ CK_RV SignVerifyTests::generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE h
 
 
 
+/** Sign and verify a complete message, then reject changed data and mismatched SLH-DSA contexts. */
 void SignVerifyTests::signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param /* = NULL_PTR */, CK_ULONG paramLen /* = 0 */)
 {
 	CK_RV rv;
@@ -431,6 +437,7 @@ void SignVerifyTests::signVerifySingleData(CK_BYTE_PTR data, size_t dataSize, CK
 	data[0] = origByte;
 }
 
+/** Sign and verify with different update boundaries and reject altered data or contexts. */
 void SignVerifyTests::signVerifyMulti(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param /* = NULL_PTR */, CK_ULONG paramLen /* = 0 */)
 {
 	CK_RV rv;
@@ -1448,6 +1455,7 @@ void SignVerifyTests::testEdSignVerifyInvalidParams()
 #endif
 
 #ifdef WITH_ML_DSA
+/** Exercise ML-DSA one-shot and multipart signatures for session and token keys with contexts. */
 void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
 {
 	CK_RV rv;
@@ -1568,6 +1576,7 @@ void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
 #endif
 
 #ifdef WITH_SLH_DSA
+/** Exercise SLH-DSA signing modes and contexts for session and token keys. */
 void SignVerifyTests::testSLHDSASignVerify(CK_ULONG parameterSet)
 {
 	CK_RV rv;
@@ -2251,6 +2260,7 @@ void SignVerifyTests::testVerifyInitWrongKeyType()
 }
 
 #ifdef WITH_SLH_DSA
+/** Reject changed or absent signature contexts while ignoring the verification hedge flag. */
 void SignVerifyTests::verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE publicKey,
 	CK_BYTE_PTR data, CK_ULONG dataLen, CK_BYTE_PTR signature, CK_ULONG signatureLen,
 	CK_SIGN_ADDITIONAL_CONTEXT* context, bool multipart)
@@ -2284,6 +2294,7 @@ void SignVerifyTests::verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_
 	}
 }
 
+/** Validate imported key lengths and bytes, sensitive readback, and use of the imported pair. */
 void SignVerifyTests::testSLHDSAImportLengths()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
@@ -2366,6 +2377,52 @@ void SignVerifyTests::testSLHDSAImportLengths()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
 }
 
+/** Distinguish missing, unsupported and mismatched SLH-DSA parameter sets. */
+void SignVerifyTests::testSLHDSAParameterSets()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_MECHANISM mechanism = {CKM_SLH_DSA_KEY_PAIR_GEN, NULL, 0};
+	CK_ULONG publicParameter = 0, privateParameter = 0;
+	CK_ATTRIBUTE publicTemplate = {CKA_PARAMETER_SET, &publicParameter, sizeof(publicParameter)};
+	CK_ATTRIBUTE privateTemplate = {CKA_PARAMETER_SET, &privateParameter, sizeof(privateParameter)};
+	CK_OBJECT_HANDLE publicKey = CK_INVALID_HANDLE, privateKey = CK_INVALID_HANDLE;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCOMPLETE), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 0, &privateTemplate, 0, &publicKey, &privateKey)));
+	for (CK_ULONG publicCount : {0UL, 1UL})
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_PARAMETER_SET_NOT_SUPPORTED), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+			&mechanism, &publicTemplate, publicCount, &privateTemplate, 1 - publicCount, &publicKey, &privateKey)));
+	privateParameter = CKP_SLH_DSA_SHA2_128F;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCONSISTENT), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 1, &privateTemplate, 1, &publicKey, &privateKey)));
+	publicParameter = privateParameter;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 1, &privateTemplate, 0, &publicKey, &privateKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, publicKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, privateKey)));
+#ifndef P11_SHARED_LIBRARY
+	// Restrict local OpenSSL fetches without changing a separately loaded module's configuration.
+	char* properties = EVP_get1_default_properties(NULL);
+	int configured = EVP_set_default_properties(NULL, "provider=softhsm-test-missing-provider");
+	publicParameter = CKP_SLH_DSA_SHA2_128F;
+	CK_RV unavailable = CRYPTOKI_F_PTR(C_GenerateKeyPair(session, &mechanism,
+		&publicTemplate, 1, &privateTemplate, 0, &publicKey, &privateKey));
+	int restored = EVP_set_default_properties(NULL, properties);
+	OPENSSL_free(properties);
+	ERR_clear_error();
+	CPPUNIT_ASSERT_EQUAL(1, configured);
+	CPPUNIT_ASSERT_EQUAL(1, restored);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_PARAMETER_SET_NOT_SUPPORTED), unavailable);
+#endif
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+
+#ifndef P11_SHARED_LIBRARY
+/** Check that the local RSA-only mechanism policy rejects SLH-DSA key generation. */
 void SignVerifyTests::testSLHDSAMechanismPolicy()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
@@ -2385,4 +2442,5 @@ void SignVerifyTests::testSLHDSAMechanismPolicy()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), opened);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_MECHANISM_INVALID), generated);
 }
+#endif // !P11_SHARED_LIBRARY
 #endif

@@ -2100,6 +2100,7 @@ P11SLHDSAPublicKeyObj::P11SLHDSAPublicKeyObj()
 }
 
 // Add attributes
+/** Initialize the SLH-DSA public-key attributes and bind them to the backing object. */
 bool P11SLHDSAPublicKeyObj::init(OSObject *inobject)
 {
 	if (initialized) return true;
@@ -2140,6 +2141,7 @@ P11SLHDSAPrivateKeyObj::P11SLHDSAPrivateKeyObj()
 }
 
 // Add attributes
+/** Initialize the SLH-DSA private-key attributes and bind them to the backing object. */
 bool P11SLHDSAPrivateKeyObj::init(OSObject *inobject)
 {
 	if (initialized) return true;

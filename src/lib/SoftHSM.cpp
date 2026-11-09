@@ -784,6 +784,7 @@ CK_RV SoftHSM::C_GetTokenInfo(CK_SLOT_ID slotID, CK_TOKEN_INFO_PTR pInfo)
 	return token->getTokenInfo(pInfo);
 }
 
+/** Populate the names and identifiers used to filter mechanisms by token policy. */
 void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE> &t)
 {
 #ifndef WITH_FIPS
@@ -1029,6 +1030,7 @@ CK_RV SoftHSM::C_GetMechanismList(CK_SLOT_ID slotID, CK_MECHANISM_TYPE_PTR pMech
 }
 
 // Return more information about a mechanism for a given slot
+/** Report key-size limits and capabilities for a mechanism available in the selected slot. */
 CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_MECHANISM_INFO_PTR pInfo)
 {
 	unsigned long rsaMinSize, rsaMaxSize;
@@ -4443,6 +4445,7 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 }
 
 // AsymmetricAlgorithm version of C_SignInit
+/** Validate the signing key and mechanism parameters, then initialize session signing state. */
 CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey)
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -5795,6 +5798,7 @@ CK_RV SoftHSM::MacVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 }
 
 // AsymmetricAlgorithm version of C_VerifyInit
+/** Validate the verification key and context, then initialize session verification state. */
 CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey)
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -7081,6 +7085,7 @@ CK_RV SoftHSM::C_GenerateKey(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 }
 
 // Generate a key-pair using the specified mechanism
+/** Validate templates and mechanism policy before generating and returning a key pair. */
 CK_RV SoftHSM::C_GenerateKeyPair
 (
 	CK_SESSION_HANDLE hSession,
@@ -7718,6 +7723,7 @@ CK_RV SoftHSM::WrapMechRsaAesKw
 
 
 // Wrap the specified key using the specified wrapping key and mechanism
+/** Wrap an eligible key using the requested wrapping mechanism and output buffer. */
 CK_RV SoftHSM::C_WrapKey
 (
 	CK_SESSION_HANDLE hSession,
@@ -8400,6 +8406,7 @@ CK_RV SoftHSM::UnwrapMechRsaAesKw
 }
 
 // Unwrap the specified key using the specified unwrapping key
+/** Unwrap key material and create an object subject to the supplied attribute template. */
 CK_RV SoftHSM::C_UnwrapKey
 (
 	CK_SESSION_HANDLE hSession,
@@ -9054,6 +9061,7 @@ CK_RV SoftHSM::C_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR /*pSlot*/, CK_V
 
 #ifdef WITH_ML_KEM
 // Wrap the specified key using the specified wrapping key and mechanism
+/** Encapsulate a shared secret and create its PKCS#11 key with the requested attributes. */
 CK_RV SoftHSM::C_EncapsulateKey
 	(
         CK_SESSION_HANDLE    hSession,        /* the session's handle */
@@ -9379,6 +9387,7 @@ CK_RV SoftHSM::C_EncapsulateKey
 #endif
 
 #ifdef WITH_ML_KEM
+/** Recover a shared secret and atomically create its key object, rolling back failed templates. */
 CK_RV SoftHSM::C_DecapsulateKey
 	(
         CK_SESSION_HANDLE hSession,         /* the session's handle */
@@ -14605,6 +14614,7 @@ CK_RV SoftHSM::deriveSymmetric
 	return rv;
 }
 
+/** Validate and save an object template, destroying the allocated object if saving fails. */
 CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount, CK_OBJECT_HANDLE_PTR phObject, int op)
 {
 	if (!isInitialised) return CKR_CRYPTOKI_NOT_INITIALIZED;
@@ -14728,7 +14738,10 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 	rv = p11object->saveTemplate(token, isPrivate != CK_FALSE, attribs,attribsCount,op);
 	delete p11object;
 	if (rv != CKR_OK)
+	{
+		object->destroyObject();
 		return rv;
+	}
 
 	if (op == OBJECT_OP_CREATE)
 	{
@@ -15762,6 +15775,7 @@ bool SoftHSM::detectFork(void) {
 #endif
 }
 #ifdef WITH_SLH_DSA
+/** Generate a provider-supported SLH-DSA pair and persist both keys, cleaning up on failure. */
 CK_RV SoftHSM::generateSLHDSA(
     CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pPublicKeyTemplate,
     CK_ULONG ulPublicKeyAttributeCount, CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
@@ -15784,6 +15798,7 @@ CK_RV SoftHSM::generateSLHDSA(
 
   // Extract desired key information
   CK_ULONG paramSet = 0;
+  bool hasParamSet = false;
   for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount; i++) {
     switch (pPublicKeyTemplate[i].type) {
     case CKA_PARAMETER_SET:
@@ -15796,6 +15811,7 @@ CK_RV SoftHSM::generateSLHDSA(
         return CKR_ATTRIBUTE_VALUE_INVALID;
       }
       paramSet = *(CK_ULONG *)pPublicKeyTemplate[i].pValue;
+      hasParamSet = true;
       break;
     default:
       break;
@@ -15804,6 +15820,7 @@ CK_RV SoftHSM::generateSLHDSA(
 
   // Scan private key template for CKA_PARAMETER_SET as well
   CK_ULONG privParamSet = 0;
+  bool hasPrivParamSet = false;
   for (CK_ULONG i = 0; i < ulPrivateKeyAttributeCount; i++) {
     switch (pPrivateKeyTemplate[i].type) {
     case CKA_PARAMETER_SET:
@@ -15816,24 +15833,25 @@ CK_RV SoftHSM::generateSLHDSA(
         return CKR_ATTRIBUTE_VALUE_INVALID;
       }
       privParamSet = *(CK_ULONG *)pPrivateKeyTemplate[i].pValue;
+      hasPrivParamSet = true;
       break;
     default:
       break;
     }
   }
 
-  if (paramSet == 0) {
-    if (privParamSet == 0) {
+  if (!hasParamSet) {
+    if (!hasPrivParamSet) {
       INFO_MSG("Missing parameter(s) CKA_PARAMETER_SET in templates");
       return CKR_TEMPLATE_INCOMPLETE;
     }
     paramSet = privParamSet;
-  } else if (privParamSet != 0 && paramSet != privParamSet) {
+  } else if (hasPrivParamSet && paramSet != privParamSet) {
     INFO_MSG("CKA_PARAMETER_SET mismatch between public and private templates");
     return CKR_TEMPLATE_INCONSISTENT;
   }
 
-  if (paramSet < CKP_SLH_DSA_SHA2_128S || paramSet > CKP_SLH_DSA_SHAKE_256F) {
+  if (!SLHDSAUtil::isParameterSetAvailable(paramSet)) {
     INFO_MSG("Unsupported parameter set: %lu", (unsigned long)paramSet);
     return CKR_PARAMETER_SET_NOT_SUPPORTED;
   }

@@ -27,6 +27,8 @@
 class SLHDSAUtil
 {
 public:
+	/** Return whether an active provider supports key generation for this parameter set. */
+	static bool isParameterSetAvailable(unsigned long parameterSet);
 	/** \brief Delete constructor */
 	SLHDSAUtil() = delete;
 	/** \brief Get the private key */

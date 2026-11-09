@@ -344,6 +344,7 @@ SymmetricAlgorithm* OSSLCryptoFactory::getSymmetricAlgorithm(SymAlgo::Type algor
 }
 
 // Create a concrete instance of an asymmetric algorithm
+/** Allocate the OpenSSL implementation for the requested supported asymmetric algorithm. */
 AsymmetricAlgorithm* OSSLCryptoFactory::getAsymmetricAlgorithm(AsymAlgo::Type algorithm)
 {
 	switch (algorithm)

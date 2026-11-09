@@ -28,6 +28,7 @@
 #include "OSSLSLHDSAPublicKey.h"
 #include "OSSLSLHDSAPrivateKey.h"
 #include "OSSLUtil.h"
+#include "SLHDSAKAT.h"
 #include <openssl/rand.h>
 #include <openssl/randerr.h>
 #include <openssl/err.h>
@@ -45,6 +46,7 @@ SLHDSATests::SLHDSATests() : slhdsa(NULL)
 {
 }
 
+/** Create the SLH-DSA algorithm instance used by each test. */
 void SLHDSATests::setUp()
 {
 	slhdsa = NULL;
@@ -55,6 +57,7 @@ void SLHDSATests::setUp()
 	CPPUNIT_ASSERT(slhdsa != NULL);
 }
 
+/** Recycle the SLH-DSA algorithm instance and flush test output. */
 void SLHDSATests::tearDown()
 {
 	if (slhdsa != NULL)
@@ -65,6 +68,7 @@ void SLHDSATests::tearDown()
 	fflush(stdout);
 }
 
+/** Generate keys for every supported SLH-DSA parameter set. */
 void SLHDSATests::testKeyGeneration()
 {
 	for (const unsigned long parameterSet : allParameterSets)
@@ -88,6 +92,7 @@ void SLHDSATests::testKeyGeneration()
 	}
 }
 
+/** Round-trip SLH-DSA parameters and key pairs through their serialized representation. */
 void SLHDSATests::testSerialisation()
 {
 	for (const unsigned long parameterSet : allParameterSets)
@@ -145,6 +150,7 @@ void SLHDSATests::testSerialisation()
 	}
 }
 
+/** Round-trip SLH-DSA private keys through PKCS#8 encoding. */
 void SLHDSATests::testPKCS8()
 {
 	for (const unsigned long parameterSet : allParameterSets)
@@ -183,6 +189,30 @@ void SLHDSATests::testPKCS8()
 	}
 }
 
+/** Match independent NIST signatures and verify them with their nonempty contexts. */
+void SLHDSATests::testKnownAnswers()
+{
+	for (const SLHDSAKnownAnswer& vector : slhdsaKnownAnswers)
+	{
+		OSSLSLHDSAPrivateKey privateKey;
+		OSSLSLHDSAPublicKey publicKey;
+		privateKey.setParameterSet(vector.parameterSet);
+		privateKey.setValue(ByteString(vector.privateKey));
+		publicKey.setParameterSet(vector.parameterSet);
+		publicKey.setValue(ByteString(vector.publicKey));
+		SLHDSAMechanismParam parameters;
+		parameters.hedgeType = Hedge::DETERMINISTIC_REQUIRED;
+		parameters.additionalContext = ByteString(vector.context);
+		ByteString message(vector.message), expected(vector.signature), actual;
+		CPPUNIT_ASSERT(slhdsa->sign(&privateKey, message, actual, AsymMech::SLHDSA, &parameters));
+		CPPUNIT_ASSERT(actual == expected);
+		CPPUNIT_ASSERT(slhdsa->verify(&publicKey, message, expected, AsymMech::SLHDSA, &parameters));
+		parameters.additionalContext[0] ^= 1;
+		CPPUNIT_ASSERT(!slhdsa->verify(&publicKey, message, expected, AsymMech::SLHDSA, &parameters));
+	}
+}
+
+/** Sign and verify random messages for every supported SLH-DSA parameter set. */
 void SLHDSATests::testSigningVerifying()
 {
 	for (const unsigned long parameterSet : allParameterSets)
@@ -218,6 +248,7 @@ void SLHDSATests::testSigningVerifying()
 
 
 
+/** Exercise signing and verification with preferred randomized hedging. */
 void SLHDSATests::testSigningVerifyingHedgePreferred()
 {
 
@@ -251,6 +282,7 @@ void SLHDSATests::testSigningVerifyingHedgePreferred()
 	slhdsa->recycleParameters(p);
 }
 
+/** Verify preferred-hedging signatures bound to a nonempty context. */
 void SLHDSATests::testSigningVerifyingHedgePreferredWithContext()
 {
 	// Get domain parameters
@@ -286,6 +318,7 @@ void SLHDSATests::testSigningVerifyingHedgePreferredWithContext()
 	slhdsa->recycleParameters(p);
 }
 
+/** Reject an overlong context when randomized hedging is preferred. */
 void SLHDSATests::testSigningVerifyingHedgePreferredWithContextTooLong()
 {
 	// Get domain parameters
@@ -318,6 +351,7 @@ void SLHDSATests::testSigningVerifyingHedgePreferredWithContextTooLong()
 	slhdsa->recycleParameters(p);
 }
 
+/** Exercise signatures that require randomized hedging. */
 void SLHDSATests::testSigningVerifyingHedgeRequired()
 {
 	// Get domain parameters
@@ -350,6 +384,7 @@ void SLHDSATests::testSigningVerifyingHedgeRequired()
 	slhdsa->recycleParameters(p);
 }
 
+/** Verify required-hedging signatures bound to a nonempty context. */
 void SLHDSATests::testSigningVerifyingHedgeRequiredWithContext()
 {
 	// Get domain parameters
@@ -385,6 +420,7 @@ void SLHDSATests::testSigningVerifyingHedgeRequiredWithContext()
 	slhdsa->recycleParameters(p);
 }
 
+/** Reject an overlong context when randomized hedging is required. */
 void SLHDSATests::testSigningVerifyingHedgeRequiredWithContextTooLong()
 {
 	// Get domain parameters
@@ -417,6 +453,7 @@ void SLHDSATests::testSigningVerifyingHedgeRequiredWithContextTooLong()
 	slhdsa->recycleParameters(p);
 }
 
+/** Check repeatable signatures when deterministic signing is required. */
 void SLHDSATests::testSigningVerifyingDeterministic()
 {
 	// Get domain parameters
@@ -454,6 +491,7 @@ void SLHDSATests::testSigningVerifyingDeterministic()
 	slhdsa->recycleParameters(p);
 }
 
+/** Check deterministic signing and verification with a nonempty context. */
 void SLHDSATests::testSigningVerifyingDeterministicWithContext()
 {
 	// Get domain parameters
@@ -494,6 +532,7 @@ void SLHDSATests::testSigningVerifyingDeterministicWithContext()
 	slhdsa->recycleParameters(p);
 }
 
+/** Reject an overlong context in deterministic signing and verification. */
 void SLHDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 {
 	// Get domain parameters
@@ -527,6 +566,7 @@ void SLHDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 }
 
 
+/** Reject oversized parameter identifiers and malformed serialized raw-key lengths. */
 void SLHDSATests::testInvalidSerialisation()
 {
 	for (unsigned long parameterSet : allParameterSets)
@@ -555,6 +595,7 @@ void SLHDSATests::testInvalidSerialisation()
 	}
 }
 
+/** Check that both key readers enforce raw lengths for all SLH-DSA parameter sets. */
 void SLHDSATests::testKeyReadersRejectLengths()
 {
 	Token token;
@@ -580,6 +621,7 @@ void SLHDSATests::testKeyReadersRejectLengths()
 	}
 }
 
+/** Accept provider OID aliases and reject available non-SLH-DSA key types. */
 void SLHDSATests::testProviderAliases()
 {
 	OSSLSLHDSAPublicKey publicKey;
@@ -632,6 +674,7 @@ struct RestoreRandomMethod {
 }
 #endif
 
+/** Check deterministic fallback only for RNG failures under preferred hedging. */
 void SLHDSATests::testHedgeRngFailure()
 {
 #ifndef OPENSSL_NO_DEPRECATED_3_0
