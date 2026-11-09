@@ -2445,10 +2445,13 @@ void SignVerifyTests::testSLHDSAParameterSets()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCONSISTENT), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
 		&mechanism, &publicTemplate, 1, &privateTemplate, 1, &publicKey, &privateKey)));
 	publicParameter = privateParameter;
-	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
-		&mechanism, &publicTemplate, 1, &privateTemplate, 0, &publicKey, &privateKey)));
-	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, publicKey)));
-	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, privateKey)));
+	for (CK_ULONG privateCount : {0UL, 1UL})
+	{
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+			&mechanism, &publicTemplate, 1, &privateTemplate, privateCount, &publicKey, &privateKey)));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, publicKey)));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, privateKey)));
+	}
 #ifndef P11_SHARED_LIBRARY
 	// Restrict local OpenSSL fetches without changing a separately loaded module's configuration.
 	char* properties = EVP_get1_default_properties(NULL);

@@ -18,12 +18,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-/** Count live descriptors to detect a leaked file-backed transaction lock. */
-static size_t openDescriptorCount()
+/** Count live descriptors, returning false when descriptor enumeration is unavailable. */
+static bool openDescriptorCount(size_t& count)
 {
 	DIR* directory = opendir("/dev/fd");
-	CPPUNIT_ASSERT(directory != NULL);
-	size_t count = 0;
+	if (directory == NULL) return false;
+	count = 0;
 	for (dirent* entry = readdir(directory); entry != NULL; entry = readdir(directory))
 	{
 		char* end;
@@ -31,7 +31,7 @@ static size_t openDescriptorCount()
 		if (*end == '\0' && fd >= 0 && fcntl(static_cast<int>(fd), F_GETFD) != -1) ++count;
 	}
 	closedir(directory);
-	return count;
+	return true;
 }
 #endif
 
@@ -791,13 +791,16 @@ void EncapDecapTests::testMLKEMInvalidCheckValue()
 		&mechanism, privateKey, attributes, 3, ciphertext, ciphertextLength, &key)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
 #if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
-	const size_t descriptorsBefore = openDescriptorCount();
+	size_t descriptorsBefore = 0;
+	const bool haveDescriptorCount = openDescriptorCount(descriptorsBefore);
 #endif
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
 		&mechanism, privateKey, attributes, 4, ciphertext, ciphertextLength, &key)));
 #if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
 	// An un-aborted ObjectFile transaction leaks its lock descriptor, even after deletion.
-	CPPUNIT_ASSERT_EQUAL(descriptorsBefore, openDescriptorCount());
+	size_t descriptorsAfter = 0;
+	if (haveDescriptorCount && openDescriptorCount(descriptorsAfter))
+		CPPUNIT_ASSERT_EQUAL(descriptorsBefore, descriptorsAfter);
 #endif
 	CPPUNIT_ASSERT_EQUAL(CK_OBJECT_HANDLE(CK_INVALID_HANDLE), key);
 	// Valid decapsulation must still work after rejecting the malformed template.

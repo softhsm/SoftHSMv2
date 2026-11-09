@@ -16007,8 +16007,7 @@ CK_RV SoftHSM::generateSLHDSA(
           rv = CKR_TEMPLATE_INCONSISTENT;
           break;
         }
-        privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
-        break;
+        continue;
       default:
         privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
       }
