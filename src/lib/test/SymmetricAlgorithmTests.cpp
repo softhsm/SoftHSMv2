@@ -1734,6 +1734,75 @@ void SymmetricAlgorithmTests::testAesEncryptDecrypt()
 	encryptDecrypt({CKM_AES_GCM,&gcmParamsWithoutAAD,sizeof(gcmParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST-1);
 	encryptDecrypt({CKM_AES_GCM,&gcmParamsWithoutAAD,sizeof(gcmParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST+1);
 	encryptDecrypt({CKM_AES_GCM,&gcmParamsWithoutAAD,sizeof(gcmParamsWithoutAAD)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST);
+
+	// IV lengths other than 12 bytes are valid (1 to 256 bytes per PKCS#11)
+	CK_BYTE gcmIvOther[256];
+	memset(gcmIvOther, 0xA5, sizeof(gcmIvOther));
+	const CK_ULONG gcmIvLens[] = { 1, 8, 16, 256 };
+	for (size_t i = 0; i < sizeof(gcmIvLens)/sizeof(gcmIvLens[0]); i++)
+	{
+		CK_GCM_PARAMS gcmParamsOtherIv =
+		{
+			&gcmIvOther[0],
+			gcmIvLens[i],
+			gcmIvLens[i]*8,
+			&gcmAAD[0],
+			sizeof(gcmAAD),
+			16*8
+		};
+		encryptDecrypt({CKM_AES_GCM,&gcmParamsOtherIv,sizeof(gcmParamsOtherIv)},blockSize,hSessionRO,hKey,blockSize*NR_OF_BLOCKS_IN_TEST);
+	}
+
+	// GCM without an IV is invalid (issue #844) and must be rejected, not crash
+	CK_GCM_PARAMS gcmParamsZeroIvLen =
+	{
+		&gcmIV[0],
+		0,
+		0,
+		NULL_PTR,
+		0,
+		16*8
+	};
+	CK_GCM_PARAMS gcmParamsNullIv =
+	{
+		NULL_PTR,
+		sizeof(gcmIV),
+		sizeof(gcmIV)*8,
+		NULL_PTR,
+		0,
+		16*8
+	};
+	CK_GCM_PARAMS gcmParamsNullAad =
+	{
+		&gcmIV[0],
+		sizeof(gcmIV),
+		sizeof(gcmIV)*8,
+		NULL_PTR,
+		sizeof(gcmAAD),
+		16*8
+	};
+	CK_BYTE gcmLongIV[1] = {0};
+	CK_GCM_PARAMS gcmParamsLongIv =
+	{
+		&gcmLongIV[0],
+		static_cast<CK_ULONG>(0x100000001ULL),
+		0,
+		NULL_PTR,
+		0,
+		16*8
+	};
+	CK_GCM_PARAMS* badGcmParams[] = { &gcmParamsZeroIvLen, &gcmParamsNullIv, &gcmParamsNullAad, NULL_PTR };
+	size_t badGcmParamsCount = 3;
+	if (sizeof(CK_ULONG) > 4)
+		badGcmParams[badGcmParamsCount++] = &gcmParamsLongIv;
+	for (size_t i = 0; i < badGcmParamsCount; i++)
+	{
+		CK_MECHANISM badMech = { CKM_AES_GCM, badGcmParams[i], sizeof(CK_GCM_PARAMS) };
+		rv = CRYPTOKI_F_PTR( C_EncryptInit(hSessionRO, &badMech, hKey) );
+		CPPUNIT_ASSERT_EQUAL(CKR_MECHANISM_PARAM_INVALID, rv);
+		rv = CRYPTOKI_F_PTR( C_DecryptInit(hSessionRO, &badMech, hKey) );
+		CPPUNIT_ASSERT_EQUAL(CKR_MECHANISM_PARAM_INVALID, rv);
+	}
 }
 
 
