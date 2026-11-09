@@ -2293,7 +2293,9 @@ void SignVerifyTests::testSLHDSAImportLengths()
 		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
 	CK_KEY_TYPE type = CKK_SLH_DSA;
-	CK_BYTE raw[129] = {0};
+	CK_BBOOL yes = CK_TRUE, no = CK_FALSE;
+	CK_BYTE raw[129];
+	for (size_t i = 0; i < sizeof(raw); ++i) raw[i] = static_cast<CK_BYTE>(i + 1);
 	for (CK_ULONG parameterSet : {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_256F})
 	for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
 	for (CK_BBOOL isPrivate : {CK_FALSE, CK_TRUE})
@@ -2308,12 +2310,23 @@ void SignVerifyTests::testSLHDSAImportLengths()
 				{CKA_KEY_TYPE, &type, sizeof(type)},
 				{CKA_PRIVATE, &isPrivate, sizeof(isPrivate)},
 				{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
-				{CKA_VALUE, raw, length + delta}
+				{CKA_VALUE, raw, length + delta},
+				{CKA_EXTRACTABLE, &yes, sizeof(yes)},
+				{CKA_SENSITIVE, &no, sizeof(no)}
 			};
 			CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
-			CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 5, &key));
+			CK_ULONG attributeCount = objectClass == CKO_PRIVATE_KEY ? 7 : 5;
+			CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, attributeCount, &key));
 			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
-			if (rv == CKR_OK) CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+			if (rv == CKR_OK)
+			{
+				CK_BYTE imported[sizeof(raw)] = {0};
+				CK_ATTRIBUTE value = {CKA_VALUE, imported, sizeof(imported)};
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &value, 1)));
+				CPPUNIT_ASSERT_EQUAL(length, value.ulValueLen);
+				CPPUNIT_ASSERT(memcmp(raw, imported, length) == 0);
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+			}
 		}
 	}
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));

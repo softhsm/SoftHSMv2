@@ -598,7 +598,7 @@ void SLHDSATests::testProviderAliases()
 		CPPUNIT_ASSERT_EQUAL(parameterSet, privateKey.getParameterSet());
 		EVP_PKEY_free(key);
 	}
-	EVP_PKEY* key = EVP_PKEY_Q_keygen(NULL, NULL, "ED25519");
+	EVP_PKEY* key = EVP_PKEY_Q_keygen(NULL, NULL, "RSA", size_t(2048));
 	CPPUNIT_ASSERT(key != NULL);
 	CPPUNIT_ASSERT(!publicKey.setFromOSSL(key));
 	CPPUNIT_ASSERT(!privateKey.setFromOSSL(key));
