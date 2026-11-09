@@ -2294,39 +2294,73 @@ void SignVerifyTests::testSLHDSAImportLengths()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
 	CK_KEY_TYPE type = CKK_SLH_DSA;
 	CK_BBOOL yes = CK_TRUE, no = CK_FALSE;
-	CK_BYTE raw[129];
-	for (size_t i = 0; i < sizeof(raw); ++i) raw[i] = static_cast<CK_BYTE>(i + 1);
 	for (CK_ULONG parameterSet : {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_256F})
-	for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
-	for (CK_BBOOL isPrivate : {CK_FALSE, CK_TRUE})
 	{
+		CK_MECHANISM generation = {CKM_SLH_DSA_KEY_PAIR_GEN, NULL, 0};
+		CK_ATTRIBUTE publicAttributes[] = {{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)}};
+		CK_ATTRIBUTE privateAttributes[] = {
+			{CKA_EXTRACTABLE, &yes, sizeof(yes)},
+			{CKA_SENSITIVE, &no, sizeof(no)}
+		};
+		CK_OBJECT_HANDLE generated[2];
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session, &generation,
+			publicAttributes, 1, privateAttributes, 2, &generated[0], &generated[1])));
+		CK_BYTE raw[2][129] = {};
 		CK_ULONG publicLength = parameterSet == CKP_SLH_DSA_SHA2_128S ? 32 :
 			(parameterSet == CKP_SLH_DSA_SHA2_192S ? 48 : 64);
-		CK_ULONG length = objectClass == CKO_PUBLIC_KEY ? publicLength : 2 * publicLength;
-		for (int delta : {-1, 0, 1})
+		for (size_t i = 0; i < 2; ++i)
 		{
-			CK_ATTRIBUTE attributes[] = {
-				{CKA_CLASS, &objectClass, sizeof(objectClass)},
-				{CKA_KEY_TYPE, &type, sizeof(type)},
-				{CKA_PRIVATE, &isPrivate, sizeof(isPrivate)},
-				{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
-				{CKA_VALUE, raw, length + delta},
-				{CKA_EXTRACTABLE, &yes, sizeof(yes)},
-				{CKA_SENSITIVE, &no, sizeof(no)}
-			};
-			CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
-			CK_ULONG attributeCount = objectClass == CKO_PRIVATE_KEY ? 7 : 5;
-			CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, attributeCount, &key));
-			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
-			if (rv == CKR_OK)
+			CK_ATTRIBUTE value = {CKA_VALUE, raw[i], sizeof(raw[i])};
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, generated[i], &value, 1)));
+			CPPUNIT_ASSERT_EQUAL(i == 0 ? publicLength : 2 * publicLength, value.ulValueLen);
+			// Remove the source pair so signing can only exercise imported objects.
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, generated[i])));
+		}
+		for (CK_BBOOL isPrivate : {CK_FALSE, CK_TRUE})
+		{
+			CK_OBJECT_HANDLE keys[2] = {CK_INVALID_HANDLE, CK_INVALID_HANDLE};
+			for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
 			{
-				CK_BYTE imported[sizeof(raw)] = {0};
-				CK_ATTRIBUTE value = {CKA_VALUE, imported, sizeof(imported)};
-				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &value, 1)));
-				CPPUNIT_ASSERT_EQUAL(length, value.ulValueLen);
-				CPPUNIT_ASSERT(memcmp(raw, imported, length) == 0);
-				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+				size_t index = objectClass == CKO_PUBLIC_KEY ? 0 : 1;
+				CK_ULONG length = index == 0 ? publicLength : 2 * publicLength;
+				for (int delta : {-1, 0, 1})
+				{
+					CK_ATTRIBUTE attributes[] = {
+						{CKA_CLASS, &objectClass, sizeof(objectClass)},
+						{CKA_KEY_TYPE, &type, sizeof(type)},
+						{CKA_PRIVATE, &isPrivate, sizeof(isPrivate)},
+						{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
+						{CKA_VALUE, raw[index], length + delta},
+						{index == 0 ? CKA_VERIFY : CKA_SIGN, &yes, sizeof(yes)},
+						{CKA_EXTRACTABLE, &yes, sizeof(yes)},
+						{CKA_SENSITIVE, &no, sizeof(no)}
+					};
+					CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+					CK_ULONG attributeCount = index == 0 ? 6 : 8;
+					CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, attributeCount, &key));
+					CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
+					if (rv == CKR_OK)
+					{
+						keys[index] = key;
+						CK_BYTE imported[sizeof(raw[index])] = {0};
+						CK_ATTRIBUTE value = {CKA_VALUE, imported, sizeof(imported)};
+						CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &value, 1)));
+						CPPUNIT_ASSERT_EQUAL(length, value.ulValueLen);
+						CPPUNIT_ASSERT(memcmp(raw[index], imported, length) == 0);
+						if (objectClass == CKO_PRIVATE_KEY)
+						{
+							attributes[7].pValue = &yes;
+							CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CreateObject(session, attributes, attributeCount, &key)));
+							CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_SENSITIVE), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &value, 1)));
+							CPPUNIT_ASSERT_EQUAL(CK_ULONG(CK_UNAVAILABLE_INFORMATION), value.ulValueLen);
+							CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+						}
+					}
+				}
 			}
+			signVerifySingle(CKM_SLH_DSA, session, keys[0], keys[1]);
+			for (CK_OBJECT_HANDLE key : keys)
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
 		}
 	}
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));

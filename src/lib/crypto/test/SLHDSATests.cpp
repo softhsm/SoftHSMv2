@@ -598,11 +598,19 @@ void SLHDSATests::testProviderAliases()
 		CPPUNIT_ASSERT_EQUAL(parameterSet, privateKey.getParameterSet());
 		EVP_PKEY_free(key);
 	}
-	EVP_PKEY* key = EVP_PKEY_Q_keygen(NULL, NULL, "RSA", size_t(2048));
-	CPPUNIT_ASSERT(key != NULL);
-	CPPUNIT_ASSERT(!publicKey.setFromOSSL(key));
-	CPPUNIT_ASSERT(!privateKey.setFromOSSL(key));
-	EVP_PKEY_free(key);
+	// RSA generation is optional in a provider configuration supporting SLH-DSA.
+	EVP_PKEY_CTX* rsa = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
+	if (rsa != NULL && EVP_PKEY_keygen_init(rsa) > 0)
+	{
+		EVP_PKEY* key = NULL;
+		CPPUNIT_ASSERT(EVP_PKEY_generate(rsa, &key) > 0);
+		CPPUNIT_ASSERT(key != NULL);
+		CPPUNIT_ASSERT(!publicKey.setFromOSSL(key));
+		CPPUNIT_ASSERT(!privateKey.setFromOSSL(key));
+		EVP_PKEY_free(key);
+	}
+	EVP_PKEY_CTX_free(rsa);
+	ERR_clear_error();
 }
 
 #ifndef OPENSSL_NO_DEPRECATED_3_0
