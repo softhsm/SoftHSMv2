@@ -1936,6 +1936,11 @@ CK_RV SoftHSM::C_CopyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject
 			}
 		}
 		attrType = object->nextAttributeType(attrType);
+		if (attrType == CK_UNAVAILABLE_INFORMATION)
+		{
+			rv = CKR_FUNCTION_FAILED;
+			break;
+		}
 	}
 	while (attrType != CKA_CLASS);
 

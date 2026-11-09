@@ -35,6 +35,7 @@
 #include <cppunit/extensions/HelperMacros.h>
 #include "DBObjectTests.h"
 #include "DBObject.h"
+#include <set>
 
 #include <cstdio>
 
@@ -179,6 +180,53 @@ void test_a_dbobject_with_an_object::should_store_boolean_attributes()
 		CPPUNIT_ASSERT(testObject.getAttribute(CKA_VERIFY).isBooleanAttribute());
 		CPPUNIT_ASSERT_EQUAL(testObject.getAttribute(CKA_VERIFY).getBooleanValue(), value6);
 		CPPUNIT_ASSERT_EQUAL(testObject.getBooleanValue(CKA_VERIFY, false), value6);
+	}
+}
+
+void test_a_dbobject_with_an_object::should_enumerate_attribute_types()
+{
+	DBObject testObject(connection);
+	CPPUNIT_ASSERT(testObject.find(1));
+	CPPUNIT_ASSERT(testObject.isValid());
+
+	// One attribute per kind of table
+	CPPUNIT_ASSERT(testObject.setAttribute(CKA_CLASS, OSAttribute((unsigned long)CKO_PRIVATE_KEY)));
+	CPPUNIT_ASSERT(testObject.setAttribute(CKA_TOKEN, OSAttribute(true)));
+	CPPUNIT_ASSERT(testObject.setAttribute(CKA_PUBLIC_EXPONENT, OSAttribute(ByteString("010001"))));
+	CPPUNIT_ASSERT(testObject.setAttribute(CKA_MODULUS, OSAttribute(ByteString("AABB"))));
+
+	// Types are returned in ascending order and wrap to CKA_CLASS
+	CK_ATTRIBUTE_TYPE type = CKA_CLASS;
+	std::set<CK_ATTRIBUTE_TYPE> seen;
+	do
+	{
+		seen.insert(type);
+		type = testObject.nextAttributeType(type);
+	}
+	while (type != CKA_CLASS);
+
+	CPPUNIT_ASSERT_EQUAL((size_t)4, seen.size());
+	CPPUNIT_ASSERT(seen.count(CKA_CLASS));
+	CPPUNIT_ASSERT(seen.count(CKA_TOKEN));
+	CPPUNIT_ASSERT(seen.count(CKA_MODULUS));
+	CPPUNIT_ASSERT(seen.count(CKA_PUBLIC_EXPONENT));
+}
+
+void test_a_dbobject_with_an_object::should_report_attribute_enumeration_errors()
+{
+	// Object not looked up (invalid id): error, not end-of-list
+	{
+		DBObject testObject(connection);
+		CPPUNIT_ASSERT_EQUAL((CK_ATTRIBUTE_TYPE)CK_UNAVAILABLE_INFORMATION, testObject.nextAttributeType(CKA_CLASS));
+	}
+
+	// Object whose connection is gone: error, not end-of-list
+	{
+		DBObject testObject(connection);
+		CPPUNIT_ASSERT(testObject.find(1));
+		CPPUNIT_ASSERT(testObject.setAttribute(CKA_CLASS, OSAttribute((unsigned long)CKO_DATA)));
+		testObject.dropConnection();
+		CPPUNIT_ASSERT_EQUAL((CK_ATTRIBUTE_TYPE)CK_UNAVAILABLE_INFORMATION, testObject.nextAttributeType(CKA_CLASS));
 	}
 }
 
