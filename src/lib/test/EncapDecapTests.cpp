@@ -13,6 +13,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include "EncapDecapTests.h"
+#if defined(WITH_ML_KEM) && !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+#include <dirent.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+/** Count live descriptors to detect a leaked file-backed transaction lock. */
+static size_t openDescriptorCount()
+{
+	DIR* directory = opendir("/dev/fd");
+	CPPUNIT_ASSERT(directory != NULL);
+	size_t count = 0;
+	for (dirent* entry = readdir(directory); entry != NULL; entry = readdir(directory))
+	{
+		char* end;
+		long fd = strtol(entry->d_name, &end, 10);
+		if (*end == '\0' && fd >= 0 && fcntl(static_cast<int>(fd), F_GETFD) != -1) ++count;
+	}
+	closedir(directory);
+	return count;
+}
+#endif
 
 #ifdef WITH_ML_KEM
 const CK_BBOOL IN_SESSION = CK_FALSE;
@@ -765,10 +786,21 @@ void EncapDecapTests::testMLKEMInvalidCheckValue()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_EncapsulateKey(session,
 		&mechanism, publicKey, attributes, 3, ciphertext, &ciphertextLength, &key)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+	// Warm up decapsulation before measuring resources held by the rejected object.
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
+		&mechanism, privateKey, attributes, 3, ciphertext, ciphertextLength, &key)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+#if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+	const size_t descriptorsBefore = openDescriptorCount();
+#endif
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
 		&mechanism, privateKey, attributes, 4, ciphertext, ciphertextLength, &key)));
+#if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+	// An un-aborted ObjectFile transaction leaks its lock descriptor, even after deletion.
+	CPPUNIT_ASSERT_EQUAL(descriptorsBefore, openDescriptorCount());
+#endif
 	CPPUNIT_ASSERT_EQUAL(CK_OBJECT_HANDLE(CK_INVALID_HANDLE), key);
-	// Creating another token object proves the failed transaction released its lock.
+	// Valid decapsulation must still work after rejecting the malformed template.
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
 		&mechanism, privateKey, attributes, 3, ciphertext, ciphertextLength, &key)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));

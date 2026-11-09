@@ -27,7 +27,7 @@
 class SLHDSAUtil
 {
 public:
-	/** Return whether an active provider supports key generation for this parameter set. */
+	/** Return whether an active provider can generate keys and sign with this set. */
 	static bool isParameterSetAvailable(unsigned long parameterSet);
 	/** \brief Delete constructor */
 	SLHDSAUtil() = delete;

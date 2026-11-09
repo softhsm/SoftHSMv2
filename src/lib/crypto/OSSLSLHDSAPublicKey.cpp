@@ -75,7 +75,7 @@ OSSLSLHDSAPublicKey& OSSLSLHDSAPublicKey::operator=(OSSLSLHDSAPublicKey&& other)
 /*static*/ const char* OSSLSLHDSAPublicKey::type = "OpenSSL SLH-DSA Public Key";
 
 // Set from OpenSSL representation
-/** \brief setFromOSSL */
+/** Import raw public bytes and identify the SLH-DSA parameter set through provider aliases. */
 bool OSSLSLHDSAPublicKey::setFromOSSL(const EVP_PKEY* inEVPPKEY)
 {
 	if (inEVPPKEY == NULL)
@@ -143,7 +143,7 @@ void OSSLSLHDSAPublicKey::setParameterSet(unsigned long inParameterSet)
 }
 
 // Retrieve the OpenSSL representation of the key
-/** \brief getOSSLKey */
+/** Return the cached OpenSSL public key, constructing it on demand. */
 EVP_PKEY* OSSLSLHDSAPublicKey::getOSSLKey()
 {
 	if (pkey == NULL) createOSSLKey();
@@ -152,7 +152,7 @@ EVP_PKEY* OSSLSLHDSAPublicKey::getOSSLKey()
 }
 
 // Create the OpenSSL representation of the key
-/** \brief createOSSLKey */
+/** Construct the cached OpenSSL public key from its raw bytes and parameter set. */
 void OSSLSLHDSAPublicKey::createOSSLKey()
 {
 	if (pkey != NULL) return;

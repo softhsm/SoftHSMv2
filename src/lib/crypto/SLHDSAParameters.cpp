@@ -41,7 +41,7 @@ unsigned long SLHDSAParameters::getParameterSet() const
 }
 
 // Are the parameters of the given type?
-/** \brief areOfType */
+/** Return whether the supplied non-null type name identifies SLH-DSA parameters. */
 bool SLHDSAParameters::areOfType(const char* inType)
 {
 	if (inType == NULL)
@@ -58,7 +58,7 @@ ByteString SLHDSAParameters::serialise() const
 	return ByteString(getParameterSet());
 }
 
-/** \brief deserialise */
+/** Decode an eight-byte parameter identifier, rejecting overflow and unsupported sets. */
 bool SLHDSAParameters::deserialise(ByteString& serialised)
 {
 	if (serialised.size() != 8)

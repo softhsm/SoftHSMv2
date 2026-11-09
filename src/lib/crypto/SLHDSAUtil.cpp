@@ -16,18 +16,40 @@
 #include "OSSLUtil.h"
 #include <openssl/evp.h>
 
-/** Check the selected provider at runtime, including its key-generation operation. */
+/** Generate a temporary key and sign a message to check the selected provider's support. */
 bool SLHDSAUtil::isParameterSetAvailable(unsigned long parameterSet)
 {
 	const char* name = OSSL::slhdsaParameterSet2Name(parameterSet);
 	if (name == NULL) return false;
 	EVP_PKEY_CTX* context = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
-	bool available = context != NULL && EVP_PKEY_keygen_init(context) > 0;
+	EVP_SIGNATURE* signature = EVP_SIGNATURE_fetch(NULL, name, NULL);
+	EVP_PKEY* key = NULL;
+	EVP_PKEY_CTX* signContext = NULL;
+	unsigned char* output = NULL;
+	size_t outputLength = 0;
+	const unsigned char message[] = {0};
+	bool available = false;
+	if (context != NULL && signature != NULL && EVP_PKEY_keygen_init(context) > 0 &&
+	    EVP_PKEY_generate(context, &key) > 0)
+	{
+		signContext = EVP_PKEY_CTX_new_from_pkey(NULL, key, NULL);
+		if (signContext != NULL && EVP_PKEY_sign_message_init(signContext, signature, NULL) > 0 &&
+		    EVP_PKEY_sign(signContext, NULL, &outputLength, message, sizeof(message)) > 0)
+		{
+			output = static_cast<unsigned char*>(OPENSSL_malloc(outputLength));
+			available = output != NULL &&
+				EVP_PKEY_sign(signContext, output, &outputLength, message, sizeof(message)) > 0;
+		}
+	}
+	OPENSSL_free(output);
+	EVP_PKEY_CTX_free(signContext);
+	EVP_PKEY_free(key);
+	EVP_SIGNATURE_free(signature);
 	EVP_PKEY_CTX_free(context);
 	return available;
 }
 
-/** \brief getSLHDSAPrivateKey */
+/** Load and, if necessary, decrypt a private key after validating its parameter set and length. */
 /*static*/ CK_RV SLHDSAUtil::getSLHDSAPrivateKey(SLHDSAPrivateKey* privateKey, Token* token, OSObject* key)
 {
 	if (privateKey == NULL) return CKR_ARGUMENTS_BAD;
@@ -76,7 +98,7 @@ bool SLHDSAUtil::isParameterSetAvailable(unsigned long parameterSet)
 	return CKR_OK;
 }
 
-/** \brief getSLHDSAPublicKey */
+/** Load and, if necessary, decrypt a public key after validating its parameter set and length. */
 /*static*/ CK_RV SLHDSAUtil::getSLHDSAPublicKey(SLHDSAPublicKey* publicKey, Token* token, OSObject* key)
 {
 	if (publicKey == NULL) return CKR_ARGUMENTS_BAD;
@@ -125,7 +147,7 @@ bool SLHDSAUtil::isParameterSetAvailable(unsigned long parameterSet)
 	return CKR_OK;
 }
 
-/** \brief setSLHDSAPrivateKey */
+/** Decode a PKCS#8 SLH-DSA private key and store its parameter set and optionally encrypted value. */
 /*static*/ CK_RV SLHDSAUtil::setSLHDSAPrivateKey(OSObject* key, const ByteString &ber, Token* token, bool isPrivate)
 {
 	if (key == NULL)
@@ -187,7 +209,7 @@ bool SLHDSAUtil::isParameterSetAvailable(unsigned long parameterSet)
 	return bOK ? CKR_OK : CKR_GENERAL_ERROR;
 }
 
-/** \brief setHedge */
+/** Translate a PKCS#11 hedge identifier, rejecting unsupported values or a null output. */
 /*static*/ CK_RV SLHDSAUtil::setHedge(CK_HEDGE_TYPE inHedgeType, Hedge::Type* outHedgeType)
 {
 

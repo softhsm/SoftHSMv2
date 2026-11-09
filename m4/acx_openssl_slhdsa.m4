@@ -50,16 +50,15 @@ AC_DEFUN([ACX_OPENSSL_SLHDSA],[
 				}
 			]])
 		],[
-			AC_MSG_RESULT([yes])
 			acx_cv_lib_openssl_slhdsa_support=yes
 		],[
-			AC_MSG_RESULT([no])
 			acx_cv_lib_openssl_slhdsa_support=no
 		],[
 			AC_MSG_WARN([Cannot run the SLH-DSA test while cross-compiling. With --enable-slhdsa, preset acx_cv_lib_openssl_slhdsa_support=yes only after verifying that the target can generate SLH-DSA keys and sign])
 			acx_cv_lib_openssl_slhdsa_support=no
 		])
 	])
+	AC_MSG_RESULT([$acx_cv_lib_openssl_slhdsa_support])
 
 	AC_LANG_POP([C])
 

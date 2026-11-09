@@ -28,7 +28,7 @@ SLHDSAPublicKey::SLHDSAPublicKey()
 }
 
 // Check if the key is of the given type
-/** \brief isOfType */
+/** Recognize the SLH-DSA public-key type or a supported base-class type. */
 bool SLHDSAPublicKey::isOfType(const char* inType)
 {
 	if (inType == NULL)
@@ -77,7 +77,7 @@ ByteString SLHDSAPublicKey::serialise() const
 	return value.serialise() + ByteString((const unsigned char*)&paramVal, sizeof(uint64_t)).serialise();
 }
 
-/** \brief deserialise */
+/** Decode a public key only if its parameter identifier and raw-key length are valid. */
 bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 {
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);

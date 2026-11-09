@@ -2377,6 +2377,51 @@ void SignVerifyTests::testSLHDSAImportLengths()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
 }
 
+/** Report malformed wrapped key data separately from invalid unwrap-template attributes. */
+void SignVerifyTests::testSLHDSAInvalidWrappedKey()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_BBOOL yes = CK_TRUE;
+	CK_OBJECT_CLASS secretClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE aesType = CKK_AES;
+	CK_BYTE aesValue[16] = {1};
+	CK_ATTRIBUTE aesTemplate[] = {
+		{CKA_CLASS, &secretClass, sizeof(secretClass)},
+		{CKA_KEY_TYPE, &aesType, sizeof(aesType)},
+		{CKA_VALUE, aesValue, sizeof(aesValue)},
+		{CKA_ENCRYPT, &yes, sizeof(yes)},
+		{CKA_UNWRAP, &yes, sizeof(yes)}
+	};
+	CK_OBJECT_HANDLE aesKey, imported = CK_INVALID_HANDLE;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CreateObject(session, aesTemplate, 5, &aesKey)));
+	CK_BYTE iv[16] = {0}, invalidPKCS8[] = {0x30, 0x00}, ciphertext[32];
+	CK_MECHANISM mechanism = {CKM_AES_CBC_PAD, iv, sizeof(iv)};
+	CK_ULONG ciphertextLength = sizeof(ciphertext);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_EncryptInit(session, &mechanism, aesKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Encrypt(session,
+		invalidPKCS8, sizeof(invalidPKCS8), ciphertext, &ciphertextLength)));
+	CK_OBJECT_CLASS privateClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE slhdsaType = CKK_SLH_DSA;
+	CK_ULONG parameterSet = CKP_SLH_DSA_SHA2_128F;
+	CK_ATTRIBUTE keyTemplate[] = {
+		{CKA_CLASS, &privateClass, sizeof(privateClass)},
+		{CKA_KEY_TYPE, &slhdsaType, sizeof(slhdsaType)},
+		{CKA_PARAMETER_SET, &parameterSet, 1}
+	};
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_WRAPPED_KEY_INVALID), CRYPTOKI_F_PTR(C_UnwrapKey(session,
+		&mechanism, aesKey, ciphertext, ciphertextLength, keyTemplate, 2, &imported)));
+	CPPUNIT_ASSERT_EQUAL(CK_OBJECT_HANDLE(CK_INVALID_HANDLE), imported);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_UnwrapKey(session,
+		&mechanism, aesKey, ciphertext, ciphertextLength, keyTemplate, 3, &imported)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, aesKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+
 /** Distinguish missing, unsupported and mismatched SLH-DSA parameter sets. */
 void SignVerifyTests::testSLHDSAParameterSets()
 {

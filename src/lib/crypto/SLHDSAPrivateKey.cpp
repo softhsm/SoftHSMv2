@@ -28,7 +28,7 @@ SLHDSAPrivateKey::SLHDSAPrivateKey()
 }
 
 // Check if the key is of the given type
-/** \brief isOfType */
+/** Recognize the SLH-DSA private-key type or a supported base-class type. */
 bool SLHDSAPrivateKey::isOfType(const char* inType)
 {
 	if (inType == NULL)
@@ -77,7 +77,7 @@ ByteString SLHDSAPrivateKey::serialise() const
 	return value.serialise() + ByteString((const unsigned char*)&paramVal, sizeof(uint64_t)).serialise();
 }
 
-/** \brief deserialise */
+/** Decode a private key only if its parameter identifier and raw-key length are valid. */
 bool SLHDSAPrivateKey::deserialise(ByteString& serialised)
 {
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);

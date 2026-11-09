@@ -30,7 +30,7 @@
 
 
 // Signing functions
-/** \brief sign */
+/** Sign a complete message with the requested context and hedge policy; reject incompatible keys or parameters. */
 bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
                       ByteString &signature, const AsymMech::Type mechanism,
                       const MechanismParam* mechanismParam)
@@ -206,7 +206,7 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	return true;
 }
 
-/** \brief signInit */
+/** Initialize multipart signing and retain a private copy of the validated mechanism parameters. */
 bool OSSLSLHDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism,
                           const MechanismParam* mechanismParam)
 {
@@ -246,7 +246,7 @@ bool OSSLSLHDSA::signInit(PrivateKey* privateKey, const AsymMech::Type mechanism
 	return true;
 }
 
-/** \brief signUpdate */
+/** Append a message chunk only while multipart signing is active. */
 bool OSSLSLHDSA::signUpdate(const ByteString &dataToSign)
 {
 	if (!AsymmetricAlgorithm::signUpdate(dataToSign))
@@ -259,7 +259,7 @@ bool OSSLSLHDSA::signUpdate(const ByteString &dataToSign)
 	return true;
 }
 
-/** \brief signFinal */
+/** Sign the accumulated message and release multipart state and owned parameters. */
 bool OSSLSLHDSA::signFinal(ByteString &signature)
 {
 	bool rv = OSSLSLHDSA::sign(currentPrivateKey, message, signature, currentMechanism, mechanismParameters.get());
@@ -277,7 +277,7 @@ bool OSSLSLHDSA::signFinal(ByteString &signature)
 }
 
 // Verification functions
-/** \brief verify */
+/** Verify a complete SLH-DSA signature using the supplied context and public key. */
 bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
                         const ByteString &signature, const AsymMech::Type mechanism,
                         const MechanismParam* mechanismParam)
@@ -411,7 +411,7 @@ bool OSSLSLHDSA::verify(PublicKey *publicKey, const ByteString &originalData,
 	return true;
 }
 
-/** \brief verifyInit */
+/** Initialize multipart verification and retain a private copy of the validated mechanism parameters. */
 bool OSSLSLHDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
                             const MechanismParam* mechanismParam)
 {
@@ -451,7 +451,7 @@ bool OSSLSLHDSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism
 	return true;
 }
 
-/** \brief verifyUpdate */
+/** Append a message chunk only while multipart verification is active. */
 bool OSSLSLHDSA::verifyUpdate(const ByteString &originalData)
 {
 	if (!AsymmetricAlgorithm::verifyUpdate(originalData))
@@ -464,7 +464,7 @@ bool OSSLSLHDSA::verifyUpdate(const ByteString &originalData)
 	return true;
 }
 
-/** \brief verifyFinal */
+/** Verify the accumulated message and release multipart state and owned parameters. */
 bool OSSLSLHDSA::verifyFinal(const ByteString &signature)
 {
 	bool rv = OSSLSLHDSA::verify(currentPublicKey, message, signature, currentMechanism, mechanismParameters.get());
@@ -524,7 +524,7 @@ bool OSSLSLHDSA::checkEncryptedDataSize(PrivateKey * /* privateKey*/, const Byte
 }
 
 // Key factory
-/** \brief generateKeyPair */
+/** Generate an OpenSSL SLH-DSA pair for the requested parameter set and transfer ownership on success. */
 bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParameters *parameters, RNG * /*rng = NULL */)
 {
 	// Check parameters
@@ -596,7 +596,7 @@ bool OSSLSLHDSA::generateKeyPair(AsymmetricKeyPair **ppKeyPair, AsymmetricParame
 	return true;
 }
 
-/** \brief reconstructKeyPair */
+/** Deserialize both keys, deleting the partial pair if either key is invalid. */
 bool OSSLSLHDSA::reconstructKeyPair(AsymmetricKeyPair **ppKeyPair, ByteString &serialisedData)
 {
 	// Check input
@@ -635,7 +635,7 @@ bool OSSLSLHDSA::reconstructKeyPair(AsymmetricKeyPair **ppKeyPair, ByteString &s
 	return true;
 }
 
-/** \brief reconstructPublicKey */
+/** Deserialize a public key and transfer ownership only after validation succeeds. */
 bool OSSLSLHDSA::reconstructPublicKey(PublicKey **ppPublicKey, ByteString &serialisedData)
 {
 	// Check input
@@ -659,7 +659,7 @@ bool OSSLSLHDSA::reconstructPublicKey(PublicKey **ppPublicKey, ByteString &seria
 	return true;
 }
 
-/** \brief reconstructPrivateKey */
+/** Deserialize a private key and transfer ownership only after validation succeeds. */
 bool OSSLSLHDSA::reconstructPrivateKey(PrivateKey **ppPrivateKey, ByteString &serialisedData)
 {
 	// Check input
@@ -701,7 +701,7 @@ AsymmetricParameters *OSSLSLHDSA::newParameters()
 	return (AsymmetricParameters *)new SLHDSAParameters();
 }
 
-/** \brief reconstructParameters */
+/** Deserialize SLH-DSA parameters and transfer ownership only after validation succeeds. */
 bool OSSLSLHDSA::reconstructParameters(AsymmetricParameters **ppParams, ByteString &serialisedData)
 {
 	// Check input parameters

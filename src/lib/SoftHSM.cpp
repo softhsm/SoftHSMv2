@@ -138,6 +138,7 @@ std::auto_ptr<SoftHSM>* SoftHSM::instance = new std::auto_ptr<SoftHSM>();
 
 #endif
 
+/** Allocate the object wrapper for a supported class and key or certificate type. */
 static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERTIFICATE_TYPE certType, P11Object **p11object)
 {
 	switch(objClass) {
@@ -8737,7 +8738,7 @@ CK_RV SoftHSM::C_UnwrapKey
 				if (slh_rv != CKR_OK)
 				{
 					bOK = false;
-					rv = slh_rv;
+					rv = slh_rv == CKR_ATTRIBUTE_VALUE_INVALID ? CKR_WRAPPED_KEY_INVALID : slh_rv;
 				}
 			}
 #endif
@@ -14750,6 +14751,8 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 		    !object->setAttribute(CKA_LOCAL, false) ||
 		    !object->commitTransaction()))
 		{
+			object->abortTransaction();
+			object->destroyObject();
 			return CKR_GENERAL_ERROR;
 		}
 
@@ -14760,6 +14763,8 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 		    !object->setAttribute(CKA_NEVER_EXTRACTABLE, false) ||
 		    !object->commitTransaction()))
 		{
+			object->abortTransaction();
+			object->destroyObject();
 			return CKR_GENERAL_ERROR;
 		}
 	}

@@ -62,6 +62,7 @@ class SignVerifyTests : public TestsBase
 #ifdef WITH_SLH_DSA
 	CPPUNIT_TEST(testSLHDSAImportLengths);
 	CPPUNIT_TEST(testSLHDSAParameterSets);
+	CPPUNIT_TEST(testSLHDSAInvalidWrappedKey);
 #ifndef P11_SHARED_LIBRARY
 	CPPUNIT_TEST(testSLHDSAMechanismPolicy);
 #endif
@@ -91,6 +92,7 @@ public:
 	void testSLHDSASignVerify(CK_ULONG parameterSet);
 	void testSLHDSAImportLengths();
 	void testSLHDSAParameterSets();
+	void testSLHDSAInvalidWrappedKey();
 #ifndef P11_SHARED_LIBRARY
 	void testSLHDSAMechanismPolicy();
 #endif

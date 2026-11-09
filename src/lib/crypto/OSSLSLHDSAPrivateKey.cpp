@@ -71,7 +71,7 @@ OSSLSLHDSAPrivateKey& OSSLSLHDSAPrivateKey::operator=(OSSLSLHDSAPrivateKey&& oth
 const char* OSSLSLHDSAPrivateKey::type = "OpenSSL SLH-DSA Private Key";
 
 // Set from OpenSSL representation
-/** \brief setFromOSSL */
+/** Import raw private bytes from a supported OpenSSL SLH-DSA key and reject other types. */
 bool OSSLSLHDSAPrivateKey::setFromOSSL(const EVP_PKEY* inSLHDSAKEY)
 {
 	if (inSLHDSAKEY == NULL)
@@ -165,7 +165,7 @@ ByteString OSSLSLHDSAPrivateKey::PKCS8Encode()
 }
 
 // Decode from PKCS#8 BER
-/** \brief PKCS8Decode */
+/** Decode a PKCS#8 private key and import it only when it represents supported SLH-DSA. */
 bool OSSLSLHDSAPrivateKey::PKCS8Decode(const ByteString& ber)
 {
 	int len = ber.size();
@@ -182,7 +182,7 @@ bool OSSLSLHDSAPrivateKey::PKCS8Decode(const ByteString& ber)
 }
 
 // Retrieve the OpenSSL representation of the key
-/** \brief getOSSLKey */
+/** Return the cached OpenSSL private key, constructing it on demand. */
 EVP_PKEY* OSSLSLHDSAPrivateKey::getOSSLKey()
 {
 	if (pkey == NULL) createOSSLKey();
@@ -191,7 +191,7 @@ EVP_PKEY* OSSLSLHDSAPrivateKey::getOSSLKey()
 }
 
 // Create the OpenSSL representation of the key
-/** \brief createOSSLKey */
+/** Construct the cached OpenSSL private key from its raw bytes and parameter set. */
 void OSSLSLHDSAPrivateKey::createOSSLKey()
 {
 	if (pkey != NULL) return;
