@@ -227,7 +227,7 @@ bool OSSLSLHDSA::signUpdate(const ByteString &dataToSign)
 /** \brief signFinal */
 bool OSSLSLHDSA::signFinal(ByteString &signature)
 {
-	int rv = OSSLSLHDSA::sign(currentPrivateKey, message, signature, currentMechanism, mechanismParameters.get());
+	bool rv = OSSLSLHDSA::sign(currentPrivateKey, message, signature, currentMechanism, mechanismParameters.get());
 
 	mechanismParameters.reset();
 
@@ -432,7 +432,7 @@ bool OSSLSLHDSA::verifyUpdate(const ByteString &originalData)
 /** \brief verifyFinal */
 bool OSSLSLHDSA::verifyFinal(const ByteString &signature)
 {
-	int rv = OSSLSLHDSA::verify(currentPublicKey, message, signature, currentMechanism, mechanismParameters.get());
+	bool rv = OSSLSLHDSA::verify(currentPublicKey, message, signature, currentMechanism, mechanismParameters.get());
 
 	mechanismParameters.reset();
 

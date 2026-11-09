@@ -73,6 +73,9 @@ src/bin/util/softhsm2-util
 src/lib/common/.dirstamp
 src/lib/common/softhsm2.conf
 src/lib/common/softhsm2.conf.5
+src/lib/common/etc/softhsm2.conf
+src/lib/common/etc/softhsm2.conf.sample
+src/lib/common/man5/softhsm2.conf.5
 src/lib/crypto/.dirstamp
 src/lib/crypto/test/cryptotest
 src/lib/data_mgr/test/datamgrtest
