@@ -15,37 +15,19 @@
 #include "SLHDSAMechanismParam.h"
 #include "OSSLUtil.h"
 #include <openssl/evp.h>
+#include <openssl/err.h>
 
-/** Generate a temporary key and sign a message to check the selected provider's support. */
+/** Fetch key management and signatures using current provider properties; clear errors on failure. */
 bool SLHDSAUtil::isParameterSetAvailable(unsigned long parameterSet)
 {
 	const char* name = OSSL::slhdsaParameterSet2Name(parameterSet);
 	if (name == NULL) return false;
-	EVP_PKEY_CTX* context = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
+	EVP_KEYMGMT* keyManagement = EVP_KEYMGMT_fetch(NULL, name, NULL);
 	EVP_SIGNATURE* signature = EVP_SIGNATURE_fetch(NULL, name, NULL);
-	EVP_PKEY* key = NULL;
-	EVP_PKEY_CTX* signContext = NULL;
-	unsigned char* output = NULL;
-	size_t outputLength = 0;
-	const unsigned char message[] = {0};
-	bool available = false;
-	if (context != NULL && signature != NULL && EVP_PKEY_keygen_init(context) > 0 &&
-	    EVP_PKEY_generate(context, &key) > 0)
-	{
-		signContext = EVP_PKEY_CTX_new_from_pkey(NULL, key, NULL);
-		if (signContext != NULL && EVP_PKEY_sign_message_init(signContext, signature, NULL) > 0 &&
-		    EVP_PKEY_sign(signContext, NULL, &outputLength, message, sizeof(message)) > 0)
-		{
-			output = static_cast<unsigned char*>(OPENSSL_malloc(outputLength));
-			available = output != NULL &&
-				EVP_PKEY_sign(signContext, output, &outputLength, message, sizeof(message)) > 0;
-		}
-	}
-	OPENSSL_free(output);
-	EVP_PKEY_CTX_free(signContext);
-	EVP_PKEY_free(key);
+	bool available = keyManagement != NULL && signature != NULL;
 	EVP_SIGNATURE_free(signature);
-	EVP_PKEY_CTX_free(context);
+	EVP_KEYMGMT_free(keyManagement);
+	if (!available) ERR_clear_error();
 	return available;
 }
 

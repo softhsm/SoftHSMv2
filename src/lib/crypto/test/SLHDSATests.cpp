@@ -68,6 +68,29 @@ void SLHDSATests::tearDown()
 	fflush(stdout);
 }
 
+/** Recheck provider properties on every availability query without leaving fetch errors behind. */
+void SLHDSATests::testParameterSetAvailability()
+{
+	CPPUNIT_ASSERT(!SLHDSAUtil::isParameterSetAvailable(0));
+	for (const unsigned long parameterSet : allParameterSets)
+		CPPUNIT_ASSERT(SLHDSAUtil::isParameterSetAvailable(parameterSet));
+
+	char* properties = EVP_get1_default_properties(NULL);
+	CPPUNIT_ASSERT(properties != NULL);
+	ERR_clear_error();
+	int configured = EVP_set_default_properties(NULL, "provider=softhsm-test-missing-provider");
+	bool unavailable = !SLHDSAUtil::isParameterSetAvailable(CKP_SLH_DSA_SHA2_128F);
+	unsigned long error = ERR_peek_error();
+	int restored = EVP_set_default_properties(NULL, properties);
+	OPENSSL_free(properties);
+	bool availableAgain = SLHDSAUtil::isParameterSetAvailable(CKP_SLH_DSA_SHA2_128F);
+	CPPUNIT_ASSERT_EQUAL(1, configured);
+	CPPUNIT_ASSERT_EQUAL(1, restored);
+	CPPUNIT_ASSERT(unavailable);
+	CPPUNIT_ASSERT_EQUAL(0UL, error);
+	CPPUNIT_ASSERT(availableAgain);
+}
+
 /** Generate keys for every supported SLH-DSA parameter set. */
 void SLHDSATests::testKeyGeneration()
 {

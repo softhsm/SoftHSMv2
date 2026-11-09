@@ -53,6 +53,7 @@ OSSLSLHDSAPublicKey::OSSLSLHDSAPublicKey(OSSLSLHDSAPublicKey&& other) noexcept
 	other.pkey = NULL;
 }
 
+/** Move public-key material and OpenSSL ownership, freeing the previous key unless self-assigned. */
 OSSLSLHDSAPublicKey& OSSLSLHDSAPublicKey::operator=(OSSLSLHDSAPublicKey&& other) noexcept
 {
 	if (this != &other)

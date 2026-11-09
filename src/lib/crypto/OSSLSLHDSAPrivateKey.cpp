@@ -55,6 +55,7 @@ OSSLSLHDSAPrivateKey::OSSLSLHDSAPrivateKey(OSSLSLHDSAPrivateKey&& other) noexcep
 	other.pkey = NULL;
 }
 
+/** Move private-key material and OpenSSL ownership, freeing the previous key unless self-assigned. */
 OSSLSLHDSAPrivateKey& OSSLSLHDSAPrivateKey::operator=(OSSLSLHDSAPrivateKey&& other) noexcept
 {
 	if (this != &other)
