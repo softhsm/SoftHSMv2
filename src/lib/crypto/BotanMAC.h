@@ -79,6 +79,34 @@ protected:
 	virtual size_t getMacSize() const;
 };
 
+class BotanHMACSHA3_224 : public BotanMacAlgorithm
+{
+protected:
+	virtual std::string getAlgorithm() const;
+	virtual size_t getMacSize() const;
+};
+
+class BotanHMACSHA3_256 : public BotanMacAlgorithm
+{
+protected:
+	virtual std::string getAlgorithm() const;
+	virtual size_t getMacSize() const;
+};
+
+class BotanHMACSHA3_384 : public BotanMacAlgorithm
+{
+protected:
+	virtual std::string getAlgorithm() const;
+	virtual size_t getMacSize() const;
+};
+
+class BotanHMACSHA3_512 : public BotanMacAlgorithm
+{
+protected:
+	virtual std::string getAlgorithm() const;
+	virtual size_t getMacSize() const;
+};
+
 #ifdef WITH_GOST
 class BotanHMACGOSTR3411 : public BotanMacAlgorithm
 {

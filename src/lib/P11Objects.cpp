@@ -256,7 +256,8 @@ CK_RV P11Object::saveTemplate(Token *token, bool isPrivate, CK_ATTRIBUTE_PTR pTe
 		//  ck5  MUST be specified when object is unwrapped with C_UnwrapKey.
 		if (((checks & P11Attribute::ck1) == P11Attribute::ck1 && op == OBJECT_OP_CREATE) ||
 		    ((checks & P11Attribute::ck3) == P11Attribute::ck3 && op == OBJECT_OP_GENERATE) ||
-		    ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_UNWRAP))
+		    ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_UNWRAP) ||
+		    ((checks & P11Attribute::ck5) == P11Attribute::ck5 && op == OBJECT_OP_DECAPSULATE))
 		{
 			bool isSpecified = false;
 

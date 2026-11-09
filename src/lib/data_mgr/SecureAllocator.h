@@ -122,7 +122,7 @@ public:
 #ifndef _WIN32
 			free(r);
 #else
-			VirtualFree((const void*) r, MEM_RELEASE);
+			VirtualFree((const void*) r, 0, MEM_RELEASE);
 #endif
 
 			return NULL;
@@ -173,7 +173,7 @@ public:
 #ifndef _WIN32
 		free(p);
 #else
-		VirtualFree((const void*) r, MEM_RELEASE);
+		VirtualFree((const void*) p, 0, MEM_RELEASE);
 #endif
 #else
 		// Release the memory

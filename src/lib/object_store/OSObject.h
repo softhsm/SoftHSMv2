@@ -38,12 +38,29 @@
 #include "config.h"
 #include "OSAttribute.h"
 #include "cryptoki.h"
+#include <atomic>
 
 class OSObject
 {
 public:
-	// Destructor
-	virtual ~OSObject() { }
+	OSObject() : refCount(1) {}
+
+	virtual ~OSObject() = default;
+
+	// Acquire object - increase reference count
+	void acquire() noexcept
+	{
+		refCount.fetch_add(1, std::memory_order_relaxed);
+	}
+
+	// Release object - decrement reference count
+	void release() noexcept
+	{
+		if (refCount.fetch_sub(1, std::memory_order_acq_rel) == 1)
+		{
+			delete this;
+		}
+	}
 
 	// Check if the specified attribute exists
 	virtual bool attributeExists(CK_ATTRIBUTE_TYPE type) = 0;
@@ -89,6 +106,8 @@ public:
 	// Destroys the object (warning, any pointers to the object are no longer
 	// valid after this call because delete is called!)
 	virtual bool destroyObject() = 0;
+private:
+	std::atomic<int> refCount;
 };
 
 #endif // !_SOFTHSM_V2_OSOBJECT_H

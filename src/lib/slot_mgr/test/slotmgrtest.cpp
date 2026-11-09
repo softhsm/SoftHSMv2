@@ -53,22 +53,22 @@
 // Initialise the one-and-only instance
 #ifdef HAVE_CXX11
 
-std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
-std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);
+std::unique_ptr<MutexFactory>* MutexFactory::instance = new std::unique_ptr<MutexFactory>();
+std::unique_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::unique_ptr<SecureMemoryRegistry>();
 #if defined(WITH_OPENSSL)
-std::unique_ptr<OSSLCryptoFactory> OSSLCryptoFactory::instance(nullptr);
+std::unique_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::unique_ptr<OSSLCryptoFactory>();
 #else
-std::unique_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(nullptr);
+std::unique_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::unique_ptr<BotanCryptoFactory>();
 #endif
 
 #else
 
-std::auto_ptr<MutexFactory> MutexFactory::instance(NULL);
-std::auto_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(NULL);
+std::auto_ptr<MutexFactory>* MutexFactory::instance = new std::auto_ptr<MutexFactory>();
+std::auto_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::auto_ptr<SecureMemoryRegistry>();
 #if defined(WITH_OPENSSL)
-std::auto_ptr<OSSLCryptoFactory> OSSLCryptoFactory::instance(NULL);
+std::auto_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::auto_ptr<OSSLCryptoFactory>();
 #else
-std::auto_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(NULL);
+std::auto_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::auto_ptr<BotanCryptoFactory>();
 #endif
 
 #endif

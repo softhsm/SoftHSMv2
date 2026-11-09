@@ -25,6 +25,7 @@
 class MLKEMUtil
 {
 public:
+	MLKEMUtil() = delete;
 	static CK_RV getMLKEMPrivateKey(MLKEMPrivateKey* privateKey, Token* token, OSObject* key);
 	static CK_RV getMLKEMPublicKey(MLKEMPublicKey* publicKey, Token* token, OSObject* key);
 

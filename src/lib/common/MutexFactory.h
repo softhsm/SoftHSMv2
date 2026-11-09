@@ -112,11 +112,15 @@ private:
 	CK_RV LockMutex(CK_VOID_PTR mutex);
 	CK_RV UnlockMutex(CK_VOID_PTR mutex);
 
-	// The one-and-only instance
+	// The one-and-only instance.
+	//
+	// A pointer to a heap-allocated, deliberately never-freed smart
+	// pointer, not a smart pointer directly: see the rationale
+	// beside SoftHSM::instance in SoftHSM.h.
 #ifdef HAVE_CXX11
-	static std::unique_ptr<MutexFactory> instance;
+	static std::unique_ptr<MutexFactory>* instance;
 #else
-	static std::auto_ptr<MutexFactory> instance;
+	static std::auto_ptr<MutexFactory>* instance;
 #endif
 
 	// The function pointers

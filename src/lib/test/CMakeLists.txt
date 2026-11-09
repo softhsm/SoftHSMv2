@@ -21,6 +21,7 @@ set(SOURCES p11test.cpp
             UserTests.cpp
             ObjectTests.cpp
             DeriveTests.cpp
+            EncapDecapTests.cpp
             SignVerifyTests.cpp
             AsymEncryptDecryptTests.cpp
             AsymWrapUnwrapTests.cpp
@@ -31,11 +32,11 @@ set(SOURCES p11test.cpp
             )
 add_executable(${PROJECT_NAME} ${SOURCES})
 			
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if(WIN32)
     target_sources(${PROJECT_NAME} PRIVATE
                    ${PROJECT_SOURCE_DIR}/../win32/setenv.cpp
                    ${PROJECT_SOURCE_DIR}/../win32/syslog.cpp)
-    list(APPEND COMPILE_OPTIONS "/DCRYPTOKI_STATIC")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CRYPTOKI_STATIC)
 else()
     target_sources(${PROJECT_NAME} PRIVATE "ForkTests.cpp")
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS -pthread)

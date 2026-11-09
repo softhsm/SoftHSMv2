@@ -43,6 +43,18 @@
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SessionObjectStoreTests);
 
+namespace {
+
+// Helper to release all objects
+void releaseAll(std::set<OSObject*>& s)
+{
+	for (auto* o : s)
+		o->release();
+	s.clear();
+}
+
+} // anonymous namespace
+
 void SessionObjectStoreTests::setUp()
 {
 }
@@ -121,10 +133,12 @@ void SessionObjectStoreTests::testCreateDeleteObjects()
 		}
 	}
 
+	releaseAll(objects);
+	obj2 = NULL;
+
 	// Verify that it was indeed removed
 	CPPUNIT_ASSERT(testStore->getObjectCount() == 2);
 
-	objects.clear();
         testStore->getObjects(objects);
 	bool present3[2] = { false, false };
 
@@ -149,6 +163,8 @@ void SessionObjectStoreTests::testCreateDeleteObjects()
 	{
 		CPPUNIT_ASSERT(present3[j] == true);
 	}
+
+	releaseAll(objects);
 
 	delete testStore;
 }
@@ -181,115 +197,102 @@ void SessionObjectStoreTests::testMultiSession()
 	// Check that the store contains 3 objects
 	CPPUNIT_ASSERT(store->getObjectCount() == 3);
 
-	// Check that all three objects are distinct and present
+	// Check that all objects are distinct and present
 	std::set<OSObject*> objects;
-        store->getObjects(objects);
-	bool present1[3] = { false, false, false };
-
-	for (std::set<OSObject*>::iterator i = objects.begin(); i != objects.end(); i++)
+	store->getObjects(objects);
+	bool present[5] = { false, false, false, false, false };
+	for (auto* obj : objects)
 	{
-		ByteString retrievedId;
-
-		CPPUNIT_ASSERT((*i)->isValid());
-		CPPUNIT_ASSERT((*i)->attributeExists(CKA_ID));
-
-		CPPUNIT_ASSERT((*i)->getAttribute(CKA_ID).isByteStringAttribute());
-
-		for (int j = 0; j < 3; j++)
+		CPPUNIT_ASSERT(obj->isValid());
+		CPPUNIT_ASSERT(obj->attributeExists(CKA_ID));
+		CPPUNIT_ASSERT(obj->getAttribute(CKA_ID).isByteStringAttribute());
+		for (int j = 0; j < 5; ++j)
 		{
-			if ((*i)->getAttribute(CKA_ID).getByteStringValue() == id[j])
+			if (obj->getAttribute(CKA_ID).getByteStringValue() == id[j])
 			{
-				present1[j] = true;
+				present[j] = true;
 			}
 		}
 	}
+	CPPUNIT_ASSERT(present[0] && present[1] && present[2]);
+	CPPUNIT_ASSERT(!present[3] && !present[4]);
+	releaseAll(objects);
 
-	for (int j = 0; j < 3; j++)
-	{
-		CPPUNIT_ASSERT(present1[j] == true);
-	}
-
-	// Now indicate that the second session has been closed
+	// Close session 2 -> obj2 is destroyed. Its pointer is now stale.
 	store->sessionClosed(2);
+	obj2 = NULL;   // hygiene: prevent accidental use-after-free in the test
 
-	// Verify that it was indeed removed
 	CPPUNIT_ASSERT(store->getObjectCount() == 2);
 
-        objects.clear();
 	store->getObjects(objects);
-	bool present3[2] = { false, false };
-
-	for (std::set<OSObject*>::iterator i = objects.begin(); i != objects.end(); i++)
+	memset(present, 0, sizeof(present));
+	for (auto* obj : objects)
 	{
-		ByteString retrievedId;
-
-		CPPUNIT_ASSERT((*i)->isValid());
-		CPPUNIT_ASSERT((*i)->attributeExists(CKA_ID));
-
-		CPPUNIT_ASSERT((*i)->getAttribute(CKA_ID).isByteStringAttribute());
-
-		if ((*i)->getAttribute(CKA_ID).getByteStringValue() == id[0])
+		for (int j = 0; j < 5; ++j)
 		{
-			present3[0] = true;
-		}
-		if ((*i)->getAttribute(CKA_ID).getByteStringValue() == id[2])
-		{
-			present3[1] = true;
+			if (obj->getAttribute(CKA_ID).getByteStringValue() == id[j])
+			{
+				present[j] = true;
+			}
 		}
 	}
+	CPPUNIT_ASSERT(present[0] && !present[1] && present[2]);
+	releaseAll(objects);
 
-	for (int j = 0; j < 2; j++)
-	{
-		CPPUNIT_ASSERT(present3[j] == true);
-	}
-
-	// Create two more objects for session 7
+	// Create two more in session 7, with distinct IDs so we can identify them by attribute
 	SessionObject* obj4 = store->createObject(1, 7);
 	CPPUNIT_ASSERT(obj4 != NULL);
+	obj4->setAttribute(CKA_ID, idAtt[3]);
 	SessionObject* obj5 = store->createObject(1, 7);
 	CPPUNIT_ASSERT(obj5 != NULL);
+	obj5->setAttribute(CKA_ID, idAtt[4]);
 
 	CPPUNIT_ASSERT(store->getObjectCount() == 4);
 
-	// Close session 1
+	// Close session 1 -> obj1 destroyed.
 	store->sessionClosed(1);
+	obj1 = NULL;
 
 	CPPUNIT_ASSERT(store->getObjectCount() == 3);
 
-        objects.clear();
 	store->getObjects(objects);
+	memset(present, 0, sizeof(present));
+	for (auto* obj : objects)
+	{
+		for (int j = 0; j < 5; ++j)
+		{
+			if (obj->getAttribute(CKA_ID).getByteStringValue() == id[j])
+			{
+				present[j] = true;
+			}
+		}
+	}
+	CPPUNIT_ASSERT(!present[0] && !present[1]);
+	CPPUNIT_ASSERT(present[2] && present[3] && present[4]);
 
-	CPPUNIT_ASSERT(objects.find(obj1) == objects.end());
-	CPPUNIT_ASSERT(objects.find(obj2) == objects.end());
-	CPPUNIT_ASSERT(objects.find(obj3) != objects.end());
-	CPPUNIT_ASSERT(objects.find(obj4) != objects.end());
-	CPPUNIT_ASSERT(objects.find(obj5) != objects.end());
-
-	CPPUNIT_ASSERT(!obj1->isValid());
-	CPPUNIT_ASSERT(!obj2->isValid());
+	// The objects whose sessions are still open should still be usable
 	CPPUNIT_ASSERT(obj3->isValid());
 	CPPUNIT_ASSERT(obj4->isValid());
 	CPPUNIT_ASSERT(obj5->isValid());
 
-	// Close session 7
+	releaseAll(objects);
+
+	// Close session 7 -> obj4, obj5 destroyed
 	store->sessionClosed(7);
+	obj4 = NULL;
+	obj5 = NULL;
 
 	CPPUNIT_ASSERT(store->getObjectCount() == 1);
 
-        objects.clear();
 	store->getObjects(objects);
+	CPPUNIT_ASSERT(objects.size() == 1);
 
-	CPPUNIT_ASSERT(objects.find(obj1) == objects.end());
-	CPPUNIT_ASSERT(objects.find(obj2) == objects.end());
-	CPPUNIT_ASSERT(objects.find(obj3) != objects.end());
-	CPPUNIT_ASSERT(objects.find(obj4) == objects.end());
-	CPPUNIT_ASSERT(objects.find(obj5) == objects.end());
-
-	CPPUNIT_ASSERT(!obj1->isValid());
-	CPPUNIT_ASSERT(!obj2->isValid());
+	std::set<OSObject*>::iterator it = objects.begin();
+	CPPUNIT_ASSERT((*it)->isValid());
+	CPPUNIT_ASSERT((*it)->getAttribute(CKA_ID).getByteStringValue() == id[2]);
 	CPPUNIT_ASSERT(obj3->isValid());
-	CPPUNIT_ASSERT(!obj4->isValid());
-	CPPUNIT_ASSERT(!obj5->isValid());
+
+	releaseAll(objects);
 
 	delete store;
 }
@@ -318,4 +321,3 @@ void SessionObjectStoreTests::testWipeStore()
 
 	delete store;
 }
-

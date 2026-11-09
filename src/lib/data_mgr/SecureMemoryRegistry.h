@@ -58,10 +58,13 @@ public:
 	void wipe();
 
 private:
+	// A pointer to a heap-allocated, deliberately never-freed smart
+	// pointer, not a smart pointer directly: see the rationale
+	// beside SoftHSM::instance in SoftHSM.h.
 #ifdef HAVE_CXX11
-	static std::unique_ptr<SecureMemoryRegistry> instance;
+	static std::unique_ptr<SecureMemoryRegistry>* instance;
 #else
-	static std::auto_ptr<SecureMemoryRegistry> instance;
+	static std::auto_ptr<SecureMemoryRegistry>* instance;
 #endif
 
 	std::map<void*, size_t> registry;

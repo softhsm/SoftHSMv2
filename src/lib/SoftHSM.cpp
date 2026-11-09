@@ -58,6 +58,10 @@
 #include "ECParameters.h"
 #include "EDPublicKey.h"
 #include "EDPrivateKey.h"
+#ifdef WITH_EDDSA
+#include "EDDSAMechanismParam.h"
+#include "EDDSAUtil.h"
+#endif
 #include "DHParameters.h"
 #include "DHPublicKey.h"
 #include "DHPrivateKey.h"
@@ -112,25 +116,25 @@
 
 #ifdef HAVE_CXX11
 
-std::unique_ptr<MutexFactory> MutexFactory::instance(nullptr);
-std::unique_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(nullptr);
+std::unique_ptr<MutexFactory>* MutexFactory::instance = new std::unique_ptr<MutexFactory>();
+std::unique_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::unique_ptr<SecureMemoryRegistry>();
 #if defined(WITH_OPENSSL)
-std::unique_ptr<OSSLCryptoFactory> OSSLCryptoFactory::instance(nullptr);
+std::unique_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::unique_ptr<OSSLCryptoFactory>();
 #else
-std::unique_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(nullptr);
+std::unique_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::unique_ptr<BotanCryptoFactory>();
 #endif
-std::unique_ptr<SoftHSM> SoftHSM::instance(nullptr);
+std::unique_ptr<SoftHSM>* SoftHSM::instance = new std::unique_ptr<SoftHSM>();
 
 #else
 
-std::auto_ptr<MutexFactory> MutexFactory::instance(NULL);
-std::auto_ptr<SecureMemoryRegistry> SecureMemoryRegistry::instance(NULL);
+std::auto_ptr<MutexFactory>* MutexFactory::instance = new std::auto_ptr<MutexFactory>();
+std::auto_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::auto_ptr<SecureMemoryRegistry>();
 #if defined(WITH_OPENSSL)
-std::auto_ptr<OSSLCryptoFactory> OSSLCryptoFactory::instance(NULL);
+std::auto_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::auto_ptr<OSSLCryptoFactory>();
 #else
-std::auto_ptr<BotanCryptoFactory> BotanCryptoFactory::instance(NULL);
+std::auto_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::auto_ptr<BotanCryptoFactory>();
 #endif
-std::auto_ptr<SoftHSM> SoftHSM::instance(NULL);
+std::auto_ptr<SoftHSM>* SoftHSM::instance = new std::auto_ptr<SoftHSM>();
 
 #endif
 
@@ -212,7 +216,11 @@ static CK_RV newP11Object(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_CERT
 			    (keyType == CKK_SHA224_HMAC) ||
 			    (keyType == CKK_SHA256_HMAC) ||
 			    (keyType == CKK_SHA384_HMAC) ||
-			    (keyType == CKK_SHA512_HMAC))
+			    (keyType == CKK_SHA512_HMAC) ||
+			    (keyType == CKK_SHA3_224_HMAC) ||
+			    (keyType == CKK_SHA3_256_HMAC) ||
+			    (keyType == CKK_SHA3_384_HMAC) ||
+			    (keyType == CKK_SHA3_512_HMAC))
 			{
 				P11GenericSecretKeyObj* key = new P11GenericSecretKeyObj();
 				*p11object = key;
@@ -426,11 +434,11 @@ static void resetMutexFactoryCallbacks()
 // Return the one-and-only instance
 SoftHSM* SoftHSM::i()
 {
-	if (!instance.get())
+	if (!instance->get())
 	{
-		instance.reset(new SoftHSM());
+		instance->reset(new SoftHSM());
 	}
-	else if(instance->detectFork())
+	else if((*instance)->detectFork())
 	{
 		if (Configuration::i()->getBool("library.reset_on_fork", false))
 		{
@@ -439,18 +447,18 @@ SoftHSM* SoftHSM::i()
 			 * the old instance is first destroyed as some
 			 * static structures are erased in the destructor.
 			 */
-			instance.reset(NULL);
-			instance.reset(new SoftHSM());
+			instance->reset(NULL);
+			instance->reset(new SoftHSM());
 		}
 	}
 
-	return instance.get();
+	return instance->get();
 }
 
 void SoftHSM::reset()
 {
-	if (instance.get())
-		instance.reset();
+	if (instance->get())
+		instance->reset();
 }
 
 // Constructor
@@ -786,6 +794,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256"]			= CKM_SHA256;
 	t["CKM_SHA384"]			= CKM_SHA384;
 	t["CKM_SHA512"]			= CKM_SHA512;
+#ifdef WITH_SHA3
+	t["CKM_SHA3_224"]		= CKM_SHA3_224;
+	t["CKM_SHA3_256"]		= CKM_SHA3_256;
+	t["CKM_SHA3_384"]		= CKM_SHA3_384;
+	t["CKM_SHA3_512"]		= CKM_SHA3_512;
+#endif
 #ifndef WITH_FIPS
 	t["CKM_MD5_HMAC"]		= CKM_MD5_HMAC;
 #endif
@@ -794,6 +808,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256_HMAC"]		= CKM_SHA256_HMAC;
 	t["CKM_SHA384_HMAC"]		= CKM_SHA384_HMAC;
 	t["CKM_SHA512_HMAC"]		= CKM_SHA512_HMAC;
+#ifdef WITH_SHA3
+	t["CKM_SHA3_224_HMAC"]		= CKM_SHA3_224_HMAC;
+	t["CKM_SHA3_256_HMAC"]		= CKM_SHA3_256_HMAC;
+	t["CKM_SHA3_384_HMAC"]		= CKM_SHA3_384_HMAC;
+	t["CKM_SHA3_512_HMAC"]		= CKM_SHA3_512_HMAC;
+#endif
 	t["CKM_RSA_PKCS_KEY_PAIR_GEN"]	= CKM_RSA_PKCS_KEY_PAIR_GEN;
 	t["CKM_RSA_PKCS"]		= CKM_RSA_PKCS;
 	t["CKM_RSA_X_509"]		= CKM_RSA_X_509;
@@ -807,6 +827,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256_RSA_PKCS"]	= CKM_SHA256_RSA_PKCS;
 	t["CKM_SHA384_RSA_PKCS"]	= CKM_SHA384_RSA_PKCS;
 	t["CKM_SHA512_RSA_PKCS"]	= CKM_SHA512_RSA_PKCS;
+#ifdef WITH_SHA3
+	t["CKM_SHA3_224_RSA_PKCS"]	= CKM_SHA3_224_RSA_PKCS;
+	t["CKM_SHA3_256_RSA_PKCS"]	= CKM_SHA3_256_RSA_PKCS;
+	t["CKM_SHA3_384_RSA_PKCS"]	= CKM_SHA3_384_RSA_PKCS;
+	t["CKM_SHA3_512_RSA_PKCS"]	= CKM_SHA3_512_RSA_PKCS;
+#endif
 #ifdef WITH_RAW_PSS
 	t["CKM_RSA_PKCS_PSS"]		= CKM_RSA_PKCS_PSS;
 #endif
@@ -815,6 +841,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_SHA256_RSA_PKCS_PSS"]	= CKM_SHA256_RSA_PKCS_PSS;
 	t["CKM_SHA384_RSA_PKCS_PSS"]	= CKM_SHA384_RSA_PKCS_PSS;
 	t["CKM_SHA512_RSA_PKCS_PSS"]	= CKM_SHA512_RSA_PKCS_PSS;
+#ifdef WITH_SHA3
+	t["CKM_SHA3_224_RSA_PKCS_PSS"]	= CKM_SHA3_224_RSA_PKCS_PSS;
+	t["CKM_SHA3_256_RSA_PKCS_PSS"]	= CKM_SHA3_256_RSA_PKCS_PSS;
+	t["CKM_SHA3_384_RSA_PKCS_PSS"]	= CKM_SHA3_384_RSA_PKCS_PSS;
+	t["CKM_SHA3_512_RSA_PKCS_PSS"]	= CKM_SHA3_512_RSA_PKCS_PSS;
+#endif
 	t["CKM_GENERIC_SECRET_KEY_GEN"]	= CKM_GENERIC_SECRET_KEY_GEN;
 #ifndef WITH_FIPS
 	t["CKM_DES_KEY_GEN"]		= CKM_DES_KEY_GEN;
@@ -855,6 +887,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_DSA_SHA256"]		= CKM_DSA_SHA256;
 	t["CKM_DSA_SHA384"]		= CKM_DSA_SHA384;
 	t["CKM_DSA_SHA512"]		= CKM_DSA_SHA512;
+#ifdef WITH_SHA3
+	t["CKM_DSA_SHA3_224"]		= CKM_DSA_SHA3_224;
+	t["CKM_DSA_SHA3_256"]		= CKM_DSA_SHA3_256;
+	t["CKM_DSA_SHA3_384"]		= CKM_DSA_SHA3_384;
+	t["CKM_DSA_SHA3_512"]		= CKM_DSA_SHA3_512;
+#endif
 	t["CKM_DH_PKCS_KEY_PAIR_GEN"]	= CKM_DH_PKCS_KEY_PAIR_GEN;
 	t["CKM_DH_PKCS_PARAMETER_GEN"]	= CKM_DH_PKCS_PARAMETER_GEN;
 	t["CKM_DH_PKCS_DERIVE"]		= CKM_DH_PKCS_DERIVE;
@@ -866,6 +904,12 @@ void SoftHSM::prepareSupportedMechanisms(std::map<std::string, CK_MECHANISM_TYPE
 	t["CKM_ECDSA_SHA256"]		= CKM_ECDSA_SHA256;
 	t["CKM_ECDSA_SHA384"]		= CKM_ECDSA_SHA384;
 	t["CKM_ECDSA_SHA512"]		= CKM_ECDSA_SHA512;
+#ifdef WITH_SHA3
+	t["CKM_ECDSA_SHA3_224"]		= CKM_ECDSA_SHA3_224;
+	t["CKM_ECDSA_SHA3_256"]		= CKM_ECDSA_SHA3_256;
+	t["CKM_ECDSA_SHA3_384"]		= CKM_ECDSA_SHA3_384;
+	t["CKM_ECDSA_SHA3_512"]		= CKM_ECDSA_SHA3_512;
+#endif
 #endif
 #if defined(WITH_ECC) || defined(WITH_EDDSA)
 	t["CKM_ECDH1_DERIVE"]		= CKM_ECDH1_DERIVE;
@@ -1147,6 +1191,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_SHA256:
 		case CKM_SHA384:
 		case CKM_SHA512:
+#ifdef WITH_SHA3
+		case CKM_SHA3_224:
+		case CKM_SHA3_256:
+		case CKM_SHA3_384:
+		case CKM_SHA3_512:
+#endif
 			// Key size is not in use
 			pInfo->ulMinKeySize = 0;
 			pInfo->ulMaxKeySize = 0;
@@ -1184,6 +1234,28 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 			pInfo->ulMaxKeySize = 512;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_HMAC:
+			pInfo->ulMinKeySize = 28;
+			pInfo->ulMaxKeySize = 512;
+			pInfo->flags = CKF_SIGN | CKF_VERIFY;
+			break;
+		case CKM_SHA3_256_HMAC:
+			pInfo->ulMinKeySize = 32;
+			pInfo->ulMaxKeySize = 512;
+			pInfo->flags = CKF_SIGN | CKF_VERIFY;
+			break;
+		case CKM_SHA3_384_HMAC:
+			pInfo->ulMinKeySize = 48;
+			pInfo->ulMaxKeySize = 512;
+			pInfo->flags = CKF_SIGN | CKF_VERIFY;
+			break;
+		case CKM_SHA3_512_HMAC:
+			pInfo->ulMinKeySize = 64;
+			pInfo->ulMaxKeySize = 512;
+			pInfo->flags = CKF_SIGN | CKF_VERIFY;
+			break;
+#endif
 		case CKM_RSA_PKCS_KEY_PAIR_GEN:
 			pInfo->ulMinKeySize = rsaMinSize;
 			pInfo->ulMaxKeySize = rsaMaxSize;
@@ -1207,6 +1279,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_SHA256_RSA_PKCS:
 		case CKM_SHA384_RSA_PKCS:
 		case CKM_SHA512_RSA_PKCS:
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_RSA_PKCS:
+		case CKM_SHA3_256_RSA_PKCS:
+		case CKM_SHA3_384_RSA_PKCS:
+		case CKM_SHA3_512_RSA_PKCS:
+#endif
 #ifdef WITH_RAW_PSS
 		case CKM_RSA_PKCS_PSS:
 #endif
@@ -1215,6 +1293,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_SHA256_RSA_PKCS_PSS:
 		case CKM_SHA384_RSA_PKCS_PSS:
 		case CKM_SHA512_RSA_PKCS_PSS:
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_RSA_PKCS_PSS:
+		case CKM_SHA3_256_RSA_PKCS_PSS:
+		case CKM_SHA3_384_RSA_PKCS_PSS:
+		case CKM_SHA3_512_RSA_PKCS_PSS:
+#endif
 			pInfo->ulMinKeySize = rsaMinSize;
 			pInfo->ulMaxKeySize = rsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
@@ -1338,6 +1422,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_DSA_SHA256:
 		case CKM_DSA_SHA384:
 		case CKM_DSA_SHA512:
+#ifdef WITH_SHA3
+		case CKM_DSA_SHA3_224:
+		case CKM_DSA_SHA3_256:
+		case CKM_DSA_SHA3_384:
+		case CKM_DSA_SHA3_512:
+#endif
 			pInfo->ulMinKeySize = dsaMinSize;
 			pInfo->ulMaxKeySize = dsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY;
@@ -1370,6 +1460,12 @@ CK_RV SoftHSM::C_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type, CK_
 		case CKM_ECDSA_SHA256:
 		case CKM_ECDSA_SHA384:
 		case CKM_ECDSA_SHA512:
+#ifdef WITH_SHA3
+		case CKM_ECDSA_SHA3_224:
+		case CKM_ECDSA_SHA3_256:
+		case CKM_ECDSA_SHA3_384:
+		case CKM_ECDSA_SHA3_512:
+#endif
 			pInfo->ulMinKeySize = ecdsaMinSize;
 			pInfo->ulMaxKeySize = ecdsaMaxSize;
 			pInfo->flags = CKF_SIGN | CKF_VERIFY | CKF_EC_COMMOM;
@@ -2137,9 +2233,23 @@ CK_RV SoftHSM::C_FindObjectsInit(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pT
 	// Check if we are out of memory
 	if (findOp == NULL_PTR) return CKR_HOST_MEMORY;
 
+	std::set<OSObject*> tokenObjects;
+	std::set<OSObject*> sessionObjects;
+	token->getObjects(tokenObjects);
+	sessionObjectStore->getObjects(slot->getSlotID(), sessionObjects);
+
+	struct SessionObjReleaser {
+		std::set<OSObject*>& s;
+		~SessionObjReleaser()
+		{
+			for (auto* o : s)
+				o->release();
+		}
+	} sessionObjectGuard{sessionObjects};
+
 	std::set<OSObject*> allObjects;
-	token->getObjects(allObjects);
-	sessionObjectStore->getObjects(slot->getSlotID(),allObjects);
+	allObjects.insert(tokenObjects.begin(), tokenObjects.end());
+	allObjects.insert(sessionObjects.begin(), sessionObjects.end());
 
 	std::set<CK_OBJECT_HANDLE> handles;
 	std::set<OSObject*>::iterator it;
@@ -3870,6 +3980,20 @@ CK_RV SoftHSM::C_DigestInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 		case CKM_SHA512:
 			algo = HashAlgo::SHA512;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224:
+			algo = HashAlgo::SHA3_224;
+			break;
+		case CKM_SHA3_256:
+			algo = HashAlgo::SHA3_256;
+			break;
+		case CKM_SHA3_384:
+			algo = HashAlgo::SHA3_384;
+			break;
+		case CKM_SHA3_512:
+			algo = HashAlgo::SHA3_512;
+			break;
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411:
 			algo = HashAlgo::GOST;
@@ -4123,6 +4247,12 @@ static bool isMacMechanism(CK_MECHANISM_PTR pMechanism)
 		case CKM_SHA256_HMAC:
 		case CKM_SHA384_HMAC:
 		case CKM_SHA512_HMAC:
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_HMAC:
+		case CKM_SHA3_256_HMAC:
+		case CKM_SHA3_384_HMAC:
+		case CKM_SHA3_512_HMAC:
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411_HMAC:
 #endif
@@ -4224,6 +4354,32 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 			minSize = 64;
 			algo = MacAlgo::HMAC_SHA512;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_224_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 28;
+			algo = MacAlgo::HMAC_SHA3_224;
+			break;
+		case CKM_SHA3_256_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_256_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 32;
+			algo = MacAlgo::HMAC_SHA3_256;
+			break;
+		case CKM_SHA3_384_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_384_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 48;
+			algo = MacAlgo::HMAC_SHA3_384;
+			break;
+		case CKM_SHA3_512_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_512_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 64;
+			algo = MacAlgo::HMAC_SHA3_512;
+			break;
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411_HMAC:
 			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_GOST28147)
@@ -4347,6 +4503,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 #endif
 #ifdef WITH_EDDSA
 	bool isEDDSA = false;
+	EDDSAMechanismParam eddsaParam;
 #endif
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
@@ -4399,6 +4556,28 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_224_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_256_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_256_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_384_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_384_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_512_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_512_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+#endif
 #ifdef WITH_RAW_PSS
 		case CKM_RSA_PKCS_PSS:
 			if (pMechanism->pParameter == NULL_PTR ||
@@ -4436,6 +4615,28 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
 					allowedMgf = CKG_MGF1_SHA512;
 					break;
+#ifdef WITH_SHA3
+				case CKM_SHA3_224:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_224;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
+					allowedMgf = CKG_MGF1_SHA3_224;
+					break;
+				case CKM_SHA3_256:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_256;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_256;
+					allowedMgf = CKG_MGF1_SHA3_256;
+					break;
+				case CKM_SHA3_384:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_384;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_384;
+					allowedMgf = CKG_MGF1_SHA3_384;
+					break;
+				case CKM_SHA3_512:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_512;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
+					allowedMgf = CKG_MGF1_SHA3_512;
+					break;
+#endif
 				default:
 					ERROR_MSG("Invalid RSA-PSS hash");
 					return CKR_ARGUMENTS_BAD;
@@ -4537,6 +4738,76 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_224 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_224)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_224_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_224;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_256_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_256 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_256)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_256_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_256;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_256;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_384_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_384 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_384)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_384_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_384;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_384;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_512_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_512 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_512)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_512_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_512;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+#endif
 		case CKM_DSA:
 			mechanism = AsymMech::DSA;
 			bAllowMultiPartOp = false;
@@ -4567,6 +4838,28 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			bAllowMultiPartOp = true;
 			isDSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_DSA_SHA3_224:
+			mechanism = AsymMech::DSA_SHA3_224;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+		case CKM_DSA_SHA3_256:
+			mechanism = AsymMech::DSA_SHA3_256;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+		case CKM_DSA_SHA3_384:
+			mechanism = AsymMech::DSA_SHA3_384;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+		case CKM_DSA_SHA3_512:
+			mechanism = AsymMech::DSA_SHA3_512;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+#endif
 #ifdef WITH_ECC
 		case CKM_ECDSA:
 			mechanism = AsymMech::ECDSA;
@@ -4575,29 +4868,51 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 			break;
 		case CKM_ECDSA_SHA1:
 			mechanism = AsymMech::ECDSA_SHA1;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA224:
 			mechanism = AsymMech::ECDSA_SHA224;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA256:
 			mechanism = AsymMech::ECDSA_SHA256;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA384:
 			mechanism = AsymMech::ECDSA_SHA384;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA512:
 			mechanism = AsymMech::ECDSA_SHA512;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_ECDSA_SHA3_224:
+			mechanism = AsymMech::ECDSA_SHA3_224;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+		case CKM_ECDSA_SHA3_256:
+			mechanism = AsymMech::ECDSA_SHA3_256;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+		case CKM_ECDSA_SHA3_384:
+			mechanism = AsymMech::ECDSA_SHA3_384;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+		case CKM_ECDSA_SHA3_512:
+			mechanism = AsymMech::ECDSA_SHA3_512;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+#endif
 #endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3410:
@@ -4613,10 +4928,17 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 #endif
 #ifdef WITH_EDDSA
 		case CKM_EDDSA:
+		{
 			mechanism = AsymMech::EDDSA;
 			bAllowMultiPartOp = false;
 			isEDDSA = true;
+			CK_RV eddsaRv = EDDSAUtil::getEddsaParam(pMechanism, eddsaParam, &mechanismParam);
+			if (eddsaRv != CKR_OK)
+			{
+				return eddsaRv;
+			}
 			break;
+		}
 #endif
 #ifdef WITH_ML_DSA
 		case CKM_ML_DSA:
@@ -5384,6 +5706,32 @@ CK_RV SoftHSM::MacVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 			minSize = 64;
 			algo = MacAlgo::HMAC_SHA512;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_224_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 28;
+			algo = MacAlgo::HMAC_SHA3_224;
+			break;
+		case CKM_SHA3_256_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_256_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 32;
+			algo = MacAlgo::HMAC_SHA3_256;
+			break;
+		case CKM_SHA3_384_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_384_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 48;
+			algo = MacAlgo::HMAC_SHA3_384;
+			break;
+		case CKM_SHA3_512_HMAC:
+			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_SHA3_512_HMAC)
+				return CKR_KEY_TYPE_INCONSISTENT;
+			minSize = 64;
+			algo = MacAlgo::HMAC_SHA3_512;
+			break;
+#endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3411_HMAC:
 			if (keyType != CKK_GENERIC_SECRET && keyType != CKK_GOST28147)
@@ -5507,6 +5855,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 #endif
 #ifdef WITH_EDDSA
 	bool isEDDSA = false;
+	EDDSAMechanismParam eddsaParam;
 #endif
 #ifdef WITH_ML_DSA
 	bool isMLDSA = false;
@@ -5559,6 +5908,28 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_224_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_256_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_256_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_384_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_384_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_512_RSA_PKCS:
+			mechanism = AsymMech::RSA_SHA3_512_PKCS;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+#endif
 #ifdef WITH_RAW_PSS
 		case CKM_RSA_PKCS_PSS:
 			if (pMechanism->pParameter == NULL_PTR ||
@@ -5596,6 +5967,28 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA512;
 					expectedMgf = CKG_MGF1_SHA512;
 					break;
+#ifdef WITH_SHA3
+				case CKM_SHA3_224:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_224;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
+					expectedMgf = CKG_MGF1_SHA3_224;
+					break;
+				case CKM_SHA3_256:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_256;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_256;
+					expectedMgf = CKG_MGF1_SHA3_256;
+					break;
+				case CKM_SHA3_384:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_384;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_384;
+					expectedMgf = CKG_MGF1_SHA3_384;
+					break;
+				case CKM_SHA3_512:
+					rsaPssParam.hashAlg = HashAlgo::SHA3_512;
+					rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
+					expectedMgf = CKG_MGF1_SHA3_512;
+					break;
+#endif
 				default:
 					return CKR_ARGUMENTS_BAD;
 			}
@@ -5696,6 +6089,76 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isRSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_SHA3_224_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_224 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_224)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_224_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_224;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_256_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_256 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_256)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_256_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_256;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_256;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_384_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_384 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_384)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_384_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_384;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_384;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+		case CKM_SHA3_512_RSA_PKCS_PSS:
+			if (pMechanism->pParameter == NULL_PTR ||
+			    pMechanism->ulParameterLen != sizeof(CK_RSA_PKCS_PSS_PARAMS) ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->hashAlg != CKM_SHA3_512 ||
+			    CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->mgf != CKG_MGF1_SHA3_512)
+			{
+				ERROR_MSG("Invalid parameters");
+				return CKR_ARGUMENTS_BAD;
+			}
+			mechanism = AsymMech::RSA_SHA3_512_PKCS_PSS;
+			rsaPssParam.hashAlg = HashAlgo::SHA3_512;
+			rsaPssParam.mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
+			rsaPssParam.sLen = CK_RSA_PKCS_PSS_PARAMS_PTR(pMechanism->pParameter)->sLen;
+			mechanismParam = &rsaPssParam;
+			bAllowMultiPartOp = true;
+			isRSA = true;
+			break;
+#endif
 		case CKM_DSA:
 			mechanism = AsymMech::DSA;
 			bAllowMultiPartOp = false;
@@ -5726,6 +6189,28 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			bAllowMultiPartOp = true;
 			isDSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_DSA_SHA3_224:
+			mechanism = AsymMech::DSA_SHA3_224;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+		case CKM_DSA_SHA3_256:
+			mechanism = AsymMech::DSA_SHA3_256;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+		case CKM_DSA_SHA3_384:
+			mechanism = AsymMech::DSA_SHA3_384;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+		case CKM_DSA_SHA3_512:
+			mechanism = AsymMech::DSA_SHA3_512;
+			bAllowMultiPartOp = true;
+			isDSA = true;
+			break;
+#endif
 #ifdef WITH_ECC
 		case CKM_ECDSA:
 			mechanism = AsymMech::ECDSA;
@@ -5734,29 +6219,51 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			break;
 		case CKM_ECDSA_SHA1:
 			mechanism = AsymMech::ECDSA_SHA1;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA224:
 			mechanism = AsymMech::ECDSA_SHA224;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA256:
 			mechanism = AsymMech::ECDSA_SHA256;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA384:
 			mechanism = AsymMech::ECDSA_SHA384;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
 		case CKM_ECDSA_SHA512:
 			mechanism = AsymMech::ECDSA_SHA512;
-			bAllowMultiPartOp = false;
+			bAllowMultiPartOp = true;
 			isECDSA = true;
 			break;
+#ifdef WITH_SHA3
+		case CKM_ECDSA_SHA3_224:
+			mechanism = AsymMech::ECDSA_SHA3_224;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+		case CKM_ECDSA_SHA3_256:
+			mechanism = AsymMech::ECDSA_SHA3_256;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+		case CKM_ECDSA_SHA3_384:
+			mechanism = AsymMech::ECDSA_SHA3_384;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+		case CKM_ECDSA_SHA3_512:
+			mechanism = AsymMech::ECDSA_SHA3_512;
+			bAllowMultiPartOp = true;
+			isECDSA = true;
+			break;
+#endif
 #endif
 #ifdef WITH_GOST
 		case CKM_GOSTR3410:
@@ -5772,10 +6279,17 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 #endif
 #ifdef WITH_EDDSA
 		case CKM_EDDSA:
+		{
 			mechanism = AsymMech::EDDSA;
 			bAllowMultiPartOp = false;
 			isEDDSA = true;
+			CK_RV eddsaRv = EDDSAUtil::getEddsaParam(pMechanism, eddsaParam, &mechanismParam);
+			if (eddsaRv != CKR_OK)
+			{
+				return eddsaRv;
+			}
 			break;
+		}
 #endif
 #ifdef WITH_ML_DSA
 		case CKM_ML_DSA:
@@ -8658,6 +9172,16 @@ CK_RV SoftHSM::C_EncapsulateKey
 		return CKR_GENERAL_ERROR;
 	}
 
+	if (pCipherText == NULL_PTR)
+	{
+		unsigned long ctLen = ((MLKEMPublicKey*)publicKey)->getOutputLength();
+		cipher->recyclePublicKey(publicKey);
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		if (ctLen == 0) return CKR_GENERAL_ERROR;
+		*pulCipherTextLen = ctLen;
+		return CKR_OK;
+	}
+
 	SymmetricKey *secret = NULL;
 
 	if (cipher->encapsulate(publicKey, cipherText, &secret, keyType, mech))
@@ -8709,6 +9233,25 @@ CK_RV SoftHSM::C_EncapsulateKey
 						case CKA_VALUE:
 							INFO_MSG("CKA_VALUE must not be included");
 							rv = CKR_ATTRIBUTE_READ_ONLY;
+							break;
+						case CKA_VALUE_LEN:
+							byteLen = *(CK_ULONG*)pTemplate[i].pValue;
+							if (byteLen > 32 || byteLen == 0)
+							{
+								INFO_MSG("CKA_VALUE_LEN must be less than or equal to 32");
+								*pulCipherTextLen = 0;
+								rv = CKR_WRAPPED_KEY_LEN_RANGE;
+							}
+							if (keyType == CKK_AES)
+							{
+								if (byteLen != 16 && byteLen != 24 && byteLen != 32)
+								{
+									INFO_MSG("CKA_VALUE_LEN must be 16, 24 or 32 for AES");
+									*pulCipherTextLen = 0;
+									rv = CKR_ATTRIBUTE_VALUE_INVALID;
+								}
+								break;
+							}
 							break;
 						case CKA_CHECK_VALUE:
 							if (pTemplate[i].ulValueLen > 0)
@@ -8873,7 +9416,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 	CK_BBOOL isDecapsulationKeyOnToken = decapsulationKey->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isDecapsulationKeyPrivate = decapsulationKey->getBooleanValue(CKA_PRIVATE, true);
 
-	// Check user credentials for the wrapping key
+	// Check user credentials for the decapsulation key
 	rv = haveRead(session->getState(), isDecapsulationKeyOnToken, isDecapsulationKeyPrivate);
 	if (rv != CKR_OK)
 	{
@@ -8884,7 +9427,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 	}
 
 	// Check if the wrapping key can be used for decapsulation
-	if (decapsulationKey->getBooleanValue(CKA_DECAPSULATE, false) == false)
+	if (!decapsulationKey->getBooleanValue(CKA_DECAPSULATE, false))
 		return CKR_KEY_FUNCTION_NOT_PERMITTED;
 
 	// Check if the specified mechanism is allowed for the wrapping key
@@ -8940,6 +9483,12 @@ CK_RV SoftHSM::C_DecapsulateKey
 	AsymmetricAlgorithm* cipher = CryptoFactory::i()->getAsymmetricAlgorithm(algo);
 	if (cipher == NULL) return CKR_MECHANISM_INVALID;
 
+	if (ulCipherTextLen <= 0 || pCipherText == NULL_PTR)
+	{
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(cipher);
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+
 	PrivateKey* privateKey = cipher->newPrivateKey();
 
 	if (MLKEMUtil::getMLKEMPrivateKey((MLKEMPrivateKey*)privateKey, token, decapsulationKey) != CKR_OK)
@@ -8985,7 +9534,7 @@ CK_RV SoftHSM::C_DecapsulateKey
 			}
 		}
 
-		rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, phKey, OBJECT_OP_UNWRAP);
+		rv = this->CreateObject(hSession, secretAttribs, secretAttribsCount, phKey, OBJECT_OP_DECAPSULATE);
 
 		// Store the attributes that are being supplied
 		if (rv == CKR_OK)
@@ -9002,12 +9551,31 @@ CK_RV SoftHSM::C_DecapsulateKey
 					{
 						case CKA_VALUE:
 							INFO_MSG("CKA_VALUE must not be included");
-							return CKR_ATTRIBUTE_READ_ONLY;
+							rv = CKR_ATTRIBUTE_READ_ONLY;
+							break;
+						case CKA_VALUE_LEN:
+							byteLen = *(CK_ULONG*)pTemplate[i].pValue;
+							if (byteLen > 32 || byteLen == 0)
+							{
+								INFO_MSG("CKA_VALUE_LEN must be less than or equal to 32");
+								rv = CKR_WRAPPED_KEY_LEN_RANGE;
+								break;
+							}
+							if (keyType == CKK_AES)
+							{
+								if (byteLen != 16 && byteLen != 24 && byteLen != 32)
+								{
+									INFO_MSG("CKA_VALUE_LEN must be 16, 24 or 32 for AES");
+									rv = CKR_ATTRIBUTE_VALUE_INVALID;
+								}
+								break;
+							}
+							break;
 						case CKA_CHECK_VALUE:
 							if (pTemplate[i].ulValueLen > 0)
 							{
 								INFO_MSG("CKA_CHECK_VALUE must be a no-value (0 length) entry");
-								return CKR_ATTRIBUTE_VALUE_INVALID;
+								rv = CKR_ATTRIBUTE_VALUE_INVALID;
 							}
 							checkValue = false;
 							break;
@@ -9018,55 +9586,59 @@ CK_RV SoftHSM::C_DecapsulateKey
 
 				bool bOK = true;
 
-				// Common Attributes
-				bOK = bOK && osobject->setAttribute(CKA_LOCAL,false);
-				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,false);
-				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE,false);
-
-				// Secret Attributes
-				ByteString secretValue = secret->getKeyBits();
-				ByteString value;
-				ByteString plainKCV;
-				ByteString kcv;
-
-				// Truncate value when requested, remove from the leading end
-				if (byteLen < secretValue.size())
-					secretValue.resize(byteLen);
-				// Get the KCV
-				switch (keyType)
+				if (rv == CKR_OK)
 				{
-					case CKK_GENERIC_SECRET:
-						secret->setBitLen(byteLen * 8);
-						plainKCV = secret->getKeyCheckValue();
-						break;
-					case CKK_AES:
-						secret->setBitLen(byteLen * 8);
-						plainKCV = ((AESKey*)secret)->getKeyCheckValue();
-						break;
-					default:
-						bOK = false;
-						break;
-				}
 
-				if (isPrivate)
-				{
-					token->encrypt(secretValue, value);
-					token->encrypt(plainKCV, kcv);
-				}
-				else
-				{
-					value = secretValue;
-					kcv = plainKCV;
-				}
-				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-				if (checkValue)
-					bOK = bOK && osobject->setAttribute(CKA_CHECK_VALUE, kcv);
-				if (bOK) {
-					bOK = osobject->commitTransaction();
-					DEBUG_MSG("phKey: %lx", phKey);
-				}
-				else {
-					osobject->abortTransaction();
+					// Common Attributes
+					bOK = bOK && osobject->setAttribute(CKA_LOCAL,false);
+					bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,false);
+					bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE,false);
+
+					// Secret Attributes
+					ByteString secretValue = secret->getKeyBits();
+					ByteString value;
+					ByteString plainKCV;
+					ByteString kcv;
+
+					// Truncate value when requested, remove from the leading end
+					if (byteLen < secretValue.size())
+						secretValue.resize(byteLen);
+					// Get the KCV
+					switch (keyType)
+					{
+						case CKK_GENERIC_SECRET:
+							secret->setBitLen(byteLen * 8);
+							plainKCV = secret->getKeyCheckValue();
+							break;
+						case CKK_AES:
+							secret->setBitLen(byteLen * 8);
+							plainKCV = ((AESKey*)secret)->getKeyCheckValue();
+							break;
+						default:
+							bOK = false;
+							break;
+					}
+
+					if (isPrivate)
+					{
+						token->encrypt(secretValue, value);
+						token->encrypt(plainKCV, kcv);
+					}
+					else
+					{
+						value = secretValue;
+						kcv = plainKCV;
+					}
+					bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+					if (checkValue)
+						bOK = bOK && osobject->setAttribute(CKA_CHECK_VALUE, kcv);
+					if (bOK) {
+						bOK = osobject->commitTransaction();
+						DEBUG_MSG("phKey: %lx", phKey);
+					}
+					else {
+						osobject->abortTransaction();
+					}
 				}
 
 				if (!bOK)
@@ -15059,6 +15631,24 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 		mechanismParam->hashAlg = HashAlgo::SHA512;
 		if (hashLen) *hashLen = 64;
 		break;
+#ifdef WITH_SHA3
+	case CKM_SHA3_224:
+		mechanismParam->hashAlg = HashAlgo::SHA3_224;
+		if (hashLen) *hashLen = 28;
+		break;
+	case CKM_SHA3_256:
+		mechanismParam->hashAlg = HashAlgo::SHA3_256;
+		if (hashLen) *hashLen = 32;
+		break;
+	case CKM_SHA3_384:
+		mechanismParam->hashAlg = HashAlgo::SHA3_384;
+		if (hashLen) *hashLen = 48;
+		break;
+	case CKM_SHA3_512:
+		mechanismParam->hashAlg = HashAlgo::SHA3_512;
+		if (hashLen) *hashLen = 64;
+		break;
+#endif
 	default:
 	    ERROR_MSG("hash algorithm not supported for OAEP");
 		return CKR_ARGUMENTS_BAD;
@@ -15080,6 +15670,20 @@ CK_RV SoftHSM::BuildRSAOAEPParam(const CK_RSA_PKCS_OAEP_PARAMS *params,
 	case CKG_MGF1_SHA512:
 		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA512;
 		break;
+#ifdef WITH_SHA3
+	case CKG_MGF1_SHA3_224:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA3_224;
+		break;
+	case CKG_MGF1_SHA3_256:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA3_256;
+		break;
+	case CKG_MGF1_SHA3_384:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA3_384;
+		break;
+	case CKG_MGF1_SHA3_512:
+		mechanismParam->mgfAlg = AsymRSAMGF::MGF1_SHA3_512;
+		break;
+#endif
 	default:
 	    ERROR_MSG("mgf algorithm not supported for OAEP");
 		return CKR_ARGUMENTS_BAD;

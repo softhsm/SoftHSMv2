@@ -37,6 +37,7 @@
 #include "CryptoFactory.h"
 #include "RSAParameters.h"
 #include "RSAMechanismParam.h"
+#include "RSAUtil.h"
 #include "OSSLRSAKeyPair.h"
 #include <algorithm>
 #include <openssl/evp.h>
@@ -177,6 +178,24 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 				hash = EVP_sha512();
 				allowedLen = 64;
 				break;
+#ifdef WITH_SHA3
+			case HashAlgo::SHA3_224:
+				hash = EVP_sha3_224();
+				allowedLen = 28;
+				break;
+			case HashAlgo::SHA3_256:
+				hash = EVP_sha3_256();
+				allowedLen = 32;
+				break;
+			case HashAlgo::SHA3_384:
+				hash = EVP_sha3_384();
+				allowedLen = 48;
+				break;
+			case HashAlgo::SHA3_512:
+				hash = EVP_sha3_512();
+				allowedLen = 64;
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -198,6 +217,20 @@ bool OSSLRSA::sign(PrivateKey* privateKey, const ByteString& dataToSign,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
+			case AsymRSAMGF::MGF1_SHA3_224:
+				mgf = EVP_sha3_224();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_256:
+				mgf = EVP_sha3_256();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_384:
+				mgf = EVP_sha3_384();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_512:
+				mgf = EVP_sha3_512();
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -326,7 +359,6 @@ bool OSSLRSA::signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
 
 	HashAlgo::Type hash1 = HashAlgo::Unknown;
 	HashAlgo::Type hash2 = HashAlgo::Unknown;
-	const RSAPssMechanismParam* pssParam = NULL;
 	switch (mechanism)
 	{
 		case AsymMech::RSA_MD5_PKCS:
@@ -347,28 +379,21 @@ bool OSSLRSA::signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
 		case AsymMech::RSA_SHA512_PKCS:
 			hash1 = HashAlgo::SHA512;
 			break;
+		case AsymMech::RSA_SHA3_224_PKCS:
+			hash1 = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS:
+			hash1 = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS:
+			hash1 = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS:
+			hash1 = HashAlgo::SHA3_512;
+			break;
 		case AsymMech::RSA_SHA1_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA1, AsymRSAMGF::MGF1_SHA1, 20, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA1)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA1))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength() + 6) / 8 - 2 - 20))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -376,27 +401,8 @@ bool OSSLRSA::signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA1;
 			break;
 		case AsymMech::RSA_SHA224_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA224, AsymRSAMGF::MGF1_SHA224, 28, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA224)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA224))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength() + 6) / 8 - 2 - 28))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -404,27 +410,8 @@ bool OSSLRSA::signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA224;
 			break;
 		case AsymMech::RSA_SHA256_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA256, AsymRSAMGF::MGF1_SHA256, 32, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA256)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA256))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength() + 6) / 8 - 2 - 32))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -432,27 +419,8 @@ bool OSSLRSA::signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA256;
 			break;
 		case AsymMech::RSA_SHA384_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA384, AsymRSAMGF::MGF1_SHA384, 48, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA384)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA384))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength() + 6) / 8 - 2 - 48))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
@@ -460,32 +428,49 @@ bool OSSLRSA::signInit(PrivateKey *privateKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA384;
 			break;
 		case AsymMech::RSA_SHA512_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA512, AsymRSAMGF::MGF1_SHA512, 64, privateKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA512)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA512))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::signFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((privateKey->getBitLength() + 6) / 8 - 2 - 64))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, privateKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::signFinal(dummy);
 				return false;
 			}
 			hash1 = HashAlgo::SHA512;
+			break;
+		case AsymMech::RSA_SHA3_224_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_224, AsymRSAMGF::MGF1_SHA3_224, 28, privateKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::signFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_256, AsymRSAMGF::MGF1_SHA3_256, 32, privateKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::signFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_384, AsymRSAMGF::MGF1_SHA3_384, 48, privateKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::signFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_512, AsymRSAMGF::MGF1_SHA3_512, 64, privateKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::signFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_512;
 			break;
 		case AsymMech::RSA_SSL:
 			hash1 = HashAlgo::MD5;
@@ -638,6 +623,24 @@ bool OSSLRSA::signFinal(ByteString& signature)
 			hash = EVP_sha512();
 			rsaPadding = RSA_PKCS1_PADDING;
 			break;
+#ifdef WITH_SHA3
+		case AsymMech::RSA_SHA3_224_PKCS:
+			hash = EVP_sha3_224();
+			rsaPadding = RSA_PKCS1_PADDING;
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS:
+			hash = EVP_sha3_256();
+			rsaPadding = RSA_PKCS1_PADDING;
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS:
+			hash = EVP_sha3_384();
+			rsaPadding = RSA_PKCS1_PADDING;
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS:
+			hash = EVP_sha3_512();
+			rsaPadding = RSA_PKCS1_PADDING;
+			break;
+#endif
 		case AsymMech::RSA_SHA1_PKCS_PSS:
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha1();
@@ -658,6 +661,24 @@ bool OSSLRSA::signFinal(ByteString& signature)
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha512();
 			break;
+#ifdef WITH_SHA3
+		case AsymMech::RSA_SHA3_224_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_224();
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_256();
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_384();
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_512();
+			break;
+#endif
 		case AsymMech::RSA_SSL:
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_md5_sha1();
@@ -801,6 +822,24 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 				hash = EVP_sha512();
 				allowedLen = 64;
 				break;
+#ifdef WITH_SHA3
+			case HashAlgo::SHA3_224:
+				hash = EVP_sha3_224();
+				allowedLen = 28;
+				break;
+			case HashAlgo::SHA3_256:
+				hash = EVP_sha3_256();
+				allowedLen = 32;
+				break;
+			case HashAlgo::SHA3_384:
+				hash = EVP_sha3_384();
+				allowedLen = 48;
+				break;
+			case HashAlgo::SHA3_512:
+				hash = EVP_sha3_512();
+				allowedLen = 64;
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -821,6 +860,20 @@ bool OSSLRSA::verify(PublicKey* publicKey, const ByteString& originalData,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
+			case AsymRSAMGF::MGF1_SHA3_224:
+				mgf = EVP_sha3_224();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_256:
+				mgf = EVP_sha3_256();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_384:
+				mgf = EVP_sha3_384();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_512:
+				mgf = EVP_sha3_512();
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -936,8 +989,6 @@ bool OSSLRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 	HashAlgo::Type hash1 = HashAlgo::Unknown;
 	HashAlgo::Type hash2 = HashAlgo::Unknown;
 
-	const RSAPssMechanismParam* pssParam = NULL;
-
 	switch (mechanism)
 	{
 		case AsymMech::RSA_MD5_PKCS:
@@ -958,28 +1009,21 @@ bool OSSLRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 		case AsymMech::RSA_SHA512_PKCS:
 			hash1 = HashAlgo::SHA512;
 			break;
+		case AsymMech::RSA_SHA3_224_PKCS:
+			hash1 = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS:
+			hash1 = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS:
+			hash1 = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS:
+			hash1 = HashAlgo::SHA3_512;
+			break;
 		case AsymMech::RSA_SHA1_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA1, AsymRSAMGF::MGF1_SHA1, 20, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA1)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA1))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength() + 6) / 8 - 2 - 20))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -987,27 +1031,8 @@ bool OSSLRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA1;
 			break;
 		case AsymMech::RSA_SHA224_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA224, AsymRSAMGF::MGF1_SHA224, 28, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA224)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA224))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength() + 6) / 8 - 2 - 28))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -1015,27 +1040,8 @@ bool OSSLRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA224;
 			break;
 		case AsymMech::RSA_SHA256_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA256, AsymRSAMGF::MGF1_SHA256, 32, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA256)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA256))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength() + 6) / 8 - 2 - 32))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
@@ -1043,60 +1049,58 @@ bool OSSLRSA::verifyInit(PublicKey* publicKey, const AsymMech::Type mechanism,
 			hash1 = HashAlgo::SHA256;
 			break;
 		case AsymMech::RSA_SHA384_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA384, AsymRSAMGF::MGF1_SHA384, 48, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA384)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA384))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength() + 6) / 8 - 2 - 48))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
-			ByteString dummy;
-			AsymmetricAlgorithm::verifyFinal(dummy);
-			return false;
 			}
 			hash1 = HashAlgo::SHA384;
 			break;
 		case AsymMech::RSA_SHA512_PKCS_PSS:
-			if ((mechanismParam == NULL) || (!mechanismParam->isOfType(RSAPssMechanismParam::type)))
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA512, AsymRSAMGF::MGF1_SHA512, 64, publicKey->getBitLength(), sLen))
 			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameter type supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			pssParam = dynamic_cast<const RSAPssMechanismParam*>(mechanismParam);
-			if ((pssParam->hashAlg != HashAlgo::SHA512)||
-			    (pssParam->mgfAlg != AsymRSAMGF::MGF1_SHA512))
-			{
-				ERROR_MSG("Invalid RSA PSS mechanism parameters supplied");
-				ByteString dummy;
-				AsymmetricAlgorithm::verifyFinal(dummy);
-				return false;
-			}
-			sLen = pssParam->sLen;
-			if (sLen > ((publicKey->getBitLength() + 6) / 8 - 2 - 64))
-			{
-				ERROR_MSG("sLen (%lu) is too large for current key size (%lu)",
-					  (unsigned long)sLen, publicKey->getBitLength());
 				ByteString dummy;
 				AsymmetricAlgorithm::verifyFinal(dummy);
 				return false;
 			}
 			hash1 = HashAlgo::SHA512;
+			break;
+		case AsymMech::RSA_SHA3_224_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_224, AsymRSAMGF::MGF1_SHA3_224, 28, publicKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::verifyFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_224;
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_256, AsymRSAMGF::MGF1_SHA3_256, 32, publicKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::verifyFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_256;
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_384, AsymRSAMGF::MGF1_SHA3_384, 48, publicKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::verifyFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_384;
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS_PSS:
+			if (!RSAUtil::checkPssParams(mechanismParam, HashAlgo::SHA3_512, AsymRSAMGF::MGF1_SHA3_512, 64, publicKey->getBitLength(), sLen))
+			{
+				ByteString dummy;
+				AsymmetricAlgorithm::verifyFinal(dummy);
+				return false;
+			}
+			hash1 = HashAlgo::SHA3_512;
 			break;
 		case AsymMech::RSA_SSL:
 			hash1 = HashAlgo::MD5;
@@ -1249,6 +1253,24 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_sha512();
 			break;
+#ifdef WITH_SHA3
+		case AsymMech::RSA_SHA3_224_PKCS:
+			rsaPadding = RSA_PKCS1_PADDING;
+			hash = EVP_sha3_224();
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS:
+			rsaPadding = RSA_PKCS1_PADDING;
+			hash = EVP_sha3_256();
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS:
+			rsaPadding = RSA_PKCS1_PADDING;
+			hash = EVP_sha3_384();
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS:
+			rsaPadding = RSA_PKCS1_PADDING;
+			hash = EVP_sha3_512();
+			break;
+#endif
 		case AsymMech::RSA_SHA1_PKCS_PSS:
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha1();
@@ -1269,6 +1291,24 @@ bool OSSLRSA::verifyFinal(const ByteString& signature)
 			rsaPadding = RSA_PKCS1_PSS_PADDING;
 			hash = EVP_sha512();
 			break;
+#ifdef WITH_SHA3
+		case AsymMech::RSA_SHA3_224_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_224();
+			break;
+		case AsymMech::RSA_SHA3_256_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_256();
+			break;
+		case AsymMech::RSA_SHA3_384_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_384();
+			break;
+		case AsymMech::RSA_SHA3_512_PKCS_PSS:
+			rsaPadding = RSA_PKCS1_PSS_PADDING;
+			hash = EVP_sha3_512();
+			break;
+#endif
 		case AsymMech::RSA_SSL:
 			rsaPadding = RSA_PKCS1_PADDING;
 			hash = EVP_md5_sha1();
@@ -1385,6 +1425,24 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 				hash = EVP_sha512();
 				hashLen = 64;
 				break;
+#ifdef WITH_SHA3
+			case HashAlgo::SHA3_224:
+				hash = EVP_sha3_224();
+				hashLen = 28;
+				break;
+			case HashAlgo::SHA3_256:
+				hash = EVP_sha3_256();
+				hashLen = 32;
+				break;
+			case HashAlgo::SHA3_384:
+				hash = EVP_sha3_384();
+				hashLen = 48;
+				break;
+			case HashAlgo::SHA3_512:
+				hash = EVP_sha3_512();
+				hashLen = 64;
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -1405,6 +1463,20 @@ bool OSSLRSA::encrypt(PublicKey* publicKey, const ByteString& data,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
+			case AsymRSAMGF::MGF1_SHA3_224:
+				mgf = EVP_sha3_224();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_256:
+				mgf = EVP_sha3_256();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_384:
+				mgf = EVP_sha3_384();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_512:
+				mgf = EVP_sha3_512();
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -1555,6 +1627,20 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			case HashAlgo::SHA512:
 				hash = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
+			case HashAlgo::SHA3_224:
+				hash = EVP_sha3_224();
+				break;
+			case HashAlgo::SHA3_256:
+				hash = EVP_sha3_256();
+				break;
+			case HashAlgo::SHA3_384:
+				hash = EVP_sha3_384();
+				break;
+			case HashAlgo::SHA3_512:
+				hash = EVP_sha3_512();
+				break;
+#endif
 			default:
 				return false;
 		}
@@ -1575,6 +1661,20 @@ bool OSSLRSA::decrypt(PrivateKey* privateKey, const ByteString& encryptedData,
 			case AsymRSAMGF::MGF1_SHA512:
 				mgf = EVP_sha512();
 				break;
+#ifdef WITH_SHA3
+			case AsymRSAMGF::MGF1_SHA3_224:
+				mgf = EVP_sha3_224();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_256:
+				mgf = EVP_sha3_256();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_384:
+				mgf = EVP_sha3_384();
+				break;
+			case AsymRSAMGF::MGF1_SHA3_512:
+				mgf = EVP_sha3_512();
+				break;
+#endif
 			default:
 				return false;
 		}

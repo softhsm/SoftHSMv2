@@ -6,6 +6,7 @@ set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR}
                  ${PROJECT_SOURCE_DIR}/../data_mgr
                  ${PROJECT_SOURCE_DIR}/../object_store
                  ${PROJECT_SOURCE_DIR}/../pkcs11
+                 ${PROJECT_SOURCE_DIR}/../session_mgr
                  ${PROJECT_SOURCE_DIR}/../slot_mgr
                  )
 
@@ -13,7 +14,7 @@ set(SOURCES HandleManager.cpp
             Handle.cpp
             )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if(WIN32)
     list(APPEND INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/../win32)
 ENDIF()
 

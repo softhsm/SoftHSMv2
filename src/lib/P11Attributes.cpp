@@ -411,13 +411,13 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 	//    given non-Cryptoki attribute is read-only is obviously outside the scope of Cryptoki.
 
 	// Attributes cannot be changed if CKA_MODIFIABLE is set to false
-	if (!isModifiable() && op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE && op != OBJECT_OP_UNWRAP) {
+	if (!isModifiable() && op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE && op != OBJECT_OP_UNWRAP && op != OBJECT_OP_DECAPSULATE) {
 		ERROR_MSG("An object is with CKA_MODIFIABLE set to false is not modifiable");
 		return CKR_ATTRIBUTE_READ_ONLY;
 	}
 
 	// Attributes cannot be modified if CKA_TRUSTED is true on a certificate object.
-	if (isTrusted() && op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE && op != OBJECT_OP_UNWRAP) {
+	if (isTrusted() && op != OBJECT_OP_GENERATE && op != OBJECT_OP_CREATE && op != OBJECT_OP_UNWRAP && op != OBJECT_OP_DECAPSULATE) {
 		if (osobject->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) == CKO_CERTIFICATE)
 		{
 			ERROR_MSG("A trusted certificate cannot be modified");
@@ -487,7 +487,7 @@ CK_RV P11Attribute::update(Token* token, bool isPrivate, CK_VOID_PTR pValue, CK_
 
 	// For attributes that have not been explicitly excluded from modification
 	// during create/derive/generate/unwrap, we allow them to be modified.
-	if (OBJECT_OP_CREATE==op || OBJECT_OP_DERIVE==op || OBJECT_OP_GENERATE==op || OBJECT_OP_UNWRAP==op)
+	if (OBJECT_OP_CREATE==op || OBJECT_OP_DERIVE==op || OBJECT_OP_GENERATE==op || OBJECT_OP_UNWRAP==op || OBJECT_OP_DECAPSULATE==op)
 	{
 		return updateAttr(token, isPrivate, pValue, ulValueLen, op);
 	}
@@ -873,6 +873,10 @@ CK_RV P11AttrCheckValue::updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pV
 			case CKK_SHA256_HMAC:
 			case CKK_SHA384_HMAC:
 			case CKK_SHA512_HMAC:
+			case CKK_SHA3_224_HMAC:
+			case CKK_SHA3_256_HMAC:
+			case CKK_SHA3_384_HMAC:
+			case CKK_SHA3_512_HMAC:
 				key.setKeyBits(keybits);
 				key.setBitLen(keybits.size() * 8);
 				checkValue = key.getKeyCheckValue();
@@ -967,7 +971,7 @@ CK_RV P11AttrValue::updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue,
 
 	// Set the size during C_CreateObject and C_UnwrapKey.
 
-	if (op == OBJECT_OP_CREATE || op == OBJECT_OP_UNWRAP)
+	if (op == OBJECT_OP_CREATE || op == OBJECT_OP_UNWRAP || op == OBJECT_OP_DECAPSULATE)
 	{
 		// Set the CKA_VALUE_LEN
 		if (osobject->attributeExists(CKA_VALUE_LEN))
@@ -1031,6 +1035,10 @@ CK_RV P11AttrValue::updateAttr(Token *token, bool isPrivate, CK_VOID_PTR pValue,
 			case CKK_SHA256_HMAC:
 			case CKK_SHA384_HMAC:
 			case CKK_SHA512_HMAC:
+			case CKK_SHA3_224_HMAC:
+			case CKK_SHA3_256_HMAC:
+			case CKK_SHA3_384_HMAC:
+			case CKK_SHA3_512_HMAC:
 				key.setKeyBits(plaintext);
 				key.setBitLen(plaintext.size() * 8);
 				checkValue = key.getKeyCheckValue();
@@ -2308,7 +2316,7 @@ CK_RV P11AttrValueLen::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_VOID_
 {
 	// Attribute specific checks
 
-	if (op != OBJECT_OP_GENERATE && op != OBJECT_OP_DERIVE)
+	if (op != OBJECT_OP_GENERATE && op != OBJECT_OP_DERIVE && op != OBJECT_OP_DECAPSULATE)
 	{
 		return CKR_ATTRIBUTE_READ_ONLY;
 	}

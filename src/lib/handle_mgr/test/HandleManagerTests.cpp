@@ -34,8 +34,34 @@
 #include <string.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include "HandleManagerTests.h"
+#include "OSObject.h"
+#include "Session.h"
 
 CPPUNIT_TEST_SUITE_REGISTRATION(HandleManagerTests);
+
+namespace {
+
+// Minimal OSObject for tests. We only need acquire()/release() to behave
+// correctly and the pointer itself to serve as a unique identity.
+class TestOSObject : public OSObject
+{
+public:
+	bool attributeExists(CK_ATTRIBUTE_TYPE) { return false; }
+	OSAttribute getAttribute(CK_ATTRIBUTE_TYPE) { abort(); }
+	bool getBooleanValue(CK_ATTRIBUTE_TYPE, bool v) { return v; }
+	unsigned long getUnsignedLongValue(CK_ATTRIBUTE_TYPE, unsigned long v) { return v; }
+	ByteString getByteStringValue(CK_ATTRIBUTE_TYPE) { abort(); }
+	CK_ATTRIBUTE_TYPE nextAttributeType(CK_ATTRIBUTE_TYPE) { return CKA_CLASS; }
+	bool setAttribute(CK_ATTRIBUTE_TYPE, const OSAttribute&) { return true; }
+	bool deleteAttribute(CK_ATTRIBUTE_TYPE) { return true; }
+	bool isValid() { return true; }
+	bool startTransaction(Access) { return true; }
+	bool commitTransaction() { return true; }
+	bool abortTransaction() { return true; }
+	bool destroyObject() { return true; }
+};
+
+} // anonymous namespace
 
 void HandleManagerTests::setUp()
 {
@@ -51,21 +77,27 @@ void HandleManagerTests::testHandleManager()
 {
 	CPPUNIT_ASSERT(handleManager != NULL);
 
-	CK_SLOT_ID slotID = 1234; // we need a unique value
+	CK_SLOT_ID slotID = 1234;
 	CK_SESSION_HANDLE hSession;
-	CK_VOID_PTR session = &hSession; // we need a unique value
 	CK_SESSION_HANDLE hSession2;
-	CK_VOID_PTR session2 = &hSession2; // we need a unique value
 	CK_OBJECT_HANDLE hObject;
-	CK_VOID_PTR object = &hObject; // we need a unique value
 	CK_OBJECT_HANDLE hObject2;
-	CK_VOID_PTR object2 = &hObject2; // we need a unique value
 	CK_OBJECT_HANDLE hObject3;
-	CK_VOID_PTR object3 = &hObject3; // we need a unique value
 	CK_OBJECT_HANDLE hObject4;
-	CK_VOID_PTR object4 = &hObject4; // we need a unique value
 	CK_OBJECT_HANDLE hObject5;
-	CK_VOID_PTR object5 = &hObject5; // we need a unique value
+
+	// Sessions are passed as Session* but HandleManager never dereferences
+	// them, so casts from any unique pointer work.
+	Session* session  = reinterpret_cast<Session*>(&hSession);
+	Session* session2 = reinterpret_cast<Session*>(&hSession2);
+
+	// Objects must be real OSObjects because addSessionObject acquires and
+	// the cleanup paths release. Each starts at refcount=1.
+	OSObject* object  = new TestOSObject();
+	OSObject* object2 = new TestOSObject();
+	OSObject* object3 = new TestOSObject();
+	OSObject* object4 = new TestOSObject();
+	OSObject* object5 = new TestOSObject();
 
 	// Check session object management.
 	hSession = handleManager->addSession(slotID, session);
@@ -75,7 +107,7 @@ void HandleManagerTests::testHandleManager()
 	handleManager->sessionClosed(hSession);
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
 
-	// Add an object, hSession doesn't have to exists
+	// Add an object, hSession doesn't have to exist
 	hObject = handleManager->addSessionObject(slotID, 4412412, true, object);
 	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(object == handleManager->getObject(hObject));
@@ -103,76 +135,68 @@ void HandleManagerTests::testHandleManager()
 	CPPUNIT_ASSERT(session == handleManager->getSession(hSession));
 
 	// Now some magic with a couple of objects
-	// First add a public object
 	hObject = handleManager->addTokenObject(slotID, false, object);
 	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(object == handleManager->getObject(hObject));
 
-	// Now add a private object
 	hObject2 = handleManager->addTokenObject(slotID, true, object2);
 	CPPUNIT_ASSERT(hObject2 != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(object2 == handleManager->getObject(hObject2));
 
-	// Now add another private object
 	hObject3 = handleManager->addTokenObject(slotID, true, object3);
 	CPPUNIT_ASSERT(hObject3 != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(object3 == handleManager->getObject(hObject3));
 
-	// Adding the same object will return the same handle whether the object is marked private or public.
+	// Re-registering returns the same handle whether marked private or public.
 	CPPUNIT_ASSERT(hObject2 == handleManager->addTokenObject(slotID, true, object2));
-	// Because the private state of an object cannot be changed it won't be marked as public, it remains private
 	CPPUNIT_ASSERT(hObject2 == handleManager->addTokenObject(slotID, false, object2));
 
-	// It is not allowed to migrate an object from one slot to another, so here we return an invalid handle.
+	// Not allowed to migrate an object from one slot to another.
 	CPPUNIT_ASSERT(CK_INVALID_HANDLE == handleManager->addTokenObject(124121, false, object2));
 
-	// Now add another private session object
 	hObject4 = handleManager->addSessionObject(slotID, hSession, true, object4);
 	CPPUNIT_ASSERT(hObject4 != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(object4 == handleManager->getObject(hObject4));
 
-	// Now add another public session object
 	hObject5 = handleManager->addSessionObject(slotID, hSession, false, object5);
 	CPPUNIT_ASSERT(hObject5 != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5));
 
-	// Logout, now private objects should be gone.
+	// Logout: private objects (both token and session) should be gone.
 	handleManager->tokenLoggedOut(slotID);
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject));
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject2)); // should still be private and removed.
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject3));
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject4));
-	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5));
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject)); // public token
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject2)); // private token
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject3)); // private token
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject4)); // private session
+	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5)); // public session
 
-	// Create another valid session for the slot
 	hSession2 = handleManager->addSession(slotID, session2);
 	CPPUNIT_ASSERT(hSession2 != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(session2 == handleManager->getSession(hSession2));
 
 	handleManager->sessionClosed(hSession);
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject)); // token object should still be there.
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject5)); // session object should be gone.
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject)); // token object stays
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject5)); // session object gone
 
-	// Removing the last remaining session should kill the remaining handle.
+	// Closing the last session cascades into allSessionsClosed.
 	handleManager->sessionClosed(hSession2);
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject)); // should be gone now.
-
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject));
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2));
 
-
-	// Create a valid session again
-	hSession = handleManager->addSession(slotID, session);
-	CPPUNIT_ASSERT(hSession != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(session == handleManager->getSession(hSession));
-
-	// Create another valid session for the slot
+	// Bulk close
+	hSession  = handleManager->addSession(slotID, session);
 	hSession2 = handleManager->addSession(slotID, session2);
-	CPPUNIT_ASSERT(hSession2 != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(session2 == handleManager->getSession(hSession2));
-
 	handleManager->allSessionsClosed(slotID);
-
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2));
+
+	// At this point HandleManager holds no references to any of our test
+	// objects; refcount on each should be 1 (the "creating" ref we still own).
+	// Release once to delete each.
+	object->release();
+	object2->release();
+	object3->release();
+	object4->release();
+	object5->release();
 }

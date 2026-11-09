@@ -59,12 +59,10 @@ SessionObjectStore::~SessionObjectStore()
 	std::set<SessionObject*> cleanUp = allObjects;
 	allObjects.clear();
 
-	for (std::set<SessionObject*>::iterator i = cleanUp.begin(); i != cleanUp.end(); i++)
+	for (auto* obj : cleanUp)
 	{
-		if ((*i) == NULL) continue;
-
-		SessionObject* that = *i;
-		delete that;
+		if (obj == NULL) continue;
+		obj->release();
 	}
 
 	MutexFactory::i()->recycleMutex(storeMutex);
@@ -72,31 +70,29 @@ SessionObjectStore::~SessionObjectStore()
 
 int SessionObjectStore::getObjectCount()
 {
-    return objects.size();
+	return objects.size();
 }
 
 void SessionObjectStore::getObjects(std::set<OSObject*> &inObjects)
 {
-    // Make sure that no other thread is in the process of changing
-    // the object list when we return it
-    MutexLocker lock(storeMutex);
-
-    std::set<SessionObject*>::iterator it;
-    for (it=objects.begin(); it!=objects.end(); ++it) {
-        inObjects.insert(*it);
-    }
+	// Returned objects are acquire()'d under the lock; the caller must release()
+	// them. Token object stores do not acquire, so only session objects are released.
+	MutexLocker lock(storeMutex);
+	for (auto* obj : objects) {
+		obj->acquire();
+		inObjects.insert(obj);
+	}
 }
 
 void SessionObjectStore::getObjects(CK_SLOT_ID slotID, std::set<OSObject*> &inObjects)
 {
-	// Make sure that no other thread is in the process of changing
-	// the object list when we return it
+	// As above: returned objects are acquire()'d and must be release()'d by the caller.
 	MutexLocker lock(storeMutex);
-
-	std::set<SessionObject*>::iterator it;
-	for (it=objects.begin(); it!=objects.end(); ++it) {
-		if ((*it)->hasSlotID(slotID))
-			inObjects.insert(*it);
+	for (auto* obj : objects) {
+		if (obj->hasSlotID(slotID)) {
+			obj->acquire();
+			inObjects.insert(obj);
+		}
 	}
 }
 
@@ -129,90 +125,109 @@ SessionObject* SessionObjectStore::createObject(CK_SLOT_ID slotID, CK_SESSION_HA
 // Delete an object
 bool SessionObjectStore::deleteObject(SessionObject* object)
 {
-	MutexLocker lock(storeMutex);
-
-	if (objects.find(object) == objects.end())
+	SessionObject* toRelease = NULL;
 	{
-		ERROR_MSG("Cannot delete non-existent object 0x%08X", object);
-
-		return false;
+		MutexLocker lock(storeMutex);
+		if (objects.find(object) == objects.end())
+		{
+			ERROR_MSG("Cannot delete non-existent object 0x%08X", object);
+			return false;
+		}
+		object->invalidate();
+		objects.erase(object);
+		allObjects.erase(object);
+		toRelease = object;
 	}
-
-	// Invalidate the object instance
-	object->invalidate();
-
-	objects.erase(object);
-
+	if (toRelease)
+	{
+		toRelease->release();
+	}
 	return true;
 }
 
-// Indicate that a session has been closed; invalidates all objects
-// associated with this session
+// Indicate that a session has been closed - remove all its objects
 void SessionObjectStore::sessionClosed(CK_SESSION_HANDLE hSession)
 {
-	MutexLocker lock(storeMutex);
-
-	std::set<SessionObject*> checkObjects = objects;
-
-	for (std::set<SessionObject*>::iterator i = checkObjects.begin(); i != checkObjects.end(); i++)
+	std::set<SessionObject*> toRelease;
 	{
-        if ((*i)->removeOnSessionClose(hSession))
-		{
-			// Since the object remains in the allObjects set, any pointers to it will
-			// remain valid but it will no longer be returned when the set of objects
-			// is requested
-			objects.erase(*i);
+		MutexLocker lock(storeMutex);
+		for (auto it = objects.begin(); it != objects.end(); ) {
+			if ((*it)->removeOnSessionClose(hSession))
+			{
+				toRelease.insert(*it);
+				allObjects.erase(*it);
+				it = objects.erase(it);
+			}
+			else
+			{
+				++it;
+			}
 		}
-    }
+	}
+	for (auto* obj : toRelease)
+	{
+		obj->release();
+	}
 }
 
 void SessionObjectStore::allSessionsClosed(CK_SLOT_ID slotID)
 {
-	MutexLocker lock(storeMutex);
-
-	std::set<SessionObject*> checkObjects = objects;
-
-	for (std::set<SessionObject*>::iterator i = checkObjects.begin(); i != checkObjects.end(); i++)
+	std::set<SessionObject*> toRelease;
 	{
-		if ((*i)->removeOnAllSessionsClose(slotID))
-		{
-			// Since the object remains in the allObjects set, any pointers to it will
-			// remain valid but it will no longer be returned when the set of objects
-			// is requested
-			objects.erase(*i);
+		MutexLocker lock(storeMutex);
+		for (auto it = objects.begin(); it != objects.end(); ) {
+			if ((*it)->removeOnAllSessionsClose(slotID))
+			{
+				toRelease.insert(*it);
+				allObjects.erase(*it);
+				it = objects.erase(it);
+			}
+			else
+			{
+				++it;
+			}
 		}
+	}
+	for (auto* obj : toRelease)
+	{
+		obj->release();
 	}
 }
 
 void SessionObjectStore::tokenLoggedOut(CK_SLOT_ID slotID)
 {
-	MutexLocker lock(storeMutex);
-
-	std::set<SessionObject*> checkObjects = objects;
-
-	for (std::set<SessionObject*>::iterator i = checkObjects.begin(); i != checkObjects.end(); i++)
+	std::set<SessionObject*> toRelease;
 	{
-		if ((*i)->removeOnTokenLogout(slotID))
-		{
-			// Since the object remains in the allObjects set, any pointers to it will
-			// remain valid but it will no longer be returned when the set of objects
-			// is requested
-			objects.erase(*i);
+		MutexLocker lock(storeMutex);
+		for (auto it = objects.begin(); it != objects.end(); ) {
+			if ((*it)->removeOnTokenLogout(slotID)) {
+				toRelease.insert(*it);
+				allObjects.erase(*it);
+				it = objects.erase(it);
+			}
+			else
+			{
+				++it;
+			}
 		}
+	}
+	for (auto* obj : toRelease)
+	{
+		obj->release();
 	}
 }
 
 // Clear the whole store
 void SessionObjectStore::clearStore()
 {
-	MutexLocker lock(storeMutex);
-
-	objects.clear();
-	std::set<SessionObject*> clearObjects = allObjects;
-	allObjects.clear();
-
-	for (std::set<SessionObject*>::iterator i = clearObjects.begin(); i != clearObjects.end(); i++)
+	std::set<SessionObject*> clearObjects;
 	{
-		delete *i;
+		MutexLocker lock(storeMutex);
+		objects.clear();
+		clearObjects.swap(allObjects);
+	}
+	for (auto* obj : clearObjects)
+	{
+		obj->release();
 	}
 }

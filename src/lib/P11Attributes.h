@@ -38,13 +38,14 @@
 #include "Token.h"
 
 // The operation types
-#define OBJECT_OP_NONE		0x0
-#define OBJECT_OP_COPY		0x1
-#define OBJECT_OP_CREATE	0x2
-#define OBJECT_OP_DERIVE	0x3
-#define OBJECT_OP_GENERATE	0x4
-#define OBJECT_OP_SET		0x5
-#define OBJECT_OP_UNWRAP	0x6
+#define OBJECT_OP_NONE		    0x0
+#define OBJECT_OP_COPY		    0x1
+#define OBJECT_OP_CREATE	    0x2
+#define OBJECT_OP_DERIVE	    0x3
+#define OBJECT_OP_GENERATE      0x4
+#define OBJECT_OP_SET	    	0x5
+#define OBJECT_OP_UNWRAP    	0x6
+#define OBJECT_OP_DECAPSULATE	0x7
 
 class P11Attribute
 {
