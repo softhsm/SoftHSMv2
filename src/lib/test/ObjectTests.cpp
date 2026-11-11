@@ -1074,6 +1074,60 @@ void ObjectTests::testCopyObject()
 	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
 }
 
+// Issue #847: a copied RSA private key must keep all its attributes
+void ObjectTests::testCopyPrivateKey()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+	CK_OBJECT_HANDLE hPuk, hPrk, hCopy;
+
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+	rv = CRYPTOKI_F_PTR( C_Login(hSession, CKU_USER, m_userPin1, m_userPin1Length) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// Private key on the token, copied to another token object
+	rv = generateRsaKeyPair(hSession, IN_SESSION, IS_PUBLIC, ON_TOKEN, IS_PRIVATE, hPuk, hPrk);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_ATTRIBUTE copyTemplate[] = {
+		{ CKA_TOKEN, &bTrue, sizeof(bTrue) }
+	};
+	rv = CRYPTOKI_F_PTR( C_CopyObject(hSession, hPrk, copyTemplate, 1, &hCopy) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	const CK_ATTRIBUTE_TYPE types[] = { CKA_MODULUS, CKA_PUBLIC_EXPONENT, CKA_ID, CKA_SUBJECT };
+	for (size_t i = 0; i < sizeof(types)/sizeof(types[0]); i++)
+	{
+		CK_BYTE orig[1024], copy[1024];
+		CK_ATTRIBUTE a1 = { types[i], orig, sizeof(orig) };
+		CK_ATTRIBUTE a2 = { types[i], copy, sizeof(copy) };
+
+		rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hPrk, &a1, 1) );
+		CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+		CPPUNIT_ASSERT(a1.ulValueLen != 0 && a1.ulValueLen != (CK_ULONG)-1);
+		rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hCopy, &a2, 1) );
+		CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+		CPPUNIT_ASSERT_EQUAL(a1.ulValueLen, a2.ulValueLen);
+		CPPUNIT_ASSERT(memcmp(orig, copy, a1.ulValueLen) == 0);
+	}
+
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hCopy) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hPrk) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hPuk) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = CRYPTOKI_F_PTR( C_CloseSession(hSession) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+}
+
 void ObjectTests::testDestroyObject()
 {
 //    printf("\ntestDestroyObject\n");

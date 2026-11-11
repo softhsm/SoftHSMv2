@@ -1085,23 +1085,52 @@ ByteString DBObject::getByteStringValue(CK_ATTRIBUTE_TYPE type)
 	}
 }
 
-CK_ATTRIBUTE_TYPE DBObject::nextAttributeType(CK_ATTRIBUTE_TYPE)
+CK_ATTRIBUTE_TYPE DBObject::nextAttributeType(CK_ATTRIBUTE_TYPE type)
 {
 	MutexLocker lock(_mutex);
 
 	if (_connection == NULL)
 	{
 		ERROR_MSG("Object is not connected to the database.");
-		return false;
+		return CK_UNAVAILABLE_INFORMATION;
 	}
 	if (_objectId == 0)
 	{
 		ERROR_MSG("Cannot get next attribute for invalid object.");
-		return false;
+		return CK_UNAVAILABLE_INFORMATION;
 	}
 
-	// FIXME: implement for C_CopyObject
-	return CKA_CLASS;
+	// Find the smallest attribute type stored for this object that is greater than
+	// the given type, across all attribute tables. Wraps to CKA_CLASS (0) when none is
+	// left, as the other OSObject implementations do. Errors are reported as
+	// CK_UNAVAILABLE_INFORMATION so callers can tell them from the end of the list.
+	DB::Statement statement = _connection->prepare(
+		"select min(type) from ("
+		"select type from attribute_text where object_id=%lld union all "
+		"select type from attribute_integer where object_id=%lld union all "
+		"select type from attribute_binary where object_id=%lld union all "
+		"select type from attribute_array where object_id=%lld union all "
+		"select type from attribute_boolean where object_id=%lld union all "
+		"select type from attribute_datetime where object_id=%lld union all "
+		"select type from attribute_real where object_id=%lld"
+		") where type>%lu",
+		_objectId, _objectId, _objectId, _objectId, _objectId, _objectId, _objectId,
+		type);
+	if (!statement.isValid())
+	{
+		ERROR_MSG("Preparing next attribute statement failed");
+		return CK_UNAVAILABLE_INFORMATION;
+	}
+
+	DB::Result result = _connection->perform(statement);
+	if (!result.isValid())
+	{
+		ERROR_MSG("Querying next attribute failed");
+		return CK_UNAVAILABLE_INFORMATION;
+	}
+
+	// min() yields NULL (read as 0 = CKA_CLASS) when there is no further attribute
+	return (CK_ATTRIBUTE_TYPE)result.getLongLong(1);
 }
 
 // Set the specified attribute

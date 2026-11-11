@@ -71,7 +71,8 @@ public:
 	virtual unsigned long getUnsignedLongValue(CK_ATTRIBUTE_TYPE type, unsigned long val) = 0;
 	virtual ByteString getByteStringValue(CK_ATTRIBUTE_TYPE type) = 0;
 
-	// Retrieve the next attribute type
+	// Retrieve the next attribute type; CKA_CLASS (= 0) when there are no more
+	// attributes, CK_UNAVAILABLE_INFORMATION when enumeration failed
 	virtual CK_ATTRIBUTE_TYPE nextAttributeType(CK_ATTRIBUTE_TYPE type) = 0;
 
 	// Set the specified attribute

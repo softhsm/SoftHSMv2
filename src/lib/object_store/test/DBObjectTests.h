@@ -68,6 +68,8 @@ class test_a_dbobject_with_an_object : public test_a_dbobject
 	CPPUNIT_TEST(should_store_mixed_attributes);
 	CPPUNIT_TEST(should_store_double_attributes);
 	CPPUNIT_TEST(can_refresh_attributes);
+	CPPUNIT_TEST(should_enumerate_attribute_types);
+	CPPUNIT_TEST(should_report_attribute_enumeration_errors);
 	CPPUNIT_TEST(should_cleanup_statements_during_transactions);
 	CPPUNIT_TEST(should_use_transactions);
 	CPPUNIT_TEST(should_fail_to_delete);
@@ -85,6 +87,8 @@ public:
 	void should_store_mixed_attributes();
 	void should_store_double_attributes();
 	void can_refresh_attributes();
+	void should_enumerate_attribute_types();
+	void should_report_attribute_enumeration_errors();
 	void should_cleanup_statements_during_transactions();
 	void should_use_transactions();
 	void should_fail_to_delete();
