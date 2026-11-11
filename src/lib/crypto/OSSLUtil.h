@@ -76,6 +76,10 @@ namespace OSSL
 #ifdef WITH_ML_DSA
 	const char* mldsaParameterSet2Name(unsigned long parameterSet);
 #endif
+#ifdef WITH_SLH_DSA
+	const char* slhdsaParameterSet2Name(unsigned long parameterSet);
+	unsigned long pkey2slhdsaParameterSet(const EVP_PKEY* key);
+#endif
 #ifdef WITH_ML_KEM
 	const char* mlkemParameterSet2Name(unsigned long parameterSet);
 #endif

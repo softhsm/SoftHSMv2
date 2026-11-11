@@ -21,6 +21,7 @@ class MLDSATests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testKeyGeneration);
 	CPPUNIT_TEST(testSerialisation);
 	CPPUNIT_TEST(testPKCS8);
+	CPPUNIT_TEST(testMechanismParametersLifetime);
 	CPPUNIT_TEST(testSigningVerifying);
 	CPPUNIT_TEST(testSigningMultiPartVerifying);
     CPPUNIT_TEST(testSigningMultiPartVerifyingWithContext);
@@ -54,6 +55,7 @@ public:
 	void testKeyGeneration();
 	void testSerialisation();
 	void testPKCS8();
+	void testMechanismParametersLifetime();
 	void testSigningVerifying();
 	void testSigningMultiPartVerifying();
     void testSigningMultiPartVerifyingWithContext();

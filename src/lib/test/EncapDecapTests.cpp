@@ -13,6 +13,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include "EncapDecapTests.h"
+#if defined(WITH_ML_KEM) && !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+#include <dirent.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+/** Count live descriptors, returning false when descriptor enumeration is unavailable. */
+static bool openDescriptorCount(size_t& count)
+{
+	DIR* directory = opendir("/dev/fd");
+	if (directory == NULL) return false;
+	count = 0;
+	for (dirent* entry = readdir(directory); entry != NULL; entry = readdir(directory))
+	{
+		char* end;
+		long fd = strtol(entry->d_name, &end, 10);
+		if (*end == '\0' && fd >= 0 && fcntl(static_cast<int>(fd), F_GETFD) != -1) ++count;
+	}
+	closedir(directory);
+	return true;
+}
+#endif
 
 #ifdef WITH_ML_KEM
 const CK_BBOOL IN_SESSION = CK_FALSE;
@@ -675,4 +696,117 @@ void EncapDecapTests::testMLKEMEncapsulationDecapsulationWithValueLenWrong()
 	CPPUNIT_ASSERT(rv == CKR_OK);
 }
 
+#endif
+
+#ifdef WITH_ML_KEM
+/** Check truncated ML-KEM secret values and their SHA-1 check values on both sides. */
+void EncapDecapTests::testMLKEMGenericSecretCheckValue()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_OBJECT_HANDLE publicKey, privateKey;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), generateMLKEM(CKP_ML_KEM_512, session,
+		IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PRIVATE, publicKey, privateKey));
+	CK_MECHANISM mechanism = {CKM_ML_KEM, NULL, 0};
+	CK_OBJECT_CLASS objectClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE type = CKK_GENERIC_SECRET;
+	CK_BBOOL yes = CK_TRUE, no = CK_FALSE;
+	for (CK_ULONG length : {16, 24, 32})
+	{
+		CK_ATTRIBUTE attributes[] = {
+			{CKA_CLASS, &objectClass, sizeof(objectClass)},
+			{CKA_KEY_TYPE, &type, sizeof(type)},
+			{CKA_VALUE_LEN, &length, sizeof(length)},
+			{CKA_SENSITIVE, &no, sizeof(no)},
+			{CKA_EXTRACTABLE, &yes, sizeof(yes)}
+		};
+		CK_BYTE ciphertext[2048];
+		CK_ULONG ciphertextLength = sizeof(ciphertext);
+		CK_OBJECT_HANDLE encapsulated = CK_INVALID_HANDLE, decapsulated = CK_INVALID_HANDLE;
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ARGUMENTS_BAD), CRYPTOKI_F_PTR(C_EncapsulateKey(session,
+			&mechanism, publicKey, attributes, 5, ciphertext, NULL, &encapsulated)));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_EncapsulateKey(session,
+			&mechanism, publicKey, attributes, 5, ciphertext, &ciphertextLength, &encapsulated)));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
+			&mechanism, privateKey, attributes, 5, ciphertext, ciphertextLength, &decapsulated)));
+		CK_BYTE previousValue[32] = {0};
+		for (CK_OBJECT_HANDLE key : {encapsulated, decapsulated})
+		{
+			CK_BYTE value[32], kcv[3], digest[20];
+			CK_ATTRIBUTE result[] = {{CKA_VALUE, value, sizeof(value)}, {CKA_CHECK_VALUE, kcv, sizeof(kcv)}};
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, result, 2)));
+			CPPUNIT_ASSERT_EQUAL(length, result[0].ulValueLen);
+			CPPUNIT_ASSERT_EQUAL(CK_ULONG(3), result[1].ulValueLen);
+			CK_MECHANISM sha1 = {CKM_SHA_1, NULL, 0};
+			CK_ULONG digestLength = sizeof(digest);
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DigestInit(session, &sha1)));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Digest(session, value, length, digest, &digestLength)));
+			CPPUNIT_ASSERT(memcmp(kcv, digest, sizeof(kcv)) == 0);
+			if (key == encapsulated) memcpy(previousValue, value, length);
+			else CPPUNIT_ASSERT(memcmp(previousValue, value, length) == 0);
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+		}
+	}
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+
+/** Ensure rejected check-value templates release token transactions and invalidate output handles. */
+void EncapDecapTests::testMLKEMInvalidCheckValue()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_OBJECT_HANDLE publicKey, privateKey;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), generateMLKEM(CKP_ML_KEM_512, session,
+		IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PRIVATE, publicKey, privateKey));
+	CK_MECHANISM mechanism = {CKM_ML_KEM, NULL, 0};
+	CK_OBJECT_CLASS objectClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE type = CKK_GENERIC_SECRET;
+	CK_BBOOL yes = CK_TRUE;
+	CK_BYTE checkValue[3] = {1, 2, 3};
+	CK_ATTRIBUTE attributes[] = {
+		{CKA_CLASS, &objectClass, sizeof(objectClass)},
+		{CKA_KEY_TYPE, &type, sizeof(type)},
+		{CKA_TOKEN, &yes, sizeof(yes)},
+		{CKA_CHECK_VALUE, checkValue, sizeof(checkValue)}
+	};
+	CK_BYTE ciphertext[2048];
+	CK_ULONG ciphertextLength = sizeof(ciphertext);
+	CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_EncapsulateKey(session,
+		&mechanism, publicKey, attributes, 4, ciphertext, &ciphertextLength, &key)));
+	CPPUNIT_ASSERT_EQUAL(CK_OBJECT_HANDLE(CK_INVALID_HANDLE), key);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_EncapsulateKey(session,
+		&mechanism, publicKey, attributes, 3, ciphertext, &ciphertextLength, &key)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+	// Warm up decapsulation before measuring resources held by the rejected object.
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
+		&mechanism, privateKey, attributes, 3, ciphertext, ciphertextLength, &key)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+#if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+	size_t descriptorsBefore = 0;
+	const bool haveDescriptorCount = openDescriptorCount(descriptorsBefore);
+#endif
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
+		&mechanism, privateKey, attributes, 4, ciphertext, ciphertextLength, &key)));
+#if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+	// An un-aborted ObjectFile transaction leaks its lock descriptor, even after deletion.
+	size_t descriptorsAfter = 0;
+	if (haveDescriptorCount && openDescriptorCount(descriptorsAfter))
+		CPPUNIT_ASSERT_EQUAL(descriptorsBefore, descriptorsAfter);
+#endif
+	CPPUNIT_ASSERT_EQUAL(CK_OBJECT_HANDLE(CK_INVALID_HANDLE), key);
+	// Valid decapsulation must still work after rejecting the malformed template.
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DecapsulateKey(session,
+		&mechanism, privateKey, attributes, 3, ciphertext, ciphertextLength, &key)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
 #endif

@@ -2488,3 +2488,38 @@ void ObjectTests::testCreateSecretKey()
 	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
 }
 
+
+/** A rejected token template must not leave a discoverable, unowned object. */
+void ObjectTests::testFailedCreateObjectCleanup()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_BBOOL yes = CK_TRUE, no = CK_FALSE;
+	CK_OBJECT_CLASS objectClass = CKO_DATA;
+	CK_ATTRIBUTE attributes[] = {
+		{CKA_CLASS, &objectClass, sizeof(objectClass)},
+		{CKA_TOKEN, &yes, sizeof(yes)},
+		{CKA_PRIVATE, &no, sizeof(no)},
+		{CKA_KEY_TYPE, &objectClass, sizeof(objectClass)} // Invalid for a data object.
+	};
+	auto countObjects = [&]() {
+		CK_ULONG count = 0, found;
+		CK_OBJECT_HANDLE objects[16];
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_FindObjectsInit(session, NULL, 0)));
+		do {
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_FindObjects(session, objects, 16, &found)));
+			count += found;
+		} while (found != 0);
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_FindObjectsFinal(session)));
+		return count;
+	};
+	CK_ULONG before = countObjects();
+	CK_OBJECT_HANDLE object = CK_INVALID_HANDLE;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_TYPE_INVALID), CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &object)));
+	CPPUNIT_ASSERT_EQUAL(before, countObjects());
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}

@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <utility>
 #include <vector>
+#include <memory>
 #include <cppunit/extensions/HelperMacros.h>
 #include "MLDSATests.h"
 #include "CryptoFactory.h"
@@ -978,4 +979,57 @@ void MLDSATests::testSigningVerifyingDeterministicWithContextTooLong()
 	mldsa->recycleParameters(p);
 }
 
+
+namespace {
+class CountedMLDSAParameters : public MLDSAMechanismParam
+{
+public:
+	CountedMLDSAParameters(int& count) : count(count) { ++count; }
+	~CountedMLDSAParameters() { --count; }
+	CountedMLDSAParameters* clone() const
+	{
+		CountedMLDSAParameters* result = new CountedMLDSAParameters(count);
+		result->hedgeType = hedgeType;
+		result->additionalContext = additionalContext;
+		return result;
+	}
+private:
+	int& count;
+};
+}
+
+/** Check that verification parameters are freed exactly once on completion and early destruction. */
+void MLDSATests::testMechanismParametersLifetime()
+{
+	MLDSAParameters parameters;
+	parameters.setParameterSet(CKP_ML_DSA_44);
+	AsymmetricKeyPair* generatedPair = NULL;
+	bool generated = mldsa->generateKeyPair(&generatedPair, &parameters);
+	auto recycle = [this](AsymmetricKeyPair* key) { mldsa->recycleKeyPair(key); };
+	std::unique_ptr<AsymmetricKeyPair, decltype(recycle)> pair(generatedPair, recycle);
+	CPPUNIT_ASSERT(generated);
+	int liveParameters = 0;
+	{
+		CountedMLDSAParameters context(liveParameters);
+		context.additionalContext = ByteString("010203");
+		ByteString message("aabbcc"), signature;
+		CPPUNIT_ASSERT(mldsa->sign(pair->getPrivateKey(), message, signature, AsymMech::MLDSA, &context));
+		for (bool finish : {false, true})
+		{
+			{
+				std::unique_ptr<AsymmetricAlgorithm> algorithm(CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::MLDSA));
+				CPPUNIT_ASSERT(algorithm->verifyInit(pair->getPublicKey(), AsymMech::MLDSA, &context));
+				CPPUNIT_ASSERT_EQUAL(2, liveParameters);
+				if (finish)
+				{
+					CPPUNIT_ASSERT(algorithm->verifyUpdate(message));
+					CPPUNIT_ASSERT(algorithm->verifyFinal(signature));
+					CPPUNIT_ASSERT_EQUAL(1, liveParameters);
+				}
+			}
+			CPPUNIT_ASSERT_EQUAL(1, liveParameters);
+		}
+	}
+	CPPUNIT_ASSERT_EQUAL(0, liveParameters);
+}
 #endif

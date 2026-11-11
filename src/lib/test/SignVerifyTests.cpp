@@ -43,6 +43,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "SignVerifyTests.h"
+#if defined(WITH_SLH_DSA) && !defined(P11_SHARED_LIBRARY)
+#include <openssl/evp.h>
+#include <openssl/err.h>
+#endif
+#ifdef _WIN32
+#include "setenv.h"
+#endif
 
 // CKA_TOKEN
 const CK_BBOOL ON_TOKEN = CK_TRUE;
@@ -271,6 +278,54 @@ CK_RV SignVerifyTests::generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hS
 }
 #endif
 
+#ifdef WITH_SLH_DSA
+/** Generate an SLH-DSA pair with the requested parameter set and object visibility. */
+CK_RV SignVerifyTests::generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk) {
+	CK_MECHANISM mechanism = { CKM_SLH_DSA_KEY_PAIR_GEN, NULL_PTR, 0 };
+	CK_KEY_TYPE keyType = CKK_SLH_DSA;
+	CK_BYTE label[] = { 0x12, 0x34 }; // dummy
+	CK_BYTE id[] = { 123 } ; // dummy
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+
+	CK_ATTRIBUTE pukAttribs[] =
+	{
+		{ CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet) },
+		{ CKA_LABEL, &label[0], sizeof(label) },
+		{ CKA_ID, &id[0], sizeof(id) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_VERIFY, &bTrue, sizeof(bTrue) },
+		{ CKA_ENCRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_WRAP, &bFalse, sizeof(bFalse) },
+		{ CKA_TOKEN, &bTokenPuk, sizeof(bTokenPuk) },
+		{ CKA_PRIVATE, &bPrivatePuk, sizeof(bPrivatePuk) }
+	};
+	CK_ATTRIBUTE prkAttribs[] =
+	{
+		{ CKA_LABEL, &label[0], sizeof(label) },
+		{ CKA_ID, &id[0], sizeof(id) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_SIGN, &bTrue, sizeof(bTrue) },
+		{ CKA_DECRYPT, &bFalse, sizeof(bFalse) },
+		{ CKA_UNWRAP, &bFalse, sizeof(bFalse) },
+		{ CKA_SENSITIVE, &bTrue, sizeof(bTrue) },
+		{ CKA_TOKEN, &bTokenPrk, sizeof(bTokenPrk) },
+		{ CKA_PRIVATE, &bPrivatePrk, sizeof(bPrivatePrk) },
+		{ CKA_EXTRACTABLE, &bFalse, sizeof(bFalse) }
+	};
+
+	hPuk = CK_INVALID_HANDLE;
+	hPrk = CK_INVALID_HANDLE;
+	return CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &mechanism,
+							 pukAttribs, sizeof(pukAttribs)/sizeof(CK_ATTRIBUTE),
+							 prkAttribs, sizeof(prkAttribs)/sizeof(CK_ATTRIBUTE),
+							 &hPuk, &hPrk) );
+}
+#endif
+
+
+
+/** Sign and verify a complete message, then reject changed data and mismatched SLH-DSA contexts. */
 void SignVerifyTests::signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param /* = NULL_PTR */, CK_ULONG paramLen /* = 0 */)
 {
 	CK_RV rv;
@@ -291,6 +346,13 @@ void SignVerifyTests::signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSI
 
 	rv = CRYPTOKI_F_PTR( C_Verify(hSession,data,sizeof(data),signature,ulSignatureLen) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
+
+#ifdef WITH_SLH_DSA
+	if (mechanismType == CKM_SLH_DSA && param != NULL &&
+	    static_cast<CK_SIGN_ADDITIONAL_CONTEXT*>(param)->ulContextLen > 0)
+		verifySLHDSAContexts(hSession, hPublicKey, data, sizeof(data), signature,
+			ulSignatureLen, static_cast<CK_SIGN_ADDITIONAL_CONTEXT*>(param), false);
+#endif
 
 	// verify again, but now change the input that is being signed.
 	rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession,&mechanism,hPublicKey) );
@@ -375,18 +437,21 @@ void SignVerifyTests::signVerifySingleData(CK_BYTE_PTR data, size_t dataSize, CK
 	data[0] = origByte;
 }
 
+/** Sign and verify with different update boundaries and reject altered data or contexts. */
 void SignVerifyTests::signVerifyMulti(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param /* = NULL_PTR */, CK_ULONG paramLen /* = 0 */)
 {
 	CK_RV rv;
 	CK_MECHANISM mechanism = { mechanismType, param, paramLen };
 	CK_BYTE data[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B,0x0C, 0x0D, 0x0F };
-	CK_BYTE signature[256];
+	CK_BYTE signature[64 * 1024];
 	CK_ULONG ulSignatureLen = 0;
 
 	rv = CRYPTOKI_F_PTR( C_SignInit(hSession,&mechanism,hPrivateKey) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
-	rv =CRYPTOKI_F_PTR( C_SignUpdate(hSession,data,sizeof(data)) );
+	rv =CRYPTOKI_F_PTR( C_SignUpdate(hSession,data,5) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_SignUpdate(hSession,data+5,sizeof(data)-5) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
 	ulSignatureLen = sizeof(signature);
@@ -396,18 +461,29 @@ void SignVerifyTests::signVerifyMulti(CK_MECHANISM_TYPE mechanismType, CK_SESSIO
 	rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession,&mechanism,hPublicKey) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
-	rv = CRYPTOKI_F_PTR( C_VerifyUpdate(hSession,data,sizeof(data)) );
+	rv = CRYPTOKI_F_PTR( C_VerifyUpdate(hSession,data,7) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_VerifyUpdate(hSession,data+7,sizeof(data)-7) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
 	rv = CRYPTOKI_F_PTR( C_VerifyFinal(hSession,signature,ulSignatureLen) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
+
+#ifdef WITH_SLH_DSA
+	if (mechanismType == CKM_SLH_DSA && param != NULL &&
+	    static_cast<CK_SIGN_ADDITIONAL_CONTEXT*>(param)->ulContextLen > 0)
+		verifySLHDSAContexts(hSession, hPublicKey, data, sizeof(data), signature,
+			ulSignatureLen, static_cast<CK_SIGN_ADDITIONAL_CONTEXT*>(param), true);
+#endif
 
 	// verify again, but now change the input that is being signed.
 	rv = CRYPTOKI_F_PTR( C_VerifyInit(hSession,&mechanism,hPublicKey) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
 	data[0] = 0xff;
-	rv = CRYPTOKI_F_PTR( C_VerifyUpdate(hSession,data,sizeof(data)) );
+	rv = CRYPTOKI_F_PTR( C_VerifyUpdate(hSession,data,7) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_VerifyUpdate(hSession,data+7,sizeof(data)-7) );
 	CPPUNIT_ASSERT(rv==CKR_OK);
 
 	rv = CRYPTOKI_F_PTR( C_VerifyFinal(hSession,signature,ulSignatureLen) );
@@ -1379,6 +1455,7 @@ void SignVerifyTests::testEdSignVerifyInvalidParams()
 #endif
 
 #ifdef WITH_ML_DSA
+/** Exercise ML-DSA one-shot and multipart signatures for session and token keys with contexts. */
 void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
 {
 	CK_RV rv;
@@ -1427,45 +1504,195 @@ void SignVerifyTests::testMLDSASignVerify(CK_ULONG parameterSet)
 	rv = generateMLDSA(parameterSet,hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
 
 	// Private Session Keys
 	rv = generateMLDSA(parameterSet,hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
 
 	// Public Token Keys
 	rv = generateMLDSA(parameterSet,hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
 
 	// Private Token Keys
 	rv = generateMLDSA(parameterSet, hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk);
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
 	signVerifySingle(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_ML_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+}
+
+#endif
+
+#ifdef WITH_SLH_DSA
+/** Exercise SLH-DSA signing modes and contexts for session and token keys. */
+void SignVerifyTests::testSLHDSASignVerify(CK_ULONG parameterSet)
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSessionRO;
+	CK_SESSION_HANDLE hSessionRW;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	// Open read-only session on when the token is not initialized should fail
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, &hSessionRO) );
+	CPPUNIT_ASSERT(rv == CKR_CRYPTOKI_NOT_INITIALIZED);
+
+	// Initialize the library and start the test.
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Open read-only session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, &hSessionRO) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Open read-write session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSessionRW) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Login USER into the sessions so we can create a private objects
+	rv = CRYPTOKI_F_PTR( C_Login(hSessionRO,CKU_USER,m_userPin1,m_userPin1Length) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_OBJECT_HANDLE hPuk = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE hPrk = CK_INVALID_HANDLE;
+
+	CK_BYTE data[] = "context-context-context";
+	CK_ULONG dataSize = (CK_ULONG)(sizeof(data) - 1); // exclude trailing NULL
+
+	CK_SIGN_ADDITIONAL_CONTEXT params[] =
+	{
+		{ CKH_HEDGE_PREFERRED,  NULL,   0  },
+		{ CKH_HEDGE_PREFERRED,  data,   dataSize  },
+		{ CKH_HEDGE_REQUIRED,  NULL,   0  },
+		{ CKH_HEDGE_REQUIRED,  data,   dataSize  },
+		{ CKH_DETERMINISTIC_REQUIRED,  NULL,   0  },
+		{ CKH_DETERMINISTIC_REQUIRED,  data,   dataSize  },
+	};
+
+	// Public Session keys
+	rv = generateSLHDSA(parameterSet,hSessionRW,IN_SESSION,IS_PUBLIC,IN_SESSION,IS_PUBLIC,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+
+	// Private Session Keys
+	rv = generateSLHDSA(parameterSet,hSessionRW,IN_SESSION,IS_PRIVATE,IN_SESSION,IS_PRIVATE,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+
+	// Public Token Keys
+	rv = generateSLHDSA(parameterSet,hSessionRW,ON_TOKEN,IS_PUBLIC,ON_TOKEN,IS_PUBLIC,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+
+	// Private Token Keys
+	rv = generateSLHDSA(parameterSet, hSessionRW,ON_TOKEN,IS_PRIVATE,ON_TOKEN,IS_PRIVATE,hPuk,hPrk);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk);
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[0], sizeof(params[0]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[1], sizeof(params[1]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[2], sizeof(params[2]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[3], sizeof(params[3]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[4], sizeof(params[4]));
+	signVerifySingle(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
+	signVerifyMulti(CKM_SLH_DSA, hSessionRO, hPuk,hPrk, &params[5], sizeof(params[5]));
 }
 #endif
 
@@ -2031,3 +2258,237 @@ void SignVerifyTests::testVerifyInitWrongKeyType()
 	C_Logout(hSession);
 	C_CloseSession(hSession);
 }
+
+#ifdef WITH_SLH_DSA
+/** Reject changed or absent signature contexts while ignoring the verification hedge flag. */
+void SignVerifyTests::verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE publicKey,
+	CK_BYTE_PTR data, CK_ULONG dataLen, CK_BYTE_PTR signature, CK_ULONG signatureLen,
+	CK_SIGN_ADDITIONAL_CONTEXT* context, bool multipart)
+{
+	CK_BYTE differentContext[255];
+	CPPUNIT_ASSERT(context->ulContextLen > 0 && context->ulContextLen <= sizeof(differentContext));
+	memcpy(differentContext, context->pContext, context->ulContextLen);
+	differentContext[0] ^= 1;
+	CK_SIGN_ADDITIONAL_CONTEXT changed = *context;
+	changed.pContext = differentContext;
+	CK_SIGN_ADDITIONAL_CONTEXT ignoredHedge = *context;
+	ignoredHedge.hedgeVariant = static_cast<CK_HEDGE_TYPE>(~0UL);
+	CK_MECHANISM mechanisms[] = {
+		{ CKM_SLH_DSA, &changed, sizeof(changed) },
+		{ CKM_SLH_DSA, NULL, 0 },
+		{ CKM_SLH_DSA, &ignoredHedge, sizeof(ignoredHedge) }
+	};
+	for (size_t i = 0; i < 3; ++i)
+	{
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_VerifyInit(session, &mechanisms[i], publicKey)));
+		CK_RV rv;
+		if (multipart)
+		{
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_VerifyUpdate(session, data, 3)));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_VerifyUpdate(session, data + 3, dataLen - 3)));
+			rv = CRYPTOKI_F_PTR(C_VerifyFinal(session, signature, signatureLen));
+		}
+		else
+			rv = CRYPTOKI_F_PTR(C_Verify(session, data, dataLen, signature, signatureLen));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(i == 2 ? CKR_OK : CKR_SIGNATURE_INVALID), rv);
+	}
+}
+
+/** Validate imported key lengths and bytes, sensitive readback, and use of the imported pair. */
+void SignVerifyTests::testSLHDSAImportLengths()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_KEY_TYPE type = CKK_SLH_DSA;
+	CK_BBOOL yes = CK_TRUE, no = CK_FALSE;
+	for (CK_ULONG parameterSet : {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHA2_192S, CKP_SLH_DSA_SHAKE_256F})
+	{
+		CK_MECHANISM generation = {CKM_SLH_DSA_KEY_PAIR_GEN, NULL, 0};
+		CK_ATTRIBUTE publicAttributes[] = {{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)}};
+		CK_ATTRIBUTE privateAttributes[] = {
+			{CKA_EXTRACTABLE, &yes, sizeof(yes)},
+			{CKA_SENSITIVE, &no, sizeof(no)}
+		};
+		CK_OBJECT_HANDLE generated[2];
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session, &generation,
+			publicAttributes, 1, privateAttributes, 2, &generated[0], &generated[1])));
+		CK_BYTE raw[2][129] = {};
+		CK_ULONG publicLength = parameterSet == CKP_SLH_DSA_SHA2_128S ? 32 :
+			(parameterSet == CKP_SLH_DSA_SHA2_192S ? 48 : 64);
+		for (size_t i = 0; i < 2; ++i)
+		{
+			CK_ATTRIBUTE value = {CKA_VALUE, raw[i], sizeof(raw[i])};
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, generated[i], &value, 1)));
+			CPPUNIT_ASSERT_EQUAL(i == 0 ? publicLength : 2 * publicLength, value.ulValueLen);
+			// Remove the source pair so signing can only exercise imported objects.
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, generated[i])));
+		}
+		for (CK_BBOOL isPrivate : {CK_FALSE, CK_TRUE})
+		{
+			CK_OBJECT_HANDLE keys[2] = {CK_INVALID_HANDLE, CK_INVALID_HANDLE};
+			for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
+			{
+				size_t index = objectClass == CKO_PUBLIC_KEY ? 0 : 1;
+				CK_ULONG length = index == 0 ? publicLength : 2 * publicLength;
+				for (int delta : {-1, 0, 1})
+				{
+					CK_ATTRIBUTE attributes[] = {
+						{CKA_CLASS, &objectClass, sizeof(objectClass)},
+						{CKA_KEY_TYPE, &type, sizeof(type)},
+						{CKA_PRIVATE, &isPrivate, sizeof(isPrivate)},
+						{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
+						{CKA_VALUE, raw[index], length + delta},
+						{index == 0 ? CKA_VERIFY : CKA_SIGN, &yes, sizeof(yes)},
+						{CKA_EXTRACTABLE, &yes, sizeof(yes)},
+						{CKA_SENSITIVE, &no, sizeof(no)}
+					};
+					CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+					CK_ULONG attributeCount = index == 0 ? 6 : 8;
+					CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, attributeCount, &key));
+					CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
+					if (rv == CKR_OK)
+					{
+						keys[index] = key;
+						CK_BYTE imported[sizeof(raw[index])] = {0};
+						CK_ATTRIBUTE value = {CKA_VALUE, imported, sizeof(imported)};
+						CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &value, 1)));
+						CPPUNIT_ASSERT_EQUAL(length, value.ulValueLen);
+						CPPUNIT_ASSERT(memcmp(raw[index], imported, length) == 0);
+						if (objectClass == CKO_PRIVATE_KEY)
+						{
+							attributes[7].pValue = &yes;
+							CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CreateObject(session, attributes, attributeCount, &key)));
+							CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_SENSITIVE), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &value, 1)));
+							CPPUNIT_ASSERT_EQUAL(CK_ULONG(CK_UNAVAILABLE_INFORMATION), value.ulValueLen);
+							CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+						}
+					}
+				}
+			}
+			signVerifySingle(CKM_SLH_DSA, session, keys[0], keys[1]);
+			for (CK_OBJECT_HANDLE key : keys)
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+		}
+	}
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+
+/** Report malformed wrapped key data separately from invalid unwrap-template attributes. */
+void SignVerifyTests::testSLHDSAInvalidWrappedKey()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_BBOOL yes = CK_TRUE;
+	CK_OBJECT_CLASS secretClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE aesType = CKK_AES;
+	CK_BYTE aesValue[16] = {1};
+	CK_ATTRIBUTE aesTemplate[] = {
+		{CKA_CLASS, &secretClass, sizeof(secretClass)},
+		{CKA_KEY_TYPE, &aesType, sizeof(aesType)},
+		{CKA_VALUE, aesValue, sizeof(aesValue)},
+		{CKA_ENCRYPT, &yes, sizeof(yes)},
+		{CKA_UNWRAP, &yes, sizeof(yes)}
+	};
+	CK_OBJECT_HANDLE aesKey, imported = CK_INVALID_HANDLE;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CreateObject(session, aesTemplate, 5, &aesKey)));
+	CK_BYTE iv[16] = {0}, invalidPKCS8[] = {0x30, 0x00}, ciphertext[32];
+	CK_MECHANISM mechanism = {CKM_AES_CBC_PAD, iv, sizeof(iv)};
+	CK_ULONG ciphertextLength = sizeof(ciphertext);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_EncryptInit(session, &mechanism, aesKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Encrypt(session,
+		invalidPKCS8, sizeof(invalidPKCS8), ciphertext, &ciphertextLength)));
+	CK_OBJECT_CLASS privateClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE slhdsaType = CKK_SLH_DSA;
+	CK_ULONG parameterSet = CKP_SLH_DSA_SHA2_128F;
+	CK_ATTRIBUTE keyTemplate[] = {
+		{CKA_CLASS, &privateClass, sizeof(privateClass)},
+		{CKA_KEY_TYPE, &slhdsaType, sizeof(slhdsaType)},
+		{CKA_PARAMETER_SET, &parameterSet, 1}
+	};
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_WRAPPED_KEY_INVALID), CRYPTOKI_F_PTR(C_UnwrapKey(session,
+		&mechanism, aesKey, ciphertext, ciphertextLength, keyTemplate, 2, &imported)));
+	CPPUNIT_ASSERT_EQUAL(CK_OBJECT_HANDLE(CK_INVALID_HANDLE), imported);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_UnwrapKey(session,
+		&mechanism, aesKey, ciphertext, ciphertextLength, keyTemplate, 3, &imported)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, aesKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+
+/** Distinguish missing, unsupported and mismatched SLH-DSA parameter sets. */
+void SignVerifyTests::testSLHDSAParameterSets()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_MECHANISM mechanism = {CKM_SLH_DSA_KEY_PAIR_GEN, NULL, 0};
+	CK_ULONG publicParameter = 0, privateParameter = 0;
+	CK_ATTRIBUTE publicTemplate = {CKA_PARAMETER_SET, &publicParameter, sizeof(publicParameter)};
+	CK_ATTRIBUTE privateTemplate = {CKA_PARAMETER_SET, &privateParameter, sizeof(privateParameter)};
+	CK_OBJECT_HANDLE publicKey = CK_INVALID_HANDLE, privateKey = CK_INVALID_HANDLE;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCOMPLETE), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 0, &privateTemplate, 0, &publicKey, &privateKey)));
+	for (CK_ULONG publicCount : {0UL, 1UL})
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_PARAMETER_SET_NOT_SUPPORTED), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+			&mechanism, &publicTemplate, publicCount, &privateTemplate, 1 - publicCount, &publicKey, &privateKey)));
+	privateParameter = CKP_SLH_DSA_SHA2_128F;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCONSISTENT), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 1, &privateTemplate, 1, &publicKey, &privateKey)));
+	publicParameter = privateParameter;
+	for (CK_ULONG privateCount : {0UL, 1UL})
+	{
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+			&mechanism, &publicTemplate, 1, &privateTemplate, privateCount, &publicKey, &privateKey)));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, publicKey)));
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, privateKey)));
+	}
+#ifndef P11_SHARED_LIBRARY
+	// Restrict local OpenSSL fetches without changing a separately loaded module's configuration.
+	char* properties = EVP_get1_default_properties(NULL);
+	int configured = EVP_set_default_properties(NULL, "provider=softhsm-test-missing-provider");
+	publicParameter = CKP_SLH_DSA_SHA2_128F;
+	CK_RV unavailable = CRYPTOKI_F_PTR(C_GenerateKeyPair(session, &mechanism,
+		&publicTemplate, 1, &privateTemplate, 0, &publicKey, &privateKey));
+	int restored = EVP_set_default_properties(NULL, properties);
+	OPENSSL_free(properties);
+	ERR_clear_error();
+	CPPUNIT_ASSERT_EQUAL(1, configured);
+	CPPUNIT_ASSERT_EQUAL(1, restored);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_PARAMETER_SET_NOT_SUPPORTED), unavailable);
+#endif
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+
+#ifndef P11_SHARED_LIBRARY
+/** Check that the local RSA-only mechanism policy rejects SLH-DSA key generation. */
+void SignVerifyTests::testSLHDSAMechanismPolicy()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	// The existing allow-list fixture enables only RSA mechanisms.
+	setenv("SOFTHSM2_CONF", "./softhsm2-mech.conf", 1);
+	CK_RV init = CRYPTOKI_F_PTR(C_Initialize(NULL));
+	CK_SESSION_HANDLE session = CK_INVALID_HANDLE;
+	CK_RV opened = CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session));
+	CK_OBJECT_HANDLE publicKey = CK_INVALID_HANDLE, privateKey = CK_INVALID_HANDLE;
+	CK_RV generated = generateSLHDSA(CKP_SLH_DSA_SHA2_128F, session,
+		IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, publicKey, privateKey);
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	setenv("SOFTHSM2_CONF", "./softhsm2.conf", 1);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), init);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), opened);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_MECHANISM_INVALID), generated);
+}
+#endif // !P11_SHARED_LIBRARY
+#endif

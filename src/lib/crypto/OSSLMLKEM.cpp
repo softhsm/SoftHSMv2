@@ -28,7 +28,6 @@
 // Signing functions
 bool OSSLMLKEM::sign(PrivateKey * /* privateKey */, const ByteString & /*dataToSign*/,
 					 ByteString & /*signature*/ , const AsymMech::Type /*mechanism*/,
-					 const void * /* param = NULL */, const size_t /* paramLen = 0 */,
 					 const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-KEM does not support signing");
@@ -37,7 +36,6 @@ bool OSSLMLKEM::sign(PrivateKey * /* privateKey */, const ByteString & /*dataToS
 }
 
 bool OSSLMLKEM::signInit(PrivateKey * /*privateKey*/, const AsymMech::Type /*mechanism*/,
-						 const void * /* param = NULL */, const size_t /* paramLen = 0 */,
 					   const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-KEM does not support multi part signing");
@@ -62,7 +60,6 @@ bool OSSLMLKEM::signFinal(ByteString & /*signature*/)
 // Verification functions
 bool OSSLMLKEM::verify(PublicKey * /*publicKey*/, const ByteString & /*originalData*/,
 					   const ByteString & /*signature*/, const AsymMech::Type /*mechanism*/,
-					   const void * /* param = NULL */, const size_t /* paramLen = 0 */,
 					 const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-KEM does not support verifying");
@@ -71,7 +68,6 @@ bool OSSLMLKEM::verify(PublicKey * /*publicKey*/, const ByteString & /*originalD
 }
 
 bool OSSLMLKEM::verifyInit(PublicKey * /*publicKey*/, const AsymMech::Type /*mechanism*/,
-const void * /* param = NULL */, const size_t /* paramLen = 0 */,
 const MechanismParam* /*mechanismParam*/)
 {
 	ERROR_MSG("ML-KEM does not support multi part verifying");

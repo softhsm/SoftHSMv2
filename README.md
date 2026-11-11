@@ -80,6 +80,7 @@ Options:
 	--enable-gost		Enable support for GOST (default detect)
 	--enable-eddsa		Enable support for EDDSA (default detect)
 	--enable-mldsa		Enable support for ML-DSA (default detect)
+	--enable-slhdsa		Enable support for SLH-DSA (default detect)
 	--enable-mlkem		Enable support for ML-KEM (default detect)
 	--enable-sha3		Enable support for SHA3 (default detect)
 	--disable-visibility	Disable hidden visibilty link mode [enabled]

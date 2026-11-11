@@ -9,6 +9,7 @@ option(ENABLE_64bit "Enable 64-bit compiling" OFF)
 option(ENABLE_ECC "Enable support for ECC" ON)
 option(ENABLE_EDDSA "Enable support for EDDSA" ON)
 option(ENABLE_MLDSA "Enable support for ML-DSA" OFF)
+option(ENABLE_SLHDSA "Enable support for SLH-DSA" OFF)
 option(ENABLE_MLKEM "Enable support for ML-KEM" OFF)
 option(ENABLE_GOST "Enable support for GOST" OFF)
 option(ENABLE_FIPS "Enable support for FIPS 140-2 mode" OFF)
@@ -22,6 +23,10 @@ set(WITH_CRYPTO_BACKEND "openssl"
     CACHE STRING "Select crypto backend (openssl|botan)")
 set(WITH_P11_KIT ""
     CACHE STRING "Specify install path of the p11-kit module, will override path given by pkg-config")
+
+if(WITH_CRYPTO_BACKEND STREQUAL "botan" AND ENABLE_SLHDSA)
+    message(FATAL_ERROR "Botan does not support SLH-DSA")
+endif()
 
 if(WITH_OBJECTSTORE_BACKEND_DB)
     set(HAVE_OBJECTSTORE_BACKEND_DB 1)

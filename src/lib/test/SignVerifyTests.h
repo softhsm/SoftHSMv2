@@ -59,6 +59,15 @@ class SignVerifyTests : public TestsBase
 #ifdef WITH_ML_DSA
 	CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify, {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
 #endif
+#ifdef WITH_SLH_DSA
+	CPPUNIT_TEST(testSLHDSAImportLengths);
+	CPPUNIT_TEST(testSLHDSAParameterSets);
+	CPPUNIT_TEST(testSLHDSAInvalidWrappedKey);
+#ifndef P11_SHARED_LIBRARY
+	CPPUNIT_TEST(testSLHDSAMechanismPolicy);
+#endif
+	CPPUNIT_TEST_PARAMETERIZED(testSLHDSASignVerify, {CKP_SLH_DSA_SHA2_128S, CKP_SLH_DSA_SHAKE_128F});
+#endif
 	CPPUNIT_TEST(testSignInitWrongKeyType);
 	CPPUNIT_TEST(testVerifyInitWrongKeyType);
 	CPPUNIT_TEST_SUITE_END();
@@ -79,10 +88,22 @@ public:
 #ifdef WITH_ML_DSA
 	void testMLDSASignVerify(CK_ULONG parameterSet);
 #endif
+#ifdef WITH_SLH_DSA
+	void testSLHDSASignVerify(CK_ULONG parameterSet);
+	void testSLHDSAImportLengths();
+	void testSLHDSAParameterSets();
+	void testSLHDSAInvalidWrappedKey();
+#ifndef P11_SHARED_LIBRARY
+	void testSLHDSAMechanismPolicy();
+#endif
+#endif
 	void testSignInitWrongKeyType();
 	void testVerifyInitWrongKeyType();
 
 protected:
+#ifdef WITH_SLH_DSA
+	void verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE publicKey, CK_BYTE_PTR data, CK_ULONG dataLen, CK_BYTE_PTR signature, CK_ULONG signatureLen, CK_SIGN_ADDITIONAL_CONTEXT* context, bool multipart);
+#endif
 	CK_RV generateRSA(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #ifdef WITH_ECC
 	CK_RV generateEC(const char* curve, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
@@ -92,6 +113,9 @@ protected:
 #endif
 #ifdef WITH_ML_DSA
 	CK_RV generateMLDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
+#endif
+#ifdef WITH_SLH_DSA
+	CK_RV generateSLHDSA(CK_ULONG parameterSet, CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
 #endif
 	void signVerifySingle(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);
 	void signVerifySingleData(size_t dataSize, CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hPublicKey, CK_OBJECT_HANDLE hPrivateKey, CK_VOID_PTR param = NULL_PTR, CK_ULONG paramLen = 0);

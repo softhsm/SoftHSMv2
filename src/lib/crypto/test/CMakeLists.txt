@@ -24,6 +24,7 @@ set(SOURCES cryptotest.cpp
             MacTests.cpp
             MLDSATests.cpp
             MLKEMTests.cpp
+            SLHDSATests.cpp
             RNGTests.cpp
             RSATests.cpp
             chisq.c

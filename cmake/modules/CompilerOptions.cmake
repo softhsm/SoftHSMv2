@@ -408,9 +408,30 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
         message(STATUS "OpenSSL: Support for ML-DSA is disabled")
     endif(ENABLE_MLDSA)
 
+    # acx_openssl_slhdsa.m4
+    if(ENABLE_SLHDSA)
+        # SLH-DSA
+        set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_slhdsa.c)
+        try_run(RUN_SLHDSA COMPILE_RESULT
+                "${CMAKE_BINARY_DIR}/prebuild_santity_tests" ${testfile}
+                LINK_LIBRARIES ${CRYPTO_LIBS}
+                CMAKE_FLAGS
+                    "-DINCLUDE_DIRECTORIES=${CRYPTO_INCLUDES}"
+                )
+        if(COMPILE_RESULT AND RUN_SLHDSA EQUAL 0)
+            set(WITH_SLH_DSA 1)
+            message(STATUS "OpenSSL: Found SLH-DSA")
+        else()
+            set(error_msg "OpenSSL: Cannot find SLH-DSA! OpenSSL library has no SLH-DSA support!")
+            message(FATAL_ERROR ${error_msg})
+        endif()
+    else(ENABLE_SLHDSA)
+        message(STATUS "OpenSSL: Support for SLH-DSA is disabled")
+    endif(ENABLE_SLHDSA)
+
     # acx_openssl_mlkem.m4
     if(ENABLE_MLKEM)
-        # ML-DSA
+        # ML-KEM
         set(testfile ${CMAKE_SOURCE_DIR}/cmake/modules/tests/test_openssl_mlkem.c)
         try_run(RUN_MLKEM COMPILE_RESULT
                 "${CMAKE_BINARY_DIR}/prebuild_santity_tests" ${testfile}
@@ -441,8 +462,12 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
         set(WITH_SHA3 1)
         message(STATUS "OpenSSL: Found SHA3")
     else()
-        set(error_msg "OpenSSL: Cannot find SHA3! OpenSSL library has no SHA3 support (requires OpenSSL >= 1.1.1 or LibreSSL >= 3.8.0)!")
-        message(FATAL_ERROR ${error_msg})
+        unset(WITH_SHA3)
+        if(ENABLE_EDDSA OR ENABLE_MLDSA OR ENABLE_SLHDSA OR ENABLE_MLKEM)
+            message(FATAL_ERROR "OpenSSL: SHA3 is required for EdDSA and post-quantum algorithms")
+        else()
+            message(STATUS "OpenSSL: SHA3 is not available")
+        endif()
     endif()
 
     # acx_openssl_gost.m4
