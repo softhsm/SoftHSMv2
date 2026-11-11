@@ -2594,6 +2594,19 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 				DEBUG_MSG("GCM mode requires parameters");
 				return CKR_ARGUMENTS_BAD;
 			}
+			if (CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen < 1 ||
+			    CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen > 0x100000000 ||
+			    CK_GCM_PARAMS_PTR(pMechanism->pParameter)->pIv == NULL_PTR)
+			{
+				DEBUG_MSG("GCM mode requires an IV of 1 to 256 bytes");
+				return CKR_MECHANISM_PARAM_INVALID;
+			}
+			if (CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen > 0 &&
+			    CK_GCM_PARAMS_PTR(pMechanism->pParameter)->pAAD == NULL_PTR)
+			{
+				DEBUG_MSG("GCM mode requires AAD when AAD length is not zero");
+				return CKR_MECHANISM_PARAM_INVALID;
+			}
 			iv.resize(CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen);
 			memcpy(&iv[0], CK_GCM_PARAMS_PTR(pMechanism->pParameter)->pIv, CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen);
 			aad.resize(CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen);
@@ -3349,6 +3362,19 @@ CK_RV SoftHSM::SymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 			{
 				DEBUG_MSG("GCM mode requires parameters");
 				return CKR_ARGUMENTS_BAD;
+			}
+			if (CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen < 1 ||
+			    CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen > 0x100000000 ||
+			    CK_GCM_PARAMS_PTR(pMechanism->pParameter)->pIv == NULL_PTR)
+			{
+				DEBUG_MSG("GCM mode requires an IV of 1 to 256 bytes");
+				return CKR_MECHANISM_PARAM_INVALID;
+			}
+			if (CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulAADLen > 0 &&
+			    CK_GCM_PARAMS_PTR(pMechanism->pParameter)->pAAD == NULL_PTR)
+			{
+				DEBUG_MSG("GCM mode requires AAD when AAD length is not zero");
+				return CKR_MECHANISM_PARAM_INVALID;
 			}
 			iv.resize(CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen);
 			memcpy(&iv[0], CK_GCM_PARAMS_PTR(pMechanism->pParameter)->pIv, CK_GCM_PARAMS_PTR(pMechanism->pParameter)->ulIvLen);
