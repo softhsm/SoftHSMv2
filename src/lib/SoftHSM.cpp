@@ -4118,6 +4118,7 @@ CK_RV SoftHSM::C_DigestKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject)
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hObject);
 	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
+	if (key->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED) != CKO_SECRET_KEY) return CKR_KEY_INDIGESTIBLE;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
