@@ -33,26 +33,12 @@
 #ifndef _SOFTHSM_V2_OBJECTFILETESTS_H
 #define _SOFTHSM_V2_OBJECTFILETESTS_H
 
-#include <cppunit/extensions/HelperMacros.h>
 
-class ObjectFileTests : public CppUnit::TestFixture
+class ObjectFileTests 
 {
-	CPPUNIT_TEST_SUITE(ObjectFileTests);
-	CPPUNIT_TEST(testBoolAttr);
-	CPPUNIT_TEST(testULongAttr);
-	CPPUNIT_TEST(testByteStrAttr);
-	CPPUNIT_TEST(testMechTypeSetAttr);
-	CPPUNIT_TEST(testAttrMapAttr);
-	CPPUNIT_TEST(testMixedAttr);
-	CPPUNIT_TEST(testDoubleAttr);
-	CPPUNIT_TEST(testRefresh);
-	CPPUNIT_TEST(testCorruptFile);
-	CPPUNIT_TEST(testTransactions);
-	CPPUNIT_TEST(testDestroyObjectFails);
-	CPPUNIT_TEST_SUITE_END();
-
 public:
-	void testBoolAttr();
+	ObjectFileTests(bool doRefresh);
+    void testBoolAttr();
 	void testULongAttr();
 	void testByteStrAttr();
 	void testMechTypeSetAttr();
@@ -64,8 +50,8 @@ public:
 	void testTransactions();
 	void testDestroyObjectFails();
 
-	void setUp();
-	void tearDown();
+private:
+	const bool doRefresh;
 };
 
 #endif // !_SOFTHSM_V2_OBJECTFILETESTS_H
