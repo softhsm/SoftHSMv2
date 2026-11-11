@@ -462,12 +462,9 @@ elseif(WITH_CRYPTO_BACKEND STREQUAL "openssl")
         set(WITH_SHA3 1)
         message(STATUS "OpenSSL: Found SHA3")
     else()
+        # SHA3 is optional
         unset(WITH_SHA3)
-        if(ENABLE_EDDSA OR ENABLE_MLDSA OR ENABLE_SLHDSA OR ENABLE_MLKEM)
-            message(FATAL_ERROR "OpenSSL: SHA3 is required for EdDSA and post-quantum algorithms")
-        else()
-            message(STATUS "OpenSSL: SHA3 is not available")
-        endif()
+        message(STATUS "OpenSSL: SHA3 is not available (requires OpenSSL >= 1.1.1 or LibreSSL >= 3.8.0)")
     endif()
 
     # acx_openssl_gost.m4

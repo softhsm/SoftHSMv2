@@ -809,4 +809,47 @@ void EncapDecapTests::testMLKEMInvalidCheckValue()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
 }
+/** Reject imported ML-KEM keys whose value length does not match the parameter set. */
+void EncapDecapTests::testMLKEMImportLengths()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_KEY_TYPE type = CKK_ML_KEM;
+	CK_ULONG parameterSet = CKP_ML_KEM_512;
+	const CK_ULONG lengths[2] = {800, 1632};
+	CK_BYTE raw[1632 + 1] = {0};
+	for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
+	{
+		CK_ULONG length = lengths[objectClass == CKO_PUBLIC_KEY ? 0 : 1];
+		for (int delta : {-1, 0, 1})
+		{
+			CK_ATTRIBUTE attributes[] = {
+				{CKA_CLASS, &objectClass, sizeof(objectClass)},
+				{CKA_KEY_TYPE, &type, sizeof(type)},
+				{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
+				{CKA_VALUE, raw, length + delta}
+			};
+			CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+			CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &key));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
+			if (rv == CKR_OK)
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+		}
+		// An unsupported parameter set has no valid length
+		CK_ULONG unknownSet = 0;
+		CK_ATTRIBUTE attributes[] = {
+			{CKA_CLASS, &objectClass, sizeof(objectClass)},
+			{CKA_KEY_TYPE, &type, sizeof(type)},
+			{CKA_PARAMETER_SET, &unknownSet, sizeof(unknownSet)},
+			{CKA_VALUE, raw, length}
+		};
+		CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &key)));
+	}
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
 #endif

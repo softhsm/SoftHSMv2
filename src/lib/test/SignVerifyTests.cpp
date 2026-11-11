@@ -2259,8 +2259,54 @@ void SignVerifyTests::testVerifyInitWrongKeyType()
 	C_CloseSession(hSession);
 }
 
+#ifdef WITH_ML_DSA
+/** Reject imported ML-DSA keys whose value length does not match the parameter set. */
+void SignVerifyTests::testMLDSAImportLengths()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_KEY_TYPE type = CKK_ML_DSA;
+	CK_ULONG parameterSet = CKP_ML_DSA_44;
+	const CK_ULONG lengths[2] = {1312, 2560};
+	CK_BYTE raw[2560 + 1] = {0};
+	for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
+	{
+		CK_ULONG length = lengths[objectClass == CKO_PUBLIC_KEY ? 0 : 1];
+		for (int delta : {-1, 0, 1})
+		{
+			CK_ATTRIBUTE attributes[] = {
+				{CKA_CLASS, &objectClass, sizeof(objectClass)},
+				{CKA_KEY_TYPE, &type, sizeof(type)},
+				{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
+				{CKA_VALUE, raw, length + delta}
+			};
+			CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+			CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &key));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
+			if (rv == CKR_OK)
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+		}
+		// An unsupported parameter set has no valid length
+		CK_ULONG unknownSet = 0;
+		CK_ATTRIBUTE attributes[] = {
+			{CKA_CLASS, &objectClass, sizeof(objectClass)},
+			{CKA_KEY_TYPE, &type, sizeof(type)},
+			{CKA_PARAMETER_SET, &unknownSet, sizeof(unknownSet)},
+			{CKA_VALUE, raw, length}
+		};
+		CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &key)));
+	}
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+#endif
+
 #ifdef WITH_SLH_DSA
-/** Reject changed or absent signature contexts while ignoring the verification hedge flag. */
+/** Reject changed or absent signature contexts and invalid hedge flags on verification. */
 void SignVerifyTests::verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE publicKey,
 	CK_BYTE_PTR data, CK_ULONG dataLen, CK_BYTE_PTR signature, CK_ULONG signatureLen,
 	CK_SIGN_ADDITIONAL_CONTEXT* context, bool multipart)
@@ -2271,8 +2317,14 @@ void SignVerifyTests::verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_
 	differentContext[0] ^= 1;
 	CK_SIGN_ADDITIONAL_CONTEXT changed = *context;
 	changed.pContext = differentContext;
+	// Verification ignores a valid hedge variant and rejects an unknown one.
 	CK_SIGN_ADDITIONAL_CONTEXT ignoredHedge = *context;
-	ignoredHedge.hedgeVariant = static_cast<CK_HEDGE_TYPE>(~0UL);
+	ignoredHedge.hedgeVariant = context->hedgeVariant == CKH_DETERMINISTIC_REQUIRED ?
+		CKH_HEDGE_REQUIRED : CKH_DETERMINISTIC_REQUIRED;
+	CK_SIGN_ADDITIONAL_CONTEXT invalidHedge = *context;
+	invalidHedge.hedgeVariant = static_cast<CK_HEDGE_TYPE>(~0UL);
+	CK_MECHANISM invalidMechanism = { CKM_SLH_DSA, &invalidHedge, sizeof(invalidHedge) };
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ARGUMENTS_BAD), CRYPTOKI_F_PTR(C_VerifyInit(session, &invalidMechanism, publicKey)));
 	CK_MECHANISM mechanisms[] = {
 		{ CKM_SLH_DSA, &changed, sizeof(changed) },
 		{ CKM_SLH_DSA, NULL, 0 },
@@ -2445,10 +2497,19 @@ void SignVerifyTests::testSLHDSAParameterSets()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCONSISTENT), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
 		&mechanism, &publicTemplate, 1, &privateTemplate, 1, &publicKey, &privateKey)));
 	publicParameter = privateParameter;
-	for (CK_ULONG privateCount : {0UL, 1UL})
+	// The parameter set may come from either template or from both.
+	const CK_ULONG counts[3][2] = {{1, 0}, {1, 1}, {0, 1}};
+	for (const CK_ULONG* count : counts)
 	{
 		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
-			&mechanism, &publicTemplate, 1, &privateTemplate, privateCount, &publicKey, &privateKey)));
+			&mechanism, &publicTemplate, count[0], &privateTemplate, count[1], &publicKey, &privateKey)));
+		for (CK_OBJECT_HANDLE key : {publicKey, privateKey})
+		{
+			CK_ULONG stored = 0;
+			CK_ATTRIBUTE attribute = {CKA_PARAMETER_SET, &stored, sizeof(stored)};
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &attribute, 1)));
+			CPPUNIT_ASSERT_EQUAL(publicParameter, stored);
+		}
 		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, publicKey)));
 		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, privateKey)));
 	}
@@ -2470,7 +2531,7 @@ void SignVerifyTests::testSLHDSAParameterSets()
 }
 
 #ifndef P11_SHARED_LIBRARY
-/** Check that the local RSA-only mechanism policy rejects SLH-DSA key generation. */
+/** Check that the local RSA-only mechanism policy rejects key pair generation. */
 void SignVerifyTests::testSLHDSAMechanismPolicy()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
@@ -2483,12 +2544,16 @@ void SignVerifyTests::testSLHDSAMechanismPolicy()
 	CK_OBJECT_HANDLE publicKey = CK_INVALID_HANDLE, privateKey = CK_INVALID_HANDLE;
 	CK_RV generated = generateSLHDSA(CKP_SLH_DSA_SHA2_128F, session,
 		IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, publicKey, privateKey);
+	CK_MECHANISM rsaMechanism = { CKM_RSA_PKCS_KEY_PAIR_GEN, NULL_PTR, 0 };
+	CK_RV generatedRSA = CRYPTOKI_F_PTR(C_GenerateKeyPair(session, &rsaMechanism,
+		NULL_PTR, 0, NULL_PTR, 0, &publicKey, &privateKey));
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
 	setenv("SOFTHSM2_CONF", "./softhsm2.conf", 1);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), init);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), opened);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_MECHANISM_INVALID), generated);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_MECHANISM_INVALID), generatedRSA);
 }
 #endif // !P11_SHARED_LIBRARY
 #endif

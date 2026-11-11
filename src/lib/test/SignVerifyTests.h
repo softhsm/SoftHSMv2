@@ -58,6 +58,7 @@ class SignVerifyTests : public TestsBase
 	CPPUNIT_TEST(testMacSignVerify);
 #ifdef WITH_ML_DSA
 	CPPUNIT_TEST_PARAMETERIZED(testMLDSASignVerify, {CKP_ML_DSA_44, CKP_ML_DSA_65, CKP_ML_DSA_87});
+	CPPUNIT_TEST(testMLDSAImportLengths);
 #endif
 #ifdef WITH_SLH_DSA
 	CPPUNIT_TEST(testSLHDSAImportLengths);
@@ -87,6 +88,7 @@ public:
 	void testMacSignVerify();
 #ifdef WITH_ML_DSA
 	void testMLDSASignVerify(CK_ULONG parameterSet);
+	void testMLDSAImportLengths();
 #endif
 #ifdef WITH_SLH_DSA
 	void testSLHDSASignVerify(CK_ULONG parameterSet);

@@ -603,15 +603,14 @@ void SLHDSATests::testInvalidSerialisation()
 			for (size_t i = 0; i < 8; ++i) bigEndian[7-i] = (id >> (8*i)) & 0xff;
 			ByteString encodedId(bigEndian, sizeof(bigEndian));
 			CPPUNIT_ASSERT_EQUAL(id == parameterSet, parameters.deserialise(encodedId));
-			ByteString nativeId(reinterpret_cast<const unsigned char*>(&id), sizeof(id));
 			for (int delta : {-1, 0, 1})
 			{
 				ByteString value;
 				value.resize(SLHDSAParameters::publicKeyLength(parameterSet) + delta);
-				ByteString serialised = value.serialise() + nativeId.serialise();
+				ByteString serialised = value.serialise() + encodedId.serialise();
 				CPPUNIT_ASSERT_EQUAL(id == parameterSet && delta == 0, publicKey.deserialise(serialised));
 				value.resize(SLHDSAParameters::privateKeyLength(parameterSet) + delta);
-				serialised = value.serialise() + nativeId.serialise();
+				serialised = value.serialise() + encodedId.serialise();
 				CPPUNIT_ASSERT_EQUAL(id == parameterSet && delta == 0, privateKey.deserialise(serialised));
 			}
 		}
