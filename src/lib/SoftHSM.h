@@ -415,6 +415,29 @@ private:
 		CK_BBOOL isOnToken,
 		CK_BBOOL isPrivate
 	);
+#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM) || defined(WITH_SLH_DSA)
+	CK_RV storePQCKeyPair
+	(
+		CK_SESSION_HANDLE hSession,
+		Token* token,
+		CK_KEY_TYPE keyType,
+		CK_MECHANISM_TYPE keyGenMechanism,
+		CK_ULONG parameterSet,
+		const ByteString& publicValue,
+		const ByteString& privateValue,
+		const ByteString* privateSeed,
+		CK_ATTRIBUTE_PTR pPublicKeyTemplate,
+		CK_ULONG ulPublicKeyAttributeCount,
+		CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
+		CK_ULONG ulPrivateKeyAttributeCount,
+		CK_OBJECT_HANDLE_PTR phPublicKey,
+		CK_OBJECT_HANDLE_PTR phPrivateKey,
+		CK_BBOOL isPublicKeyOnToken,
+		CK_BBOOL isPublicKeyPrivate,
+		CK_BBOOL isPrivateKeyOnToken,
+		CK_BBOOL isPrivateKeyPrivate
+	);
+#endif
 #ifdef WITH_ML_DSA
 	CK_RV generateMLDSA
 	(

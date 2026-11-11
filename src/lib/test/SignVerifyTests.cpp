@@ -2354,6 +2354,59 @@ void SignVerifyTests::testRsaRawDataTooLong()
 	CRYPTOKI_F_PTR( C_CloseSession(hSession) );
 }
 
+#ifdef WITH_ML_DSA
+/** Reject imported ML-DSA keys whose value length does not match the parameter set. */
+void SignVerifyTests::testMLDSAImportLengths()
+{
+	CRYPTOKI_F_PTR(C_Finalize(NULL));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
+	CK_SESSION_HANDLE session;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL, NULL, &session)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Login(session, CKU_USER, m_userPin1, m_userPin1Length)));
+	CK_KEY_TYPE type = CKK_ML_DSA;
+	CK_ULONG parameterSet = CKP_ML_DSA_44;
+	const CK_ULONG lengths[2] = {1312, 2560};
+	CK_BYTE raw[2560 + 1] = {0};
+	for (CK_OBJECT_CLASS objectClass : {CKO_PUBLIC_KEY, CKO_PRIVATE_KEY})
+	{
+		CK_ULONG length = lengths[objectClass == CKO_PUBLIC_KEY ? 0 : 1];
+		for (int delta : {-1, 0, 1})
+		{
+			CK_ATTRIBUTE attributes[] = {
+				{CKA_CLASS, &objectClass, sizeof(objectClass)},
+				{CKA_KEY_TYPE, &type, sizeof(type)},
+				{CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet)},
+				{CKA_VALUE, raw, length + delta}
+			};
+			CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+			CK_RV rv = CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &key));
+			CPPUNIT_ASSERT_EQUAL(CK_RV(delta == 0 ? CKR_OK : CKR_ATTRIBUTE_VALUE_INVALID), rv);
+			if (rv == CKR_OK)
+				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
+		}
+		// An unsupported parameter set has no valid length
+		CK_ULONG unknownSet = 0;
+		CK_ATTRIBUTE attributes[] = {
+			{CKA_CLASS, &objectClass, sizeof(objectClass)},
+			{CKA_KEY_TYPE, &type, sizeof(type)},
+			{CKA_PARAMETER_SET, &unknownSet, sizeof(unknownSet)},
+			{CKA_VALUE, raw, length}
+		};
+		CK_OBJECT_HANDLE key = CK_INVALID_HANDLE;
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_VALUE_INVALID), CRYPTOKI_F_PTR(C_CreateObject(session, attributes, 4, &key)));
+		// The parameter set is required
+		CK_ATTRIBUTE incomplete[] = {
+			{CKA_CLASS, &objectClass, sizeof(objectClass)},
+			{CKA_KEY_TYPE, &type, sizeof(type)},
+			{CKA_VALUE, raw, length}
+		};
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCOMPLETE), CRYPTOKI_F_PTR(C_CreateObject(session, incomplete, 3, &key)));
+	}
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
+}
+#endif
+
 #ifdef WITH_SLH_DSA
 /** Reject changed or absent signature contexts while ignoring the verification hedge flag. */
 void SignVerifyTests::verifySLHDSAContexts(CK_SESSION_HANDLE session, CK_OBJECT_HANDLE publicKey,
@@ -2465,6 +2518,15 @@ void SignVerifyTests::testSLHDSAImportLengths()
 				}
 			}
 			signVerifySingle(CKM_SLH_DSA, session, keys[0], keys[1]);
+			// The parameter set is required
+			CK_OBJECT_CLASS publicClass = CKO_PUBLIC_KEY;
+			CK_ATTRIBUTE incomplete[] = {
+				{CKA_CLASS, &publicClass, sizeof(publicClass)},
+				{CKA_KEY_TYPE, &type, sizeof(type)},
+				{CKA_VALUE, raw[0], publicLength}
+			};
+			CK_OBJECT_HANDLE unused = CK_INVALID_HANDLE;
+			CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCOMPLETE), CRYPTOKI_F_PTR(C_CreateObject(session, incomplete, 3, &unused)));
 			for (CK_OBJECT_HANDLE key : keys)
 				CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
 		}
@@ -2517,7 +2579,7 @@ void SignVerifyTests::testSLHDSAInvalidWrappedKey()
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_CloseSession(session)));
 }
 
-/** Distinguish missing, unsupported and mismatched SLH-DSA parameter sets. */
+/** Take the SLH-DSA parameter set from the public key template only. */
 void SignVerifyTests::testSLHDSAParameterSets()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
@@ -2533,19 +2595,32 @@ void SignVerifyTests::testSLHDSAParameterSets()
 	CK_OBJECT_HANDLE publicKey = CK_INVALID_HANDLE, privateKey = CK_INVALID_HANDLE;
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCOMPLETE), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
 		&mechanism, &publicTemplate, 0, &privateTemplate, 0, &publicKey, &privateKey)));
-	for (CK_ULONG publicCount : {0UL, 1UL})
-		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_PARAMETER_SET_NOT_SUPPORTED), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
-			&mechanism, &publicTemplate, publicCount, &privateTemplate, 1 - publicCount, &publicKey, &privateKey)));
-	privateParameter = CKP_SLH_DSA_SHA2_128F;
-	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCONSISTENT), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_PARAMETER_SET_NOT_SUPPORTED), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 1, &privateTemplate, 0, &publicKey, &privateKey)));
+	publicParameter = privateParameter = CKP_SLH_DSA_SHA2_128F;
+	// The parameter set must not be specified in the private key template.
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCOMPLETE), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, &publicTemplate, 0, &privateTemplate, 1, &publicKey, &privateKey)));
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_ATTRIBUTE_READ_ONLY), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
 		&mechanism, &publicTemplate, 1, &privateTemplate, 1, &publicKey, &privateKey)));
-	publicParameter = privateParameter;
-	for (CK_ULONG privateCount : {0UL, 1UL})
+	// Conflicting values in one template are rejected, identical ones are not.
+	CK_ULONG otherParameter = CKP_SLH_DSA_SHAKE_128F;
+	CK_ATTRIBUTE duplicateTemplate[] = {
+		{CKA_PARAMETER_SET, &publicParameter, sizeof(publicParameter)},
+		{CKA_PARAMETER_SET, &otherParameter, sizeof(otherParameter)}
+	};
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_TEMPLATE_INCONSISTENT), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, duplicateTemplate, 2, &privateTemplate, 0, &publicKey, &privateKey)));
+	otherParameter = publicParameter;
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
+		&mechanism, duplicateTemplate, 2, &privateTemplate, 0, &publicKey, &privateKey)));
+	for (CK_OBJECT_HANDLE key : {publicKey, privateKey})
 	{
-		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GenerateKeyPair(session,
-			&mechanism, &publicTemplate, 1, &privateTemplate, privateCount, &publicKey, &privateKey)));
-		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, publicKey)));
-		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, privateKey)));
+		CK_ULONG stored = 0;
+		CK_ATTRIBUTE attribute = {CKA_PARAMETER_SET, &stored, sizeof(stored)};
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_GetAttributeValue(session, key, &attribute, 1)));
+		CPPUNIT_ASSERT_EQUAL(publicParameter, stored);
+		CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_DestroyObject(session, key)));
 	}
 #ifndef P11_SHARED_LIBRARY
 	// Restrict local OpenSSL fetches without changing a separately loaded module's configuration.
@@ -2565,7 +2640,7 @@ void SignVerifyTests::testSLHDSAParameterSets()
 }
 
 #ifndef P11_SHARED_LIBRARY
-/** Check that the local RSA-only mechanism policy rejects SLH-DSA key generation. */
+/** Check that the local RSA-only mechanism policy rejects key pair generation. */
 void SignVerifyTests::testSLHDSAMechanismPolicy()
 {
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
@@ -2578,12 +2653,16 @@ void SignVerifyTests::testSLHDSAMechanismPolicy()
 	CK_OBJECT_HANDLE publicKey = CK_INVALID_HANDLE, privateKey = CK_INVALID_HANDLE;
 	CK_RV generated = generateSLHDSA(CKP_SLH_DSA_SHA2_128F, session,
 		IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, publicKey, privateKey);
+	CK_MECHANISM rsaMechanism = { CKM_RSA_PKCS_KEY_PAIR_GEN, NULL_PTR, 0 };
+	CK_RV generatedRSA = CRYPTOKI_F_PTR(C_GenerateKeyPair(session, &rsaMechanism,
+		NULL_PTR, 0, NULL_PTR, 0, &publicKey, &privateKey));
 	CRYPTOKI_F_PTR(C_Finalize(NULL));
 	setenv("SOFTHSM2_CONF", "./softhsm2.conf", 1);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), CRYPTOKI_F_PTR(C_Initialize(NULL)));
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), init);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_OK), opened);
 	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_MECHANISM_INVALID), generated);
+	CPPUNIT_ASSERT_EQUAL(CK_RV(CKR_MECHANISM_INVALID), generatedRSA);
 }
 #endif // !P11_SHARED_LIBRARY
 #endif

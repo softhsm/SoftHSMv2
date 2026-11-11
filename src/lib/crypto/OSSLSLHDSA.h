@@ -21,7 +21,7 @@
 class OSSLSLHDSA : public AsymmetricAlgorithm
 {
 public:
-	OSSLSLHDSA() : message(), parameters(NULL), paramLength(0), mechanismParameters(nullptr) { }
+	OSSLSLHDSA() : message(), mechanismParameters(nullptr) { }
 
 	/** \brief Destructor */
 	virtual ~OSSLSLHDSA() { }
@@ -85,8 +85,6 @@ public:
 
 private:
 	ByteString message;
-	void* parameters;
-	size_t paramLength;
 	std::unique_ptr<const MechanismParam> mechanismParameters;
 };
 
