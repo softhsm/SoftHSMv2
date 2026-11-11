@@ -177,6 +177,7 @@ bool OSSLSLHDSA::sign(PrivateKey *privateKey, const ByteString &dataToSign,
 	if (signRv <= 0 && hedgePreferred && rngFailure)
 	{
 		// Retry only RNG failures; required hedging must never fall back.
+		WARNING_MSG("SLH-DSA hedged signing failed in the RNG (0x%08lX), falling back to deterministic signing", error);
 		ERR_clear_error();
 		local_random = 1;
 		OSSL_PARAM deterministicParams[] = {

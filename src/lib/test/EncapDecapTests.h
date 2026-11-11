@@ -28,6 +28,7 @@ class EncapDecapTests : public TestsBase
 	CPPUNIT_TEST(testMLKEMGenericSecretCheckValue);
 	CPPUNIT_TEST(testMLKEMInvalidCheckValue);
 	CPPUNIT_TEST(testMLKEMDecapsulationCiphertextLengthIsZero);
+	CPPUNIT_TEST(testMLKEMImportLengths);
 #endif
 	CPPUNIT_TEST_SUITE_END();
 
@@ -41,6 +42,7 @@ public:
 	void testMLKEMGenericSecretCheckValue();
 	void testMLKEMInvalidCheckValue();
 	void testMLKEMDecapsulationCiphertextLengthIsZero();
+	void testMLKEMImportLengths();
 #endif
 
 protected:
