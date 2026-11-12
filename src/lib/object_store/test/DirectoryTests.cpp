@@ -247,3 +247,38 @@ void DirectoryTests::testDirectory()
 #endif
 }
 
+void DirectoryTests::testRemoveSuccessDoesNotDependOnRefresh()
+{
+#ifndef _WIN32
+	Directory testdir("./testdir");
+	CPPUNIT_ASSERT(testdir.isValid());
+
+	const std::string fileName = "refreshFailureFile";
+	const std::string filePath = "./testdir/" + fileName;
+
+	FILE* file = fopen(filePath.c_str(), "w");
+	CPPUNIT_ASSERT(file != NULL);
+	fclose(file);
+
+	CPPUNIT_ASSERT(chmod("./testdir", 0300) == 0);
+	const bool refreshFails = !testdir.refresh();
+
+	if (!refreshFails)
+	{
+		// Some environments have privilege bypass (for example DAC override) that
+		// allow directory reads even when mode 0300 is set. Skip the scenario in
+		// that case instead of relying on a brittle permission assumption.
+		CPPUNIT_ASSERT(chmod("./testdir", 0777) == 0);
+		return;
+	}
+
+	const bool removed = testdir.remove(fileName);
+	CPPUNIT_ASSERT(chmod("./testdir", 0777) == 0);
+	CPPUNIT_ASSERT(removed);
+	CPPUNIT_ASSERT(access(filePath.c_str(), F_OK) != 0);
+	CPPUNIT_ASSERT(testdir.refresh());
+#else
+	CPPUNIT_ASSERT(true);
+#endif
+}
+

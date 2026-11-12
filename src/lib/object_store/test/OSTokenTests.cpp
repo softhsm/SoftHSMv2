@@ -32,6 +32,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 #include <cppunit/extensions/HelperMacros.h>
 #include "OSTokenTests.h"
 #include "OSToken.h"
@@ -426,6 +429,49 @@ void OSTokenTests::testCreateDeleteObjects()
 
 
 	// Release the test token
+	delete testToken;
+}
+
+void OSTokenTests::testDeleteObjectIgnoresLockRemovalFailure()
+{
+	ByteString label = "40414243";
+	ByteString serial = "0102030405060708";
+
+#ifndef _WIN32
+	OSToken* testToken = OSToken::createToken("./testdir", "lockFailureToken", DEFAULT_UMASK, label, serial);
+#else
+	OSToken* testToken = OSToken::createToken(".\\testdir", "lockFailureToken", DEFAULT_UMASK, label, serial);
+#endif
+
+	CPPUNIT_ASSERT(testToken != NULL);
+	CPPUNIT_ASSERT(testToken->isValid());
+
+	OSObject* object = testToken->createObject();
+	CPPUNIT_ASSERT(object != NULL);
+	CPPUNIT_ASSERT(testToken->getObjects().size() == 1);
+
+	ObjectFile* fileObject = dynamic_cast<ObjectFile*>(object);
+	CPPUNIT_ASSERT(fileObject != NULL);
+
+#ifndef _WIN32
+	std::string lockFilename = fileObject->getLockname();
+	FILE* lockFile = fopen(lockFilename.c_str(), "w");
+	CPPUNIT_ASSERT(lockFile != NULL);
+	fclose(lockFile);
+	CPPUNIT_ASSERT(remove(lockFilename.c_str()) == 0);
+	CPPUNIT_ASSERT(mkdir(lockFilename.c_str(), 0700) == 0);
+
+	std::string marker = lockFilename + "/marker";
+	FILE* markerFile = fopen(marker.c_str(), "w");
+	CPPUNIT_ASSERT(markerFile != NULL);
+	fclose(markerFile);
+
+	CPPUNIT_ASSERT(testToken->deleteObject(object));
+	CPPUNIT_ASSERT(testToken->getObjects().size() == 0);
+#else
+	CPPUNIT_ASSERT(true);
+#endif
+
 	delete testToken;
 }
 

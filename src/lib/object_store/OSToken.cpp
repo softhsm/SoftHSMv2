@@ -399,9 +399,6 @@ bool OSToken::deleteObject(OSObject* object)
 		return false;
 	}
 
-	// Invalidate the object instance
-	fileObject->invalidate();
-
 	// Retrieve the filename of the object
 	std::string objectFilename = fileObject->getFilename();
 
@@ -413,15 +410,17 @@ bool OSToken::deleteObject(OSObject* object)
 		return false;
 	}
 
+	// Invalidate the object instance only after the persistent object is deleted.
+	fileObject->invalidate();
+
 	// Retrieve the filename of the lock
 	std::string lockFilename = fileObject->getLockname();
 
-	// Attempt to delete the lock
+	// Attempt to delete the lock. The object file is already gone, so a lock-file
+	// failure should not block object cleanup.
 	if (!tokenDir->remove(lockFilename))
 	{
-		ERROR_MSG("Failed to delete lock file %s", lockFilename.c_str());
-
-		return false;
+		WARNING_MSG("Failed to delete lock file %s", lockFilename.c_str());
 	}
 
 	objects.erase(object);
@@ -533,12 +532,11 @@ bool OSToken::resetToken(const ByteString& label)
 		// Retrieve the filename of the lock
 		std::string lockFilename = fileObject->getLockname();
 
-		// Attempt to delete the lock
+		// Attempt to delete the lock. The object file is already gone, so a lock-file
+		// failure should not block cleanup of the invalidated object.
 		if (!tokenDir->remove(lockFilename))
 		{
-			ERROR_MSG("Failed to delete lock file %s", lockFilename.c_str());
-
-			return false;
+			WARNING_MSG("Failed to delete lock file %s", lockFilename.c_str());
 		}
 
 		objects.erase(*i);
