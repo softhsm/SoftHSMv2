@@ -72,6 +72,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ObjectTests.h"
+#ifndef _WIN32
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string>
+#include <vector>
+#endif
 
 // CKA_TOKEN
 const CK_BBOOL ON_TOKEN = CK_TRUE;
@@ -1241,6 +1248,89 @@ void ObjectTests::testDestroyObject()
 	rv = CRYPTOKI_F_PTR( C_CloseSession(hSessionRW) );
 	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
 }
+
+#if !defined(_WIN32) && !defined(P11_SHARED_LIBRARY)
+void ObjectTests::testDestroyObjectFailure()
+{
+	// Permission bits do not stop root
+	if (geteuid() == 0)
+		return;
+
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+	CK_OBJECT_HANDLE hObject;
+
+	setenv("SOFTHSM2_CONF", "./softhsm2.conf", 1);
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = createDataObjectMinimal(hSession, ON_TOKEN, IS_PUBLIC, hObject);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// Tokens created by earlier tests may still be in the token directory and
+	// there is no way to tell which one holds the object, so make all of them read-only.
+	std::vector<std::pair<std::string, mode_t> > tokenDirs;
+	DIR *dir = opendir("tokens");
+	CPPUNIT_ASSERT(dir != NULL);
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_name[0] == '.')
+			continue;
+
+		std::string candidate = std::string("tokens/") + entry->d_name;
+		struct stat candidateStat;
+		if (stat(candidate.c_str(), &candidateStat) != 0 ||
+		    !S_ISDIR(candidateStat.st_mode))
+			continue;
+
+		tokenDirs.push_back(std::make_pair(candidate, candidateStat.st_mode & 07777));
+	}
+	closedir(dir);
+	CPPUNIT_ASSERT(!tokenDirs.empty());
+
+	bool chmodOk = true;
+	for (size_t i = 0; i < tokenDirs.size(); i++)
+	{
+		chmodOk = (chmod(tokenDirs[i].first.c_str(),
+			tokenDirs[i].second & ~(S_IWUSR | S_IWGRP | S_IWOTH)) == 0) && chmodOk;
+	}
+
+	CK_RV destroyRv = CKR_GENERAL_ERROR;
+	CK_RV getAttributeRv = CKR_GENERAL_ERROR;
+	if (chmodOk)
+	{
+		destroyRv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hObject) );
+		CK_UTF8CHAR label[32];
+		CK_ATTRIBUTE labelAttribute = { CKA_LABEL, label, sizeof(label) };
+		getAttributeRv = CRYPTOKI_F_PTR(
+			C_GetAttributeValue(hSession, hObject, &labelAttribute, 1) );
+	}
+
+	bool restoreOk = true;
+	for (size_t i = 0; i < tokenDirs.size(); i++)
+	{
+		restoreOk = (chmod(tokenDirs[i].first.c_str(), tokenDirs[i].second) == 0) && restoreOk;
+	}
+
+	// The handle must still be valid so that the destroy can be retried
+	CK_RV retryDestroyRv = destroyRv == CKR_OK ? CKR_OK :
+		CRYPTOKI_F_PTR( C_DestroyObject(hSession, hObject) );
+	CK_RV closeSessionRv = CRYPTOKI_F_PTR( C_CloseSession(hSession) );
+
+	CPPUNIT_ASSERT(restoreOk);
+	CPPUNIT_ASSERT(chmodOk);
+	CPPUNIT_ASSERT_EQUAL(CKR_FUNCTION_FAILED, destroyRv);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, getAttributeRv);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, retryDestroyRv);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, closeSessionRv);
+}
+#endif
 
 void ObjectTests::testGetObjectSize()
 {

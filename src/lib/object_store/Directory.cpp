@@ -288,14 +288,19 @@ bool Directory::remove(std::string name)
 		ERROR_MSG("Failed to remove file %s (%s)", fullPath.c_str(), strerror(errno));
 		return false;
 	}
-	return refresh();
 #else
 	if (_unlink(fullPath.c_str()) != 0)
 	{
 		ERROR_MSG("Failed to remove file %s (%s)", fullPath.c_str(), strerror(errno));
 		return false;
 	}
-	return refresh();
 #endif
+
+	if (!refresh())
+	{
+		WARNING_MSG("Removed file %s but failed to refresh directory %s", fullPath.c_str(), path.c_str());
+	}
+
+	return true;
 }
 
