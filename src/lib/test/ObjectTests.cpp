@@ -72,6 +72,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ObjectTests.h"
+#ifndef _WIN32
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string>
+#endif
 
 // CKA_TOKEN
 const CK_BBOOL ON_TOKEN = CK_TRUE;
@@ -1241,6 +1247,79 @@ void ObjectTests::testDestroyObject()
 	rv = CRYPTOKI_F_PTR( C_CloseSession(hSessionRW) );
 	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
 }
+
+#ifndef _WIN32
+void ObjectTests::testDestroyObjectFailure()
+{
+	if (geteuid() == 0)
+		return;
+
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+	CK_OBJECT_HANDLE hObject;
+	struct stat tokenDirStat;
+	std::string tokenDirPath;
+
+	setenv("SOFTHSM2_CONF", "./softhsm2.conf", 1);
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID,
+		CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = createDataObjectMinimal(hSession, ON_TOKEN, IS_PUBLIC, hObject);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	DIR *tokenDirs = opendir("tokens");
+	CPPUNIT_ASSERT(tokenDirs != NULL);
+	struct dirent *entry;
+	while ((entry = readdir(tokenDirs)) != NULL)
+	{
+		if (entry->d_name[0] == '.')
+			continue;
+
+		std::string candidate = std::string("tokens/") + entry->d_name;
+		struct stat candidateStat;
+		if (stat(candidate.c_str(), &candidateStat) != 0 ||
+		    !S_ISDIR(candidateStat.st_mode))
+			continue;
+
+		std::string tokenObject = candidate + "/token.object";
+		if (stat(tokenObject.c_str(), &tokenDirStat) == 0)
+		{
+			tokenDirPath = candidate;
+			tokenDirStat = candidateStat;
+			break;
+		}
+	}
+	closedir(tokenDirs);
+	CPPUNIT_ASSERT(!tokenDirPath.empty());
+
+	const mode_t originalMode = tokenDirStat.st_mode & 07777;
+	rv = chmod(tokenDirPath.c_str(),
+		originalMode & ~(S_IWUSR | S_IWGRP | S_IWOTH)) == 0 ? CKR_OK : CKR_FUNCTION_FAILED;
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	CK_RV destroyRv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hObject) );
+	CK_UTF8CHAR label[32];
+	CK_ATTRIBUTE labelAttribute = { CKA_LABEL, label, sizeof(label) };
+	CK_RV getAttributeRv = CRYPTOKI_F_PTR(
+		C_GetAttributeValue(hSession, hObject, &labelAttribute, 1) );
+
+	int restoreResult = chmod(tokenDirPath.c_str(), originalMode);
+	CK_RV retryDestroyRv = destroyRv == CKR_OK ? CKR_OK :
+		CRYPTOKI_F_PTR( C_DestroyObject(hSession, hObject) );
+	CK_RV closeSessionRv = CRYPTOKI_F_PTR( C_CloseSession(hSession) );
+
+	CPPUNIT_ASSERT_EQUAL(0, restoreResult);
+	CPPUNIT_ASSERT_EQUAL(CKR_FUNCTION_FAILED, destroyRv);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, getAttributeRv);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, retryDestroyRv);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, closeSessionRv);
+}
+#endif
 
 void ObjectTests::testGetObjectSize()
 {

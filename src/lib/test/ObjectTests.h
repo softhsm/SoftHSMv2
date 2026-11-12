@@ -45,6 +45,9 @@ class ObjectTests : public TestsBase
 	CPPUNIT_TEST(testCopyObject);
 	CPPUNIT_TEST(testCopyPrivateKey);
 	CPPUNIT_TEST(testDestroyObject);
+#ifndef _WIN32
+	CPPUNIT_TEST(testDestroyObjectFailure);
+#endif
 	CPPUNIT_TEST(testGetObjectSize);
 	CPPUNIT_TEST(testGetAttributeValue);
 	CPPUNIT_TEST(testSetAttributeValue);
@@ -69,6 +72,9 @@ public:
 	void testCopyObject();
 	void testCopyPrivateKey();
 	void testDestroyObject();
+#ifndef _WIN32
+	void testDestroyObjectFailure();
+#endif
 	void testGetObjectSize();
 	void testGetAttributeValue();
 	void testSetAttributeValue();

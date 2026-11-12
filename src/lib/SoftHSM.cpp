@@ -2027,12 +2027,12 @@ CK_RV SoftHSM::C_DestroyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObj
 	CK_BBOOL isDestroyable = object->getBooleanValue(CKA_DESTROYABLE, true);
 	if (!isDestroyable) return CKR_ACTION_PROHIBITED;
 
-	// Tell the handleManager to forget about the object.
-	handleManager->destroyObject(hObject);
-
 	// Destroy the object
 	if (!object->destroyObject())
 		return CKR_FUNCTION_FAILED;
+
+	// Tell the handleManager to forget about the object.
+	handleManager->destroyObject(hObject);
 
 	return CKR_OK;
 }
