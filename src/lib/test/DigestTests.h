@@ -43,6 +43,9 @@ class DigestTests : public TestsNoPINInitBase
 	CPPUNIT_TEST(testDigest);
 	CPPUNIT_TEST(testDigestUpdate);
 	CPPUNIT_TEST(testDigestKey);
+	#ifdef WITH_ECC
+	CPPUNIT_TEST(testDigestECKey);
+	#endif
 	CPPUNIT_TEST(testDigestFinal);
 	CPPUNIT_TEST(testDigestAll);
 	CPPUNIT_TEST_SUITE_END();
@@ -52,6 +55,9 @@ public:
 	void testDigest();
 	void testDigestUpdate();
 	void testDigestKey();
+	#ifdef WITH_ECC
+	void testDigestECKey();
+	#endif
 	void testDigestFinal();
 	void testDigestAll();
 };
