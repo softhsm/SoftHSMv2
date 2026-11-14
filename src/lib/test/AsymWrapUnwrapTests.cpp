@@ -271,6 +271,15 @@ void AsymWrapUnwrapTests::rsaWrapUnwrap(CK_MECHANISM_TYPE mechanismType, CK_SESS
 
 	CPPUNIT_ASSERT(ulSymValueLen == ulUnwrappedValueLen);
 	CPPUNIT_ASSERT(memcmp(symValue, unwrappedValue, ulSymValueLen) == 0);
+
+	// The unwrapped AES key carries the length of the recovered value (issue #628)
+	CK_ULONG ulValueLen = 0UL;
+	CK_ATTRIBUTE valueLenTemplate[] = {
+		{ CKA_VALUE_LEN, &ulValueLen, sizeof(ulValueLen) }
+	};
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, unwrappedKey, valueLenTemplate, sizeof(valueLenTemplate)/sizeof(CK_ATTRIBUTE)) );
+	CPPUNIT_ASSERT(rv==CKR_OK);
+	CPPUNIT_ASSERT(ulValueLen == ulSymValueLen);
 }
 
 void AsymWrapUnwrapTests::testRsaWrapUnwrap()
