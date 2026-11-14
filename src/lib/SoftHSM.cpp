@@ -8725,6 +8725,12 @@ CK_RV SoftHSM::C_UnwrapKey
 				else
 					value = keydata;
 				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+
+				// The unwrap template may not carry CKA_VALUE_LEN, the mechanism
+				// supplies it with CKA_VALUE (PKCS#11 v2.40 4.1.2, footnote 6).
+				// Key types without the attribute (DES, DES3) have nothing to set.
+				if (osobject->attributeExists(CKA_VALUE_LEN))
+					bOK = bOK && osobject->setAttribute(CKA_VALUE_LEN, (unsigned long)keydata.size());
 			}
 			else if (keyType == CKK_RSA)
 			{
