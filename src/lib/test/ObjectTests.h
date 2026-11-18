@@ -62,6 +62,7 @@ class ObjectTests : public TestsBase
 	CPPUNIT_TEST(testAllowedMechanisms);
 	CPPUNIT_TEST(testReAuthentication);
 	CPPUNIT_TEST(testTemplateAttribute);
+	CPPUNIT_TEST(testNestedTemplateNullValue);
 	CPPUNIT_TEST(testCreateSecretKey);
 	CPPUNIT_TEST_SUITE_END();
 
@@ -87,6 +88,7 @@ public:
 	void testReAuthentication();
 	void testAllowedMechanisms();
 	void testTemplateAttribute();
+	void testNestedTemplateNullValue();
 	void testCreateSecretKey();
 
 protected:

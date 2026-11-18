@@ -2354,6 +2354,16 @@ CK_RV P11AttrWrapTemplate::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK_V
 		return CKR_ATTRIBUTE_VALUE_INVALID;
 	}
 
+	// The nested attributes are not covered by the NULL_PTR check in P11Attribute::update()
+	for (size_t i = 0; i < ulValueLen / sizeof(CK_ATTRIBUTE); ++i)
+	{
+		CK_ATTRIBUTE_PTR nested = ((CK_ATTRIBUTE_PTR) pValue) + i;
+		if (nested->pValue == NULL_PTR && nested->ulValueLen != 0)
+		{
+			return CKR_ATTRIBUTE_VALUE_INVALID;
+		}
+	}
+
 	// Fill the template vector with elements
 	CK_ATTRIBUTE_PTR attr = (CK_ATTRIBUTE_PTR) pValue;
 	std::map<CK_ATTRIBUTE_TYPE,OSAttribute> data;
@@ -2451,6 +2461,16 @@ CK_RV P11AttrUnwrapTemplate::updateAttr(Token* /*token*/, bool /*isPrivate*/, CK
 	if ((ulValueLen % sizeof(CK_ATTRIBUTE)) != 0)
 	{
 		return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+
+	// The nested attributes are not covered by the NULL_PTR check in P11Attribute::update()
+	for (size_t i = 0; i < ulValueLen / sizeof(CK_ATTRIBUTE); ++i)
+	{
+		CK_ATTRIBUTE_PTR nested = ((CK_ATTRIBUTE_PTR) pValue) + i;
+		if (nested->pValue == NULL_PTR && nested->ulValueLen != 0)
+		{
+			return CKR_ATTRIBUTE_VALUE_INVALID;
+		}
 	}
 
 	// Fill the template vector with elements

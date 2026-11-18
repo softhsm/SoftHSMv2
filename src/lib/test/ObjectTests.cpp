@@ -2364,6 +2364,92 @@ void ObjectTests::testTemplateAttribute()
 	free(wrapAttribs[2].pValue);
 }
 
+/** Attributes nested in CKA_WRAP_TEMPLATE / CKA_UNWRAP_TEMPLATE with a NULL_PTR value and a non-zero length must be rejected. */
+void ObjectTests::testNestedTemplateNullValue()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+	CK_OBJECT_HANDLE hObject = CK_INVALID_HANDLE;
+
+	CK_BYTE pE[] = { 0x01, 0x00, 0x01 };
+	CK_BYTE pN[] = { 0xC6, 0x47, 0xDD, 0x74, 0x3B, 0xCB, 0xDC, 0x6F, 0xCE, 0xA7,
+			 0xF0, 0x5F, 0x29, 0x4B, 0x27, 0x00, 0xCC, 0x92, 0xE9, 0x20,
+			 0x8A, 0x2C, 0x87, 0x36, 0x47, 0x24, 0xB0, 0xD5, 0x7D, 0xB0,
+			 0x92, 0x01, 0xA0, 0xA3, 0x55, 0x2E, 0x3F, 0xFE, 0xA7, 0x4C,
+			 0x4B, 0x3F, 0x9D, 0x4E, 0xCB, 0x78, 0x12, 0xA9, 0x42, 0xAD,
+			 0x51, 0x1F, 0x3B, 0xBD, 0x3D, 0x6A, 0xE5, 0x38, 0xB7, 0x45,
+			 0x65, 0x50, 0x30, 0x35 };
+	CK_BYTE pD[] = { 0x6D, 0x94, 0x6B, 0xEB, 0xFF, 0xDC, 0x03, 0x80, 0x7B, 0x0A,
+			 0x4F, 0x0A, 0x98, 0x6C, 0xA3, 0x2A, 0x8A, 0xE4, 0xAA, 0x18,
+			 0x44, 0xA4, 0xA5, 0x39, 0x37, 0x0A, 0x2C, 0xFC, 0x5F, 0xD1,
+			 0x44, 0x6E, 0xCE, 0x25, 0x9B, 0xE5, 0xD1, 0x51, 0xAF, 0xA8,
+			 0x30, 0xD1, 0x4D, 0x3C, 0x60, 0x33, 0xB5, 0xED, 0x4C, 0x39,
+			 0xDA, 0x68, 0x78, 0xF9, 0x6B, 0x4F, 0x47, 0x55, 0xB2, 0x02,
+			 0x00, 0x7E, 0x9C, 0x05 };
+	CK_OBJECT_CLASS pubClass = CKO_PUBLIC_KEY;
+	CK_OBJECT_CLASS privClass = CKO_PRIVATE_KEY;
+	CK_KEY_TYPE rsaType = CKK_RSA;
+	CK_BYTE id[] = { 0x01, 0x02, 0x03, 0x04 };
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	// Initialize the library and start the test.
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// Open read-write session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// Login USER into the sessions so we can create a private objects
+	rv = CRYPTOKI_F_PTR( C_Login(hSession, CKU_USER, m_userPin1, m_userPin1Length) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// One nested attribute of each value kind: CK_BBOOL, CK_ULONG and byte array
+	CK_ATTRIBUTE nullBool = { CKA_TOKEN, NULL_PTR, sizeof(CK_BBOOL) };
+	CK_ATTRIBUTE nullUlong = { CKA_KEY_TYPE, NULL_PTR, sizeof(CK_ULONG) };
+	CK_ATTRIBUTE nullBytes = { CKA_ID, NULL_PTR, sizeof(id) };
+	CK_ATTRIBUTE nullTemplates[] = { nullBool, nullUlong, nullBytes };
+
+	for (size_t i = 0; i < sizeof(nullTemplates)/sizeof(nullTemplates[0]); i++)
+	{
+		// Public key with CKA_WRAP_TEMPLATE
+		CK_ATTRIBUTE pubTemplate[] = {
+			{ CKA_CLASS, &pubClass, sizeof(pubClass) },
+			{ CKA_KEY_TYPE, &rsaType, sizeof(rsaType) },
+			{ CKA_MODULUS, pN, sizeof(pN) },
+			{ CKA_PUBLIC_EXPONENT, pE, sizeof(pE) },
+			{ CKA_WRAP_TEMPLATE, &nullTemplates[i], sizeof(CK_ATTRIBUTE) }
+		};
+		rv = CRYPTOKI_F_PTR( C_CreateObject(hSession, pubTemplate, sizeof(pubTemplate)/sizeof(CK_ATTRIBUTE), &hObject) );
+		CPPUNIT_ASSERT_EQUAL(CKR_ATTRIBUTE_VALUE_INVALID, rv);
+
+		// Private key with CKA_UNWRAP_TEMPLATE
+		CK_ATTRIBUTE privTemplate[] = {
+			{ CKA_CLASS, &privClass, sizeof(privClass) },
+			{ CKA_KEY_TYPE, &rsaType, sizeof(rsaType) },
+			{ CKA_MODULUS, pN, sizeof(pN) },
+			{ CKA_PRIVATE_EXPONENT, pD, sizeof(pD) },
+			{ CKA_UNWRAP_TEMPLATE, &nullTemplates[i], sizeof(CK_ATTRIBUTE) }
+		};
+		rv = CRYPTOKI_F_PTR( C_CreateObject(hSession, privTemplate, sizeof(privTemplate)/sizeof(CK_ATTRIBUTE), &hObject) );
+		CPPUNIT_ASSERT_EQUAL(CKR_ATTRIBUTE_VALUE_INVALID, rv);
+	}
+
+	// A nested attribute with a real value is still accepted
+	CK_ATTRIBUTE goodNested = { CKA_ID, id, sizeof(id) };
+	CK_ATTRIBUTE goodPubTemplate[] = {
+		{ CKA_CLASS, &pubClass, sizeof(pubClass) },
+		{ CKA_KEY_TYPE, &rsaType, sizeof(rsaType) },
+		{ CKA_MODULUS, pN, sizeof(pN) },
+		{ CKA_PUBLIC_EXPONENT, pE, sizeof(pE) },
+		{ CKA_WRAP_TEMPLATE, &goodNested, sizeof(goodNested) }
+	};
+	rv = CRYPTOKI_F_PTR( C_CreateObject(hSession, goodPubTemplate, sizeof(goodPubTemplate)/sizeof(CK_ATTRIBUTE), &hObject) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+}
+
 void ObjectTests::testCreateSecretKey()
 {
 	CK_RV rv;
