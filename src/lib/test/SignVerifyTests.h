@@ -70,6 +70,7 @@ class SignVerifyTests : public TestsBase
 #endif
 	CPPUNIT_TEST(testSignInitWrongKeyType);
 	CPPUNIT_TEST(testVerifyInitWrongKeyType);
+	CPPUNIT_TEST(testRsaRawDataTooLong);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -99,6 +100,7 @@ public:
 #endif
 	void testSignInitWrongKeyType();
 	void testVerifyInitWrongKeyType();
+	void testRsaRawDataTooLong();
 
 protected:
 #ifdef WITH_SLH_DSA

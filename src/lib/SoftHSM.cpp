@@ -2935,6 +2935,15 @@ static CK_RV AsymEncrypt(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen
 	// Size of the encrypted data
 	CK_ULONG size = publicKey->getOutputLength();
 
+	// Raw RSA input must not be longer than the modulus. Check it before the size query
+	// so that both calls of a two-call client see the same error.
+	if (mechanism == AsymMech::RSA && ulDataLen > size)
+	{
+		ERROR_MSG("The data length (%lu) exceeds the key size (%lu)", ulDataLen, size);
+		session->resetOp();
+		return CKR_DATA_LEN_RANGE;
+	}
+
 	if (pEncryptedData == NULL_PTR)
 	{
 		*pulEncryptedDataLen = size;
@@ -5347,6 +5356,16 @@ static CK_RV AsymSign(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen, C
 
 	// Size of the signature
 	CK_ULONG size = privateKey->getOutputLength();
+
+	// Raw RSA input must not be longer than the modulus. Check it before the size query
+	// so that both calls of a two-call client see the same error.
+	if (mechanism == AsymMech::RSA && ulDataLen > size)
+	{
+		ERROR_MSG("The data length (%lu) exceeds the key size (%lu)", ulDataLen, size);
+		session->resetOp();
+		return CKR_DATA_LEN_RANGE;
+	}
+
 	if (pSignature == NULL_PTR)
 	{
 		*pulSignatureLen = size;
@@ -6685,6 +6704,12 @@ static CK_RV AsymVerify(Session* session, CK_BYTE_PTR pData, CK_ULONG ulDataLen,
 
 	// We must allow input length <= k and therfore need to prepend the data with zeroes.
 	if (mechanism == AsymMech::RSA) {
+		if (ulDataLen > size)
+		{
+			ERROR_MSG("The data length (%lu) exceeds the key size (%lu)", ulDataLen, size);
+			session->resetOp();
+			return CKR_DATA_LEN_RANGE;
+		}
 		data.wipe(size-ulDataLen);
 	}
 

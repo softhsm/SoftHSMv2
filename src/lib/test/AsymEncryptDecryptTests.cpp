@@ -276,3 +276,89 @@ void AsymEncryptDecryptTests::testRsaEncryptDecrypt()
 	rsaEncryptDecrypt(CKM_RSA_PKCS_OAEP,hSessionRO,hPublicKey,hPrivateKey,&oaepParams);
 #endif
 }
+
+/** Raw RSA must reject data longer than the modulus instead of underflowing the padding length. */
+void AsymEncryptDecryptTests::testRsaRawDataTooLong()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_Login(hSession, CKU_USER, m_userPin1, m_userPin1Length) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_OBJECT_HANDLE hPublicKey = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE hPrivateKey = CK_INVALID_HANDLE;
+	rv = generateRsaKeyPair(hSession, IN_SESSION, IS_PUBLIC, IN_SESSION, IS_PUBLIC, hPublicKey, hPrivateKey);
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Size of the modulus in bytes
+	CK_ATTRIBUTE modulus = { CKA_MODULUS, NULL_PTR, 0 };
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hPublicKey, &modulus, 1) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	const CK_ULONG k = modulus.ulValueLen;
+	CPPUNIT_ASSERT(k > 0 && k <= 512);
+
+	CK_MECHANISM mechanism = { CKM_RSA_X_509, NULL_PTR, 0 };
+	CK_BYTE data[1024];
+	CK_BYTE encrypted[512];
+	CK_ULONG ulEncryptedLen;
+	memset(data, 0x01, sizeof(data));
+	data[0] = 0x00; // keep the value below the modulus when exactly k bytes are used
+
+	// k bytes is accepted
+	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession, &mechanism, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	ulEncryptedLen = sizeof(encrypted);
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, k, encrypted, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(ulEncryptedLen == k);
+
+	// k + 1 and much larger are rejected
+	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession, &mechanism, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	ulEncryptedLen = sizeof(encrypted);
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, k + 1, encrypted, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_DATA_LEN_RANGE);
+
+	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession, &mechanism, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	ulEncryptedLen = sizeof(encrypted);
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, sizeof(data), encrypted, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_DATA_LEN_RANGE);
+
+	// The size query rejects oversized data too
+	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession, &mechanism, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	ulEncryptedLen = 0;
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, k + 1, NULL_PTR, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_DATA_LEN_RANGE);
+
+	// A valid size query succeeds and leaves the operation active
+	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession, &mechanism, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	ulEncryptedLen = 0;
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, k, NULL_PTR, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(ulEncryptedLen == k);
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, k, encrypted, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// The library is still usable afterwards
+	rv = CRYPTOKI_F_PTR( C_EncryptInit(hSession, &mechanism, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	ulEncryptedLen = sizeof(encrypted);
+	rv = CRYPTOKI_F_PTR( C_Encrypt(hSession, data, k, encrypted, &ulEncryptedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CRYPTOKI_F_PTR( C_Logout(hSession) );
+	CRYPTOKI_F_PTR( C_CloseSession(hSession) );
+}
