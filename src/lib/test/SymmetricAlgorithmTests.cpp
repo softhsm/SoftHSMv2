@@ -1989,6 +1989,50 @@ void SymmetricAlgorithmTests::testDesWrapUnwrap()
 	}	
 }
 
+/** Unwrapping an empty blob with a padded mechanism must fail cleanly instead of reading before the buffer. */
+void SymmetricAlgorithmTests::testAesUnwrapEmptyCbcPad()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession;
+	CK_OBJECT_HANDLE hKey = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE hUnwrapped = CK_INVALID_HANDLE;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	// Initialize the library and start the test.
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// Open read-write session
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	// Login USER into the sessions so we can create a private objects
+	rv = CRYPTOKI_F_PTR( C_Login(hSession, CKU_USER, m_userPin1, m_userPin1Length) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	rv = generateAesKey(hSession, IN_SESSION, IS_PUBLIC, hKey);
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+
+	CK_BYTE iv[16] = { 0 };
+	CK_MECHANISM mechanism = { CKM_AES_CBC_PAD, iv, sizeof(iv) };
+	CK_OBJECT_CLASS keyClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE keyType = CKK_AES;
+	CK_ATTRIBUTE keyAttribs[] = {
+		{ CKA_CLASS, &keyClass, sizeof(keyClass) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) }
+	};
+	CK_BYTE empty = 0;
+
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hKey, &empty, 0, keyAttribs, 2, &hUnwrapped) );
+	CPPUNIT_ASSERT(rv != CKR_OK);
+
+	// The library is still usable afterwards
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hKey) );
+	CPPUNIT_ASSERT_EQUAL(CKR_OK, rv);
+}
+
 void SymmetricAlgorithmTests::testNullTemplate()
 {
 	CK_RV rv;
