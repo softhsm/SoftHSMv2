@@ -41,10 +41,12 @@ class AsymEncryptDecryptTests : public TestsBase
 {
 	CPPUNIT_TEST_SUITE(AsymEncryptDecryptTests);
 	CPPUNIT_TEST(testRsaEncryptDecrypt);
+	CPPUNIT_TEST(testRsaRawDataTooLong);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
 	void testRsaEncryptDecrypt();
+	void testRsaRawDataTooLong();
 
 protected:
 	CK_RV generateRsaKeyPair(CK_SESSION_HANDLE hSession, CK_BBOOL bTokenPuk, CK_BBOOL bPrivatePuk, CK_BBOOL bTokenPrk, CK_BBOOL bPrivatePrk, CK_OBJECT_HANDLE &hPuk, CK_OBJECT_HANDLE &hPrk);
