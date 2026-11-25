@@ -42,6 +42,7 @@
 #include "SymmetricAlgorithm.h"
 #include "MechanismParam.h"
 #include "Token.h"
+#include "MutexFactory.h"
 #include "cryptoki.h"
 
 #define SESSION_OP_NONE			0x0
@@ -79,6 +80,13 @@ public:
 	int getOpType();
 	void setOpType(int inOperation);
 	void resetOp();
+
+	// Serialises the calls that use the operation state of this session (find, digest,
+	// sign, verify, encrypt, decrypt). The state is not thread safe, and an application
+	// that overlaps two calls on one session, e.g. when it abandons a call that timed
+	// out and starts the next one, would otherwise corrupt it. Hold it with a MutexLocker
+	// for the whole C_ function, after the SessionRef.
+	Mutex* getOpMutex() { return opMutex; }
 
 	// Find
 	void setFindOp(FindOperation *inFindOp);
@@ -196,6 +204,9 @@ private:
 
 	// Reference count; the session manager owns the initial reference
 	std::atomic<unsigned long> refCount{1};
+
+	// Guards the operation state above, see getOpMutex()
+	Mutex* opMutex;
 };
 
 // Owning reference to a Session, released on destruction. SessionManager::getSession()

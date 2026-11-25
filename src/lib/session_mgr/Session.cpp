@@ -59,6 +59,7 @@ Session::Session(Slot* inSlot, bool inIsReadWrite, CK_VOID_PTR inPApplication, C
 	param = NULL;
 	paramLen = 0;
 	mechanismParam = NULL;
+	opMutex = MutexFactory::i()->getMutex();
 }
 
 // Constructor
@@ -87,12 +88,14 @@ Session::Session()
 	param = NULL;
 	paramLen = 0;
 	mechanismParam = NULL;
+	opMutex = MutexFactory::i()->getMutex();
 }
 
 // Destructor
 Session::~Session()
 {
 	resetOp();
+	MutexFactory::i()->recycleMutex(opMutex);
 }
 
 // Get session info
