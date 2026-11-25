@@ -39,9 +39,9 @@
 #include <openssl/bn.h>
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/param_build.h>
-#else
-#include <openssl/rsa.h>
+#include <openssl/err.h>
 #endif
+#include <openssl/rsa.h>
 #ifdef WITH_FIPS
 #include <openssl/fips.h>
 #endif
@@ -153,60 +153,80 @@ void OSSLRSAPublicKey::createOSSLKey()
 	if (rsa != NULL)
 		return;
 
-
 	BIGNUM* bn_n = OSSL::byteString2bn(n);
 	BIGNUM* bn_e = OSSL::byteString2bn(e);
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	OSSL_PARAM_BLD *param_bld = OSSL_PARAM_BLD_new();
+	OSSL_PARAM_BLD* param_bld = OSSL_PARAM_BLD_new();
+	OSSL_PARAM* params = NULL;
+	EVP_PKEY_CTX* ctx = NULL;
+	bool bBuildErr = false;
 
 	if ((param_bld == NULL) ||
-	(bn_n == NULL) ||
-	(bn_e == NULL) ||
-	(OSSL_PARAM_BLD_push_BN(param_bld,"n",bn_n) <= 0 ) ||
-	(OSSL_PARAM_BLD_push_BN(param_bld,"e",bn_e) <= 0 ))
+		(bn_n == NULL) ||
+		(bn_e == NULL) ||
+		(OSSL_PARAM_BLD_push_BN(param_bld, "n", bn_n) <= 0) ||
+		(OSSL_PARAM_BLD_push_BN(param_bld, "e", bn_e) <= 0))
 	{
-		OSSL_PARAM_BLD_free(param_bld);
-		BN_free(bn_n);
-		BN_free(bn_e);
-		ERROR_MSG("Could not build RSA public key parameters");
-		return;
+		bBuildErr = true;
 	}
-	OSSL_PARAM* params = OSSL_PARAM_BLD_to_param(param_bld);
+
+	if (!bBuildErr)
+		params = OSSL_PARAM_BLD_to_param(param_bld);
 	OSSL_PARAM_BLD_free(param_bld);
+
+	if ((!bBuildErr) && (params != NULL))
+	{
+		// Use the default provider for internal RSA key reconstruction.
+		ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", "provider=default");
+		if ((ctx != NULL) &&
+			(EVP_PKEY_fromdata_init(ctx) > 0) &&
+			(EVP_PKEY_fromdata(ctx, &rsa, EVP_PKEY_PUBLIC_KEY,
+				params) > 0))
+		{
+			OSSL_PARAM_free(params);
+			EVP_PKEY_CTX_free(ctx);
+
+			BN_free(bn_n);
+			BN_free(bn_e);
+			return;
+		}
+	}
+	OSSL_PARAM_free(params);
+	EVP_PKEY_CTX_free(ctx);
+	EVP_PKEY_free(rsa);
+	rsa = NULL;
+
+#if OPENSSL_VERSION_NUMBER >= 0x40000000L
+	ERROR_MSG("Could not create public RSA key object");
 	BN_free(bn_n);
 	BN_free(bn_e);
-
-	EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
-	if (ctx == NULL)
-	{
-		ERROR_MSG("Could not create RSA public key creation context");
-		OSSL_PARAM_free(params);
-		return;
-	}
-	if ((EVP_PKEY_fromdata_init(ctx) <= 0) ||
-		(EVP_PKEY_fromdata(ctx, &rsa, EVP_PKEY_PUBLIC_KEY, params) <= 0))
-	{
-		ERROR_MSG("Could not create public RSA key object");
-		OSSL_PARAM_free(params);
-		EVP_PKEY_CTX_free(ctx);
-		rsa = NULL;
-		return;
-	}
-    OSSL_PARAM_free(params);
-	EVP_PKEY_CTX_free(ctx);
-	
+	return;
 #else
-    RSA* rsa1 = RSA_new();
+	// Provider-based RSA reconstruction may fail in Engine-based
+	// applications where no suitable provider is available.
+	// Fall back to the legacy RSA API while it is still available.
+	ERR_clear_error();
+#endif
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x40000000L
+#if defined(__GNUC__) || defined(__clang__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+	RSA* rsa1 = RSA_new();
 	if (rsa1 == NULL)
-    {
+	{
 		BN_free(bn_n);
-	    BN_free(bn_e);
+		BN_free(bn_e);
 		ERROR_MSG("Could not build RSA object");
 		return;
-    }
+	}
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-// Use the OpenSSL implementation and not any engine
+	// Use the OpenSSL implementation and not any engine
+
 #ifdef WITH_FIPS
 	if (FIPS_mode())
 		RSA_set_method(rsa1, FIPS_rsa_pkcs1_ssleay());
@@ -219,15 +239,18 @@ void OSSLRSAPublicKey::createOSSLKey()
 #else
 	RSA_set_method(rsa1, RSA_PKCS1_OpenSSL());
 #endif
+
 	RSA_set0_key(rsa1, bn_n, bn_e, NULL);
+
 	rsa = EVP_PKEY_new();
 	if (rsa == NULL)
 	{
 		ERROR_MSG("Could not build RSA PKEY");
 		RSA_free(rsa1);
 		return;
-    }
-	if (EVP_PKEY_assign_RSA(rsa,rsa1) <= 0)
+	}
+
+	if (EVP_PKEY_assign_RSA(rsa, rsa1) <= 0)
 	{
 		ERROR_MSG("Could not assign RSA PKEY");
 		RSA_free(rsa1);
@@ -235,5 +258,9 @@ void OSSLRSAPublicKey::createOSSLKey()
 		rsa = NULL;
 		return;
 	}
+
+#if defined(__GNUC__) || defined(__clang__)
+# pragma GCC diagnostic pop
+#endif
 #endif
 }
