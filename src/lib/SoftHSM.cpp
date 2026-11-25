@@ -2458,7 +2458,7 @@ CK_RV SoftHSM::SymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -2719,7 +2719,7 @@ CK_RV SoftHSM::AsymEncryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -3235,7 +3235,7 @@ CK_RV SoftHSM::SymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -3497,7 +3497,7 @@ CK_RV SoftHSM::AsymDecryptInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMec
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -4328,7 +4328,7 @@ CK_RV SoftHSM::MacSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechani
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -4507,7 +4507,7 @@ CK_RV SoftHSM::AsymSignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechan
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -5691,7 +5691,7 @@ CK_RV SoftHSM::MacVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMecha
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -5870,7 +5870,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -8891,7 +8891,7 @@ CK_RV SoftHSM::C_DeriveKey
 
 	// Check the key handle.
 	OSObject *key = (OSObject *)handleManager->getObject(hBaseKey);
-	if (key == NULL_PTR || !key->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (key == NULL_PTR || !key->isValid()) return CKR_KEY_HANDLE_INVALID;
 
 	CK_BBOOL isKeyOnToken = key->getBooleanValue(CKA_TOKEN, false);
 	CK_BBOOL isKeyPrivate = key->getBooleanValue(CKA_PRIVATE, true);
@@ -14378,7 +14378,7 @@ CK_RV SoftHSM::deriveSymmetric
 
 	// Check the key handle
 	OSObject *baseKey = (OSObject *)handleManager->getObject(hBaseKey);
-	if (baseKey == NULL_PTR || !baseKey->isValid()) return CKR_OBJECT_HANDLE_INVALID;
+	if (baseKey == NULL_PTR || !baseKey->isValid()) return CKR_KEY_HANDLE_INVALID;
 
     // Get the data
     ByteString secretValue;
