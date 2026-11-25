@@ -32,6 +32,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 #include <cppunit/extensions/HelperMacros.h>
 #include "OSTokenTests.h"
 #include "OSToken.h"
@@ -428,6 +432,54 @@ void OSTokenTests::testCreateDeleteObjects()
 	// Release the test token
 	delete testToken;
 }
+
+#ifndef _WIN32
+void OSTokenTests::testDeleteObjectIgnoresLockRemovalFailure()
+{
+	ByteString label = "40414243";
+	ByteString serial = "0102030405060708";
+
+	OSToken* testToken = OSToken::createToken("./testdir", "lockFailureToken", DEFAULT_UMASK, label, serial);
+
+	CPPUNIT_ASSERT(testToken != NULL);
+	CPPUNIT_ASSERT(testToken->isValid());
+
+	OSObject* object = testToken->createObject();
+	CPPUNIT_ASSERT(object != NULL);
+	CPPUNIT_ASSERT(testToken->getObjects().size() == 1);
+
+	ObjectFile* fileObject = dynamic_cast<ObjectFile*>(object);
+	CPPUNIT_ASSERT(fileObject != NULL);
+
+	// getLockname() is relative to the token directory, so build the full path
+	std::string lockPath = "./testdir/lockFailureToken/" + fileObject->getLockname();
+
+	// Replace the lock file by a non-empty directory so that removing it fails
+	remove(lockPath.c_str());
+	CPPUNIT_ASSERT(mkdir(lockPath.c_str(), 0700) == 0);
+
+	std::string marker = lockPath + "/marker";
+	FILE* markerFile = fopen(marker.c_str(), "w");
+	CPPUNIT_ASSERT(markerFile != NULL);
+	fclose(markerFile);
+
+	bool deleted = testToken->deleteObject(object);
+	size_t remaining = testToken->getObjects().size();
+
+	// The lock directory must still be there, i.e. the lock removal really failed
+	struct stat st;
+	bool lockStillThere = (stat(lockPath.c_str(), &st) == 0) && S_ISDIR(st.st_mode);
+
+	// Clean up before asserting so that a failure does not leave files behind
+	remove(marker.c_str());
+	rmdir(lockPath.c_str());
+	delete testToken;
+
+	CPPUNIT_ASSERT(lockStillThere);
+	CPPUNIT_ASSERT(deleted);
+	CPPUNIT_ASSERT(remaining == 0);
+}
+#endif
 
 void OSTokenTests::testClearToken()
 {

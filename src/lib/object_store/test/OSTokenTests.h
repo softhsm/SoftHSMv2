@@ -42,6 +42,9 @@ class OSTokenTests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testExistingToken);
 	CPPUNIT_TEST(testNonExistentToken);
 	CPPUNIT_TEST(testCreateDeleteObjects);
+#ifndef _WIN32
+	CPPUNIT_TEST(testDeleteObjectIgnoresLockRemovalFailure);
+#endif
 	CPPUNIT_TEST(testClearToken);
 	CPPUNIT_TEST_SUITE_END();
 
@@ -50,6 +53,9 @@ public:
 	void testExistingToken();
 	void testNonExistentToken();
 	void testCreateDeleteObjects();
+#ifndef _WIN32
+	void testDeleteObjectIgnoresLockRemovalFailure();
+#endif
 	void testClearToken();
 
 	void setUp();

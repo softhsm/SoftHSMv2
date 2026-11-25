@@ -39,10 +39,16 @@ class DirectoryTests : public CppUnit::TestFixture
 {
 	CPPUNIT_TEST_SUITE(DirectoryTests);
 	CPPUNIT_TEST(testDirectory);
+#ifndef _WIN32
+	CPPUNIT_TEST(testRemoveSuccessDoesNotDependOnRefresh);
+#endif
 	CPPUNIT_TEST_SUITE_END();
 
 public:
 	void testDirectory();
+#ifndef _WIN32
+	void testRemoveSuccessDoesNotDependOnRefresh();
+#endif
 
 	void setUp();
 	void tearDown();
