@@ -174,6 +174,10 @@ void DigestTests::testDigestKey()
 		CKM_SHA512, NULL_PTR, 0
 	};
 	CK_BYTE data[] = {"Text to digest"};
+	CK_BYTE keyDigest[64];
+	CK_BYTE dataDigest[64];
+	CK_ULONG keyDigestLen = sizeof(keyDigest); 
+	CK_ULONG dataDigestLen = sizeof(dataDigest);
 
 	// Just make sure that we finalize any previous tests
 	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
@@ -222,7 +226,74 @@ void DigestTests::testDigestKey()
 
 	rv = CRYPTOKI_F_PTR( C_DigestKey(hSession, hKey) );
 	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_DigestFinal(hSession, keyDigest, &keyDigestLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_DigestInit(hSession, &mechanism) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_Digest(hSession, data, sizeof(data) - 1, dataDigest, &dataDigestLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(keyDigestLen == dataDigestLen);
+	CPPUNIT_ASSERT(memcmp(keyDigest, dataDigest, keyDigestLen) == 0);
 }
+
+#ifdef WITH_ECC
+void DigestTests::testDigestECKey()
+{
+	CK_RV rv;
+	CK_SESSION_HANDLE hSession = CK_INVALID_HANDLE;
+
+	// Just make sure that we finalize any previous tests
+	CRYPTOKI_F_PTR( C_Finalize(NULL_PTR) );
+
+	rv = CRYPTOKI_F_PTR( C_DigestKey(hSession, (CK_OBJECT_HANDLE)123UL) );
+	CPPUNIT_ASSERT(rv == CKR_CRYPTOKI_NOT_INITIALIZED);
+
+	rv = CRYPTOKI_F_PTR( C_Initialize(NULL_PTR) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_OpenSession(m_initializedTokenSlotID, CKF_SERIAL_SESSION, NULL_PTR, NULL_PTR, &hSession) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	// Create the generic secret key to digest
+	CK_BBOOL bFalse = CK_FALSE;
+	// Create an EC key pair, which must not be digestible
+	CK_MECHANISM ecMechanism = { CKM_EC_KEY_PAIR_GEN, NULL_PTR, 0 };
+	CK_KEY_TYPE ecKeyType = CKK_EC;
+	CK_BYTE oidP256[] = { 0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07 };
+	CK_ATTRIBUTE publicAttribs[] = {
+		{ CKA_EC_PARAMS, oidP256, sizeof(oidP256) },
+		{ CKA_KEY_TYPE, &ecKeyType, sizeof(ecKeyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_PRIVATE, &bFalse, sizeof(bFalse) }
+	};
+	CK_ATTRIBUTE privateAttribs[] = {
+		{ CKA_KEY_TYPE, &ecKeyType, sizeof(ecKeyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_PRIVATE, &bFalse, sizeof(bFalse) }
+	};
+	CK_OBJECT_HANDLE hPublicKey = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE hPrivateKey = CK_INVALID_HANDLE;
+	rv = CRYPTOKI_F_PTR( C_GenerateKeyPair(hSession, &ecMechanism,
+			publicAttribs, sizeof(publicAttribs)/sizeof(CK_ATTRIBUTE),
+			privateAttribs, sizeof(privateAttribs)/sizeof(CK_ATTRIBUTE),
+			&hPublicKey, &hPrivateKey) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_MECHANISM mechanism = { CKM_SHA512, NULL_PTR, 0 };
+	rv = CRYPTOKI_F_PTR( C_DigestInit(hSession, &mechanism) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	rv = CRYPTOKI_F_PTR( C_DigestKey(hSession, hPublicKey) );
+	CPPUNIT_ASSERT(rv == CKR_KEY_INDIGESTIBLE);
+
+	rv = CRYPTOKI_F_PTR( C_DigestKey(hSession, hPrivateKey) );
+	CPPUNIT_ASSERT(rv == CKR_KEY_INDIGESTIBLE);
+}
+
+#endif
+
 
 void DigestTests::testDigestFinal()
 {
