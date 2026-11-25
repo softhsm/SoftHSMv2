@@ -47,6 +47,7 @@ class SymmetricAlgorithmTests : public TestsBase
 #ifdef HAVE_AES_KEY_WRAP
 	CPPUNIT_TEST(testAesWrapUnwrap);
 #endif
+	CPPUNIT_TEST(testAesUnwrapEmptyCbcPad);
 	CPPUNIT_TEST(testNullTemplate);
 	CPPUNIT_TEST(testNonModifiableDesKeyGeneration);
 	// TODO: check CKA_CHECK_VALUE error
@@ -63,6 +64,7 @@ public:
 	void testAesEncryptDecrypt();
 	void testDesEncryptDecrypt();
 	void testAesWrapUnwrap();
+	void testAesUnwrapEmptyCbcPad();
 	void testDesWrapUnwrap();
 	void testNullTemplate();
 	void testNonModifiableDesKeyGeneration();

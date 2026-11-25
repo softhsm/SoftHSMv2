@@ -7419,6 +7419,12 @@ bool SoftHSM::RFC5652Unpad(ByteString &padded, size_t blocksize)
 {
 	auto wrappedlen = padded.size();
 
+	if( wrappedlen == 0 )
+	{
+		DEBUG_MSG("padded buffer is empty");
+		return false;
+	}
+
 	if( wrappedlen % blocksize != 0)
 	{
 		DEBUG_MSG("padded buffer length %d is not a multiple of %d", wrappedlen, blocksize);
