@@ -426,6 +426,7 @@ static AttributeKind attributeKind(CK_ATTRIBUTE_TYPE type)
 	case CKA_HASH_OF_ISSUER_PUBLIC_KEY: return akBinary;
 	case CKA_NAME_HASH_ALGORITHM: return akInteger;
 	case CKA_CHECK_VALUE: return akBinary;
+	case CKA_PUBLIC_KEY_INFO: return akBinary;
 	case CKA_KEY_TYPE: return akInteger;
 	case CKA_SUBJECT: return akBinary;
 	case CKA_ID: return akBinary;
@@ -462,6 +463,7 @@ static AttributeKind attributeKind(CK_ATTRIBUTE_TYPE type)
 	case CKA_NEVER_EXTRACTABLE: return akBoolean;
 	case CKA_ALWAYS_SENSITIVE: return akBoolean;
 	case CKA_KEY_GEN_MECHANISM: return akInteger;
+	case CKA_DESTROYABLE: return akBoolean;
 	case CKA_MODIFIABLE: return akBoolean;
 	case CKA_COPYABLE: return akBoolean;
 	case CKA_ECDSA_PARAMS: return akBinary;
