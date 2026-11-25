@@ -1185,11 +1185,88 @@ void SymmetricAlgorithmTests::aesWrapUnwrapGeneric(CK_MECHANISM_TYPE mechanismTy
 	CPPUNIT_ASSERT(rv == CKR_OK);
 	CPPUNIT_ASSERT(hNew != CK_INVALID_HANDLE);
 
+	// The unwrapped key carries the length of the recovered value (issue #628)
+	CK_ULONG unwrappedValueLen = 0UL;
+	CK_ATTRIBUTE lenAttrib[] = {
+		{ CKA_VALUE_LEN, &unwrappedValueLen, sizeof(unwrappedValueLen) }
+	};
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hNew, lenAttrib, sizeof(lenAttrib)/sizeof(CK_ATTRIBUTE)) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(unwrappedValueLen == keyLen);
+
 	free(wrappedPtr);
 	wrappedPtr = NULL_PTR;
 	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hSecret) );
 	CPPUNIT_ASSERT(rv == CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
 }
+
+#ifndef WITH_FIPS
+// A Triple DES key has no CKA_VALUE_LEN: unwrapping one recovers its value and leaves the
+// attribute absent (issue #628)
+void SymmetricAlgorithmTests::aesWrapUnwrapDes3(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)
+{
+	CK_MECHANISM mechanism = { mechanismType, NULL_PTR, 0 };
+	CK_BBOOL bFalse = CK_FALSE;
+	CK_BBOOL bTrue = CK_TRUE;
+	CK_OBJECT_CLASS secretClass = CKO_SECRET_KEY;
+	CK_KEY_TYPE keyType = CKK_DES3;
+	CK_BYTE keyPtr[24];
+	CK_RV rv;
+
+	rv = CRYPTOKI_F_PTR( C_GenerateRandom(hSession, keyPtr, sizeof(keyPtr)) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_ATTRIBUTE attribs[] = {
+		{ CKA_CLASS, &secretClass, sizeof(secretClass) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_EXTRACTABLE, &bTrue, sizeof(bTrue) },
+		{ CKA_VALUE, keyPtr, sizeof(keyPtr) }
+	};
+	CK_OBJECT_HANDLE hSecret = CK_INVALID_HANDLE;
+	rv = CRYPTOKI_F_PTR( C_CreateObject(hSession, attribs, sizeof(attribs)/sizeof(CK_ATTRIBUTE), &hSecret) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_BYTE wrapped[sizeof(keyPtr) + 16];
+	CK_ULONG wrappedLen = sizeof(wrapped);
+	rv = CRYPTOKI_F_PTR( C_WrapKey(hSession, &mechanism, hKey, hSecret, wrapped, &wrappedLen) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_ATTRIBUTE nattribs[] = {
+		{ CKA_CLASS, &secretClass, sizeof(secretClass) },
+		{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		{ CKA_TOKEN, &bFalse, sizeof(bFalse) },
+		{ CKA_SENSITIVE, &bFalse, sizeof(bFalse) },
+		{ CKA_EXTRACTABLE, &bTrue, sizeof(bTrue) }
+	};
+	CK_OBJECT_HANDLE hNew = CK_INVALID_HANDLE;
+	rv = CRYPTOKI_F_PTR( C_UnwrapKey(hSession, &mechanism, hKey, wrapped, wrappedLen, nattribs, sizeof(nattribs)/sizeof(CK_ATTRIBUTE), &hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+
+	CK_BYTE valuePtr[sizeof(keyPtr)];
+	CK_ATTRIBUTE valueAttrib[] = {
+		{ CKA_VALUE, valuePtr, sizeof(valuePtr) }
+	};
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hNew, valueAttrib, 1) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	CPPUNIT_ASSERT(valueAttrib[0].ulValueLen == sizeof(keyPtr));
+	CPPUNIT_ASSERT(memcmp(valuePtr, keyPtr, sizeof(keyPtr)) == 0);
+
+	CK_ULONG valueLen = 0UL;
+	CK_ATTRIBUTE lenAttrib[] = {
+		{ CKA_VALUE_LEN, &valueLen, sizeof(valueLen) }
+	};
+	rv = CRYPTOKI_F_PTR( C_GetAttributeValue(hSession, hNew, lenAttrib, 1) );
+	CPPUNIT_ASSERT(rv == CKR_ATTRIBUTE_TYPE_INVALID);
+
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hSecret) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+	rv = CRYPTOKI_F_PTR( C_DestroyObject(hSession, hNew) );
+	CPPUNIT_ASSERT(rv == CKR_OK);
+}
+#endif
 
 void SymmetricAlgorithmTests::aesWrapUnwrapNonModifiableGeneric(CK_MECHANISM_TYPE mechanismType, CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)
 {
@@ -1837,6 +1914,9 @@ void SymmetricAlgorithmTests::testAesWrapUnwrap()
 	aesWrapUnwrapGeneric(CKM_AES_KEY_WRAP, hSession, hKey);
 	aesWrapUnwrapGeneric(CKM_AES_CBC_PAD, hSession, hKey);
 	aesWrapUnwrapGeneric(CKM_AES_CBC, hSession, hKey);
+#ifndef WITH_FIPS
+	aesWrapUnwrapDes3(CKM_AES_KEY_WRAP, hSession, hKey);
+#endif
 	aesWrapUnwrapNonModifiableGeneric(CKM_AES_KEY_WRAP, hSession, hKey);
     aesWrapUnwrapNonModifiableGeneric(CKM_AES_CBC_PAD, hSession, hKey);
     aesWrapUnwrapNonModifiableGeneric(CKM_AES_CBC, hSession, hKey);
