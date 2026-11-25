@@ -46,6 +46,9 @@ namespace {
 class TestOSObject : public OSObject
 {
 public:
+	TestOSObject(bool* inDeleted = NULL) : deleted(inDeleted) {}
+	~TestOSObject() { if (deleted != NULL) *deleted = true; }
+
 	bool attributeExists(CK_ATTRIBUTE_TYPE) { return false; }
 	OSAttribute getAttribute(CK_ATTRIBUTE_TYPE) { abort(); }
 	bool getBooleanValue(CK_ATTRIBUTE_TYPE, bool v) { return v; }
@@ -59,6 +62,9 @@ public:
 	bool commitTransaction() { return true; }
 	bool abortTransaction() { return true; }
 	bool destroyObject() { return true; }
+
+private:
+	bool* deleted;
 };
 
 } // anonymous namespace
@@ -110,24 +116,24 @@ void HandleManagerTests::testHandleManager()
 	// Add an object, hSession doesn't have to exist
 	hObject = handleManager->addSessionObject(slotID, 4412412, true, object);
 	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject).get());
 	handleManager->sessionClosed(4412412);
 	// Object still exists as the hSession was invalid
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject).get());
 	handleManager->allSessionsClosed(slotID);
 	// Object is now gone as all sessions for the given slotID have been removed.
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
 
 	// Add an object and then destroy it.
 	hObject = handleManager->addSessionObject(slotID, 4412412, true, object);
 	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
 	handleManager->destroyObject(hObject);
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
 
 	hObject = handleManager->addTokenObject(slotID, false, object);
 	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
 	handleManager->destroyObject(hObject);
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
 
 	// Create a valid session again
 	hSession = handleManager->addSession(slotID, session);
@@ -137,15 +143,15 @@ void HandleManagerTests::testHandleManager()
 	// Now some magic with a couple of objects
 	hObject = handleManager->addTokenObject(slotID, false, object);
 	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject).get());
 
 	hObject2 = handleManager->addTokenObject(slotID, true, object2);
 	CPPUNIT_ASSERT(hObject2 != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(object2 == handleManager->getObject(hObject2));
+	CPPUNIT_ASSERT(object2 == handleManager->getObject(hObject2).get());
 
 	hObject3 = handleManager->addTokenObject(slotID, true, object3);
 	CPPUNIT_ASSERT(hObject3 != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(object3 == handleManager->getObject(hObject3));
+	CPPUNIT_ASSERT(object3 == handleManager->getObject(hObject3).get());
 
 	// Re-registering returns the same handle whether marked private or public.
 	CPPUNIT_ASSERT(hObject2 == handleManager->addTokenObject(slotID, true, object2));
@@ -156,31 +162,31 @@ void HandleManagerTests::testHandleManager()
 
 	hObject4 = handleManager->addSessionObject(slotID, hSession, true, object4);
 	CPPUNIT_ASSERT(hObject4 != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(object4 == handleManager->getObject(hObject4));
+	CPPUNIT_ASSERT(object4 == handleManager->getObject(hObject4).get());
 
 	hObject5 = handleManager->addSessionObject(slotID, hSession, false, object5);
 	CPPUNIT_ASSERT(hObject5 != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5));
+	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5).get());
 
 	// Logout: private objects (both token and session) should be gone.
 	handleManager->tokenLoggedOut(slotID);
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject)); // public token
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject2)); // private token
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject3)); // private token
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject4)); // private session
-	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5)); // public session
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject).get()); // public token
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject2).get()); // private token
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject3).get()); // private token
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject4).get()); // private session
+	CPPUNIT_ASSERT(object5 == handleManager->getObject(hObject5).get()); // public session
 
 	hSession2 = handleManager->addSession(slotID, session2);
 	CPPUNIT_ASSERT(hSession2 != CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(session2 == handleManager->getSession(hSession2));
 
 	handleManager->sessionClosed(hSession);
-	CPPUNIT_ASSERT(object == handleManager->getObject(hObject)); // token object stays
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject5)); // session object gone
+	CPPUNIT_ASSERT(object == handleManager->getObject(hObject).get()); // token object stays
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject5).get()); // session object gone
 
 	// Closing the last session cascades into allSessionsClosed.
 	handleManager->sessionClosed(hSession2);
-	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject));
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
 	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2));
 
@@ -199,4 +205,57 @@ void HandleManagerTests::testHandleManager()
 	object3->release();
 	object4->release();
 	object5->release();
+}
+
+void HandleManagerTests::testObjectReference()
+{
+	CK_SLOT_ID slotID = 1234;
+	CK_SESSION_HANDLE hSession;
+	Session* session = reinterpret_cast<Session*>(&hSession);
+
+	// Session closed
+	bool deleted = false;
+	OSObject* object = new TestOSObject(&deleted);
+	hSession = handleManager->addSession(slotID, session);
+	CK_OBJECT_HANDLE hObject = handleManager->addSessionObject(slotID, hSession, false, object);
+	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
+	{
+		OSObjectRef ref = handleManager->getObject(hObject);
+		CPPUNIT_ASSERT(ref == object);
+
+		// Drop the handle manager and the owning reference
+		handleManager->sessionClosed(hSession);
+		CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
+		object->release();
+
+		CPPUNIT_ASSERT(!deleted);
+		CPPUNIT_ASSERT(ref->isValid());
+	}
+	CPPUNIT_ASSERT(deleted);
+
+	// Object destroyed
+	deleted = false;
+	object = new TestOSObject(&deleted);
+	hSession = handleManager->addSession(slotID, session);
+	hObject = handleManager->addSessionObject(slotID, hSession, false, object);
+	CPPUNIT_ASSERT(hObject != CK_INVALID_HANDLE);
+	{
+		OSObjectRef ref = handleManager->getObject(hObject);
+		OSObjectRef copy = ref;
+
+		handleManager->destroyObject(hObject);
+		object->release();
+		CPPUNIT_ASSERT(!deleted);
+
+		ref = OSObjectRef();
+		CPPUNIT_ASSERT(NULL == ref.get());
+		CPPUNIT_ASSERT(!deleted);
+		CPPUNIT_ASSERT(copy == object);
+	}
+	CPPUNIT_ASSERT(deleted);
+
+	// An unknown handle gives an empty reference
+	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
+
+	handleManager->sessionClosed(hSession);
 }

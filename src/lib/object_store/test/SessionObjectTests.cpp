@@ -417,9 +417,16 @@ void SessionObjectTests::testCloseSession()
 	testObject.removeOnSessionClose(1);
 
 	CPPUNIT_ASSERT(!testObject.isValid());
-	CPPUNIT_ASSERT(!testObject.attributeExists(CKA_TOKEN));
-	CPPUNIT_ASSERT(!testObject.attributeExists(CKA_PRIME_BITS));
-	CPPUNIT_ASSERT(!testObject.attributeExists(CKA_VALUE_BITS));
+
+	// The attributes stay readable but cannot be modified
+	CPPUNIT_ASSERT(testObject.attributeExists(CKA_TOKEN));
+	CPPUNIT_ASSERT(testObject.attributeExists(CKA_PRIME_BITS));
+	CPPUNIT_ASSERT(testObject.attributeExists(CKA_VALUE_BITS));
+	CPPUNIT_ASSERT(testObject.getAttribute(CKA_TOKEN).getBooleanValue() == true);
+	CPPUNIT_ASSERT(testObject.getAttribute(CKA_PRIME_BITS).getUnsignedLongValue() == 0x87654321);
+	CPPUNIT_ASSERT(testObject.getAttribute(CKA_VALUE_BITS).getByteStringValue() == value3);
+	CPPUNIT_ASSERT(!testObject.setAttribute(CKA_TOKEN, attr1));
+	CPPUNIT_ASSERT(!testObject.deleteAttribute(CKA_TOKEN));
 }
 
 void SessionObjectTests::testDestroyObjectFails()

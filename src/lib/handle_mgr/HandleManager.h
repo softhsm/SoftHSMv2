@@ -62,8 +62,8 @@ public:
     // slotID mathces.
     CK_OBJECT_HANDLE addTokenObject(CK_SLOT_ID slotID, bool isPrivate, OSObject *object);
 
-    // Get the object pointer associated with the given object handle.
-    OSObject *getObject(const CK_OBJECT_HANDLE hObject);
+    // Get a reference to the object associated with the given object handle.
+    OSObjectRef getObject(const CK_OBJECT_HANDLE hObject);
 
     // Get the object handle for the object pointer that has been previously registered.
     // When the object is not found CK_INVALID_HANDLE is returned.

@@ -321,3 +321,71 @@ void SessionObjectStoreTests::testWipeStore()
 
 	delete store;
 }
+
+void SessionObjectStoreTests::testReferencedObject()
+{
+	SessionObjectStore* store = new SessionObjectStore();
+
+	ByteString id = "0102030405";
+	OSAttribute idAtt(id);
+
+	// Session closed
+	SessionObject* obj = store->createObject(1, 1);
+	CPPUNIT_ASSERT(obj != NULL);
+	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
+	{
+		OSObjectRef ref(obj);
+
+		store->sessionClosed(1);
+		CPPUNIT_ASSERT(store->getObjectCount() == 0);
+
+		CPPUNIT_ASSERT(!ref->isValid());
+		CPPUNIT_ASSERT(ref->attributeExists(CKA_ID));
+		CPPUNIT_ASSERT(ref->getByteStringValue(CKA_ID) == id);
+		CPPUNIT_ASSERT(!ref->setAttribute(CKA_ID, idAtt));
+	}
+
+	// All sessions closed
+	obj = store->createObject(1, 2);
+	CPPUNIT_ASSERT(obj != NULL);
+	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
+	{
+		OSObjectRef ref(obj);
+
+		store->allSessionsClosed(1);
+		CPPUNIT_ASSERT(store->getObjectCount() == 0);
+
+		CPPUNIT_ASSERT(!ref->isValid());
+		CPPUNIT_ASSERT(ref->getByteStringValue(CKA_ID) == id);
+	}
+
+	// Token logged out
+	obj = store->createObject(1, 3, true);
+	CPPUNIT_ASSERT(obj != NULL);
+	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
+	{
+		OSObjectRef ref(obj);
+
+		store->tokenLoggedOut(1);
+		CPPUNIT_ASSERT(store->getObjectCount() == 0);
+
+		CPPUNIT_ASSERT(!ref->isValid());
+		CPPUNIT_ASSERT(ref->getByteStringValue(CKA_ID) == id);
+	}
+
+	// Object destroyed
+	obj = store->createObject(1, 4);
+	CPPUNIT_ASSERT(obj != NULL);
+	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
+	{
+		OSObjectRef ref(obj);
+
+		CPPUNIT_ASSERT(obj->destroyObject());
+		CPPUNIT_ASSERT(store->getObjectCount() == 0);
+
+		CPPUNIT_ASSERT(!ref->isValid());
+		CPPUNIT_ASSERT(ref->getByteStringValue(CKA_ID) == id);
+	}
+
+	delete store;
+}
