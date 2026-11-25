@@ -58,7 +58,7 @@ bool SessionObject::attributeExists(CK_ATTRIBUTE_TYPE type)
 {
 	MutexLocker lock(objectMutex);
 
-	return valid && (attributes[type] != NULL);
+	return attributes[type] != NULL;
 }
 
 // Retrieve the specified attribute
@@ -219,7 +219,9 @@ bool SessionObject::deleteAttribute(CK_ATTRIBUTE_TYPE type)
 // The validity state of the object
 bool SessionObject::isValid()
 {
-    return valid;
+	MutexLocker lock(objectMutex);
+
+	return valid;
 }
 
 bool SessionObject::hasSlotID(CK_SLOT_ID inSlotID)
@@ -234,10 +236,7 @@ bool SessionObject::removeOnSessionClose(CK_SESSION_HANDLE inHSession)
 {
 	if (hSession == inHSession)
 	{
-		// Save space
-		discardAttributes();
-
-		valid = false;
+		invalidate();
 
 		return true;
 	}
@@ -251,9 +250,7 @@ bool SessionObject::removeOnAllSessionsClose(CK_SLOT_ID inSlotID)
 {
     if (slotID == inSlotID)
     {
-        discardAttributes();
-
-        valid = false;
+        invalidate();
 
         return true;
     }
@@ -267,9 +264,7 @@ bool SessionObject::removeOnTokenLogout(CK_SLOT_ID inSlotID)
 {
     if (slotID == inSlotID && isPrivate)
     {
-        discardAttributes();
-
-        valid = false;
+        invalidate();
 
         return true;
     }
@@ -328,7 +323,9 @@ bool SessionObject::destroyObject()
 // Invalidate the object
 void SessionObject::invalidate()
 {
+	// Attributes are kept for concurrent readers until the object is deleted
+	MutexLocker lock(objectMutex);
+
 	valid = false;
-	discardAttributes();
 }
 

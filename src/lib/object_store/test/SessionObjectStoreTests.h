@@ -41,12 +41,14 @@ class SessionObjectStoreTests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testCreateDeleteObjects);
 	CPPUNIT_TEST(testMultiSession);
 	CPPUNIT_TEST(testWipeStore);
+	CPPUNIT_TEST(testReferencedObject);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
 	void testCreateDeleteObjects();
 	void testMultiSession();
 	void testWipeStore();
+	void testReferencedObject();
 
 	void setUp();
 	void tearDown();

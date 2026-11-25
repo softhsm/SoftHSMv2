@@ -111,5 +111,50 @@ private:
 	std::atomic<int> refCount;
 };
 
+// Owning reference that keeps the object alive while it is in use
+class OSObjectRef
+{
+public:
+	OSObjectRef() : object(NULL) {}
+
+	explicit OSObjectRef(OSObject* inObject) : object(inObject)
+	{
+		if (object != NULL) object->acquire();
+	}
+
+	OSObjectRef(const OSObjectRef& other) : object(other.object)
+	{
+		if (object != NULL) object->acquire();
+	}
+
+	OSObjectRef(OSObjectRef&& other) noexcept : object(other.object)
+	{
+		other.object = NULL;
+	}
+
+	~OSObjectRef()
+	{
+		if (object != NULL) object->release();
+	}
+
+	OSObjectRef& operator=(OSObjectRef other) noexcept
+	{
+		OSObject* tmp = object;
+		object = other.object;
+		other.object = tmp;
+		return *this;
+	}
+
+	OSObject* get() const { return object; }
+	OSObject* operator->() const { return object; }
+
+	// A temporary must not convert as the pointer would be left dangling
+	operator OSObject*() const & { return object; }
+	operator OSObject*() const && = delete;
+
+private:
+	OSObject* object;
+};
+
 #endif // !_SOFTHSM_V2_OSOBJECT_H
 
