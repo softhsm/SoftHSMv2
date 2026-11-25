@@ -6368,11 +6368,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					return CKR_ARGUMENTS_BAD;
 				}
 				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-				CK_RV rv = MLDSAUtil::setHedge(ckSignAdditionalContext->hedgeVariant, &mldsaParam.hedgeType);
-				if (rv != CKR_OK) {
-					ERROR_MSG("Invalid parameters");
-					return CKR_ARGUMENTS_BAD;
-				}
+				// hedgeVariant is ignored on verification
 				if (ckSignAdditionalContext->ulContextLen > 0) {
 					if (ckSignAdditionalContext->pContext == NULL_PTR) {
 						ERROR_MSG("Invalid parameters");
@@ -6383,7 +6379,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 						return CKR_ARGUMENTS_BAD;
 					}
 					mldsaParam.additionalContext = ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
-					DEBUG_MSG("Verify MLDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)mldsaParam.additionalContext.size(), mldsaParam.hedgeType);
+					DEBUG_MSG("Verify MLDSA additionalContextLen=%lu", (unsigned long)mldsaParam.additionalContext.size());
 				}
 				mechanismParam = &mldsaParam;
 			}
@@ -6410,7 +6406,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 					return CKR_ARGUMENTS_BAD;
 				}
 				CK_SIGN_ADDITIONAL_CONTEXT* ckSignAdditionalContext = (CK_SIGN_ADDITIONAL_CONTEXT*) pMechanism->pParameter;
-				// hedgeVariant affects signing only.
+				// hedgeVariant is ignored on verification
 				if (ckSignAdditionalContext->ulContextLen > 0) {
 					if (ckSignAdditionalContext->pContext == NULL_PTR) {
 						ERROR_MSG("Invalid parameters");
@@ -6421,7 +6417,7 @@ CK_RV SoftHSM::AsymVerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMech
 						return CKR_ARGUMENTS_BAD;
 					}
 					slhdsaParam.additionalContext = ByteString(ckSignAdditionalContext->pContext, ckSignAdditionalContext->ulContextLen);
-					DEBUG_MSG("Verify SLHDSA additionalContextLen=%lu, hedgeType=%d", (unsigned long)slhdsaParam.additionalContext.size(), slhdsaParam.hedgeType);
+					DEBUG_MSG("Verify SLHDSA additionalContextLen=%lu", (unsigned long)slhdsaParam.additionalContext.size());
 				}
 				mechanismParam = &slhdsaParam;
 			}
@@ -7214,6 +7210,11 @@ CK_RV SoftHSM::C_GenerateKeyPair
 		default:
 			return CKR_MECHANISM_INVALID;
 	}
+
+	// Check if the mechanism is enabled in the configuration
+	if (!isMechanismPermitted(NULL, pMechanism->mechanism))
+		return CKR_MECHANISM_INVALID;
+
 	CK_CERTIFICATE_TYPE dummy;
 
 	// Extract information from the public key template that is needed to create the object.
@@ -7359,8 +7360,6 @@ CK_RV SoftHSM::C_GenerateKeyPair
 #ifdef WITH_SLH_DSA
 	if (pMechanism->mechanism == CKM_SLH_DSA_KEY_PAIR_GEN)
 	{
-		if (!isMechanismPermitted(NULL, pMechanism->mechanism))
-			return CKR_MECHANISM_INVALID;
 		return this->generateSLHDSA(hSession,
 									 pPublicKeyTemplate, ulPublicKeyAttributeCount,
 									 pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
@@ -11851,6 +11850,245 @@ CK_RV SoftHSM::generateED
 	return rv;
 }
 
+#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM) || defined(WITH_SLH_DSA)
+// Look up CKA_PARAMETER_SET in a key pair generation template
+static CK_RV getTemplateParameterSet(CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount, CK_ULONG& paramSet, bool& found)
+{
+	found = false;
+	for (CK_ULONG i = 0; i < ulCount; i++)
+	{
+		if (pTemplate[i].type != CKA_PARAMETER_SET)
+			continue;
+		if (pTemplate[i].ulValueLen != sizeof(CK_ULONG))
+		{
+			INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
+			return CKR_ATTRIBUTE_VALUE_INVALID;
+		}
+		if (pTemplate[i].pValue == NULL)
+		{
+			INFO_MSG("CKA_PARAMETER_SET must have a value");
+			return CKR_ATTRIBUTE_VALUE_INVALID;
+		}
+		CK_ULONG value = *(CK_ULONG*)pTemplate[i].pValue;
+		if (found && value != paramSet)
+		{
+			INFO_MSG("Conflicting CKA_PARAMETER_SET values in the template");
+			return CKR_TEMPLATE_INCONSISTENT;
+		}
+		paramSet = value;
+		found = true;
+	}
+	return CKR_OK;
+}
+
+// Store a generated ML-DSA, ML-KEM or SLH-DSA key pair
+CK_RV SoftHSM::storePQCKeyPair
+(CK_SESSION_HANDLE hSession,
+	Token* token,
+	CK_KEY_TYPE keyType,
+	CK_MECHANISM_TYPE keyGenMechanism,
+	CK_ULONG parameterSet,
+	const ByteString& publicValue,
+	const ByteString& privateValue,
+	const ByteString* privateSeed,
+	CK_ATTRIBUTE_PTR pPublicKeyTemplate,
+	CK_ULONG ulPublicKeyAttributeCount,
+	CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
+	CK_ULONG ulPrivateKeyAttributeCount,
+	CK_OBJECT_HANDLE_PTR phPublicKey,
+	CK_OBJECT_HANDLE_PTR phPrivateKey,
+	CK_BBOOL isPublicKeyOnToken,
+	CK_BBOOL isPublicKeyPrivate,
+	CK_BBOOL isPrivateKeyOnToken,
+	CK_BBOOL isPrivateKeyPrivate)
+{
+	CK_RV rv = CKR_OK;
+	CK_ULONG ulKeyGenMechanism = (CK_ULONG)keyGenMechanism;
+
+	// Create a public key using C_CreateObject
+	if (rv == CKR_OK)
+	{
+		const CK_ULONG maxAttribs = 32;
+		CK_OBJECT_CLASS publicKeyClass = CKO_PUBLIC_KEY;
+		CK_ATTRIBUTE publicKeyAttribs[maxAttribs] = {
+			{ CKA_CLASS, &publicKeyClass, sizeof(publicKeyClass) },
+			{ CKA_TOKEN, &isPublicKeyOnToken, sizeof(isPublicKeyOnToken) },
+			{ CKA_PRIVATE, &isPublicKeyPrivate, sizeof(isPublicKeyPrivate) },
+			{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+			{ CKA_PARAMETER_SET, &parameterSet, sizeof(parameterSet) },
+		};
+		CK_ULONG publicKeyAttribsCount = 5;
+
+		// Add the additional
+		for (CK_ULONG i=0; i < ulPublicKeyAttributeCount && rv == CKR_OK; ++i)
+		{
+			switch (pPublicKeyTemplate[i].type)
+			{
+				case CKA_CLASS:
+				case CKA_TOKEN:
+				case CKA_PRIVATE:
+				case CKA_KEY_TYPE:
+				case CKA_PARAMETER_SET:
+					continue;
+				default:
+					if (publicKeyAttribsCount >= maxAttribs)
+						rv = CKR_TEMPLATE_INCONSISTENT;
+					else
+						publicKeyAttribs[publicKeyAttribsCount++] = pPublicKeyTemplate[i];
+			}
+		}
+
+		if (rv == CKR_OK)
+			rv = this->CreateObject(hSession,publicKeyAttribs,publicKeyAttribsCount,phPublicKey,OBJECT_OP_GENERATE);
+
+		// Store the attributes that are being supplied by the key generation to the object
+		if (rv == CKR_OK)
+		{
+			OSObject* osobject = (OSObject*)handleManager->getObject(*phPublicKey);
+			if (osobject == NULL_PTR || !osobject->isValid()) {
+				rv = CKR_FUNCTION_FAILED;
+			} else if (osobject->startTransaction()) {
+				bool bOK = true;
+
+				// Common Key Attributes
+				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
+				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
+
+				// Public Key Attributes
+				ByteString value;
+				if (isPublicKeyPrivate)
+				{
+					bOK = bOK && token->encrypt(publicValue, value);
+				}
+				else
+				{
+					value = publicValue;
+				}
+				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, parameterSet);
+				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+
+				if (bOK)
+					bOK = osobject->commitTransaction();
+				else
+					osobject->abortTransaction();
+
+				if (!bOK)
+					rv = CKR_FUNCTION_FAILED;
+			} else
+				rv = CKR_FUNCTION_FAILED;
+		}
+	}
+
+	// Create a private key using C_CreateObject
+	if (rv == CKR_OK)
+	{
+		const CK_ULONG maxAttribs = 32;
+		CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
+		CK_ATTRIBUTE privateKeyAttribs[maxAttribs] = {
+			{ CKA_CLASS, &privateKeyClass, sizeof(privateKeyClass) },
+			{ CKA_TOKEN, &isPrivateKeyOnToken, sizeof(isPrivateKeyOnToken) },
+			{ CKA_PRIVATE, &isPrivateKeyPrivate, sizeof(isPrivateKeyPrivate) },
+			{ CKA_KEY_TYPE, &keyType, sizeof(keyType) },
+		};
+		CK_ULONG privateKeyAttribsCount = 4;
+
+		// Add the additional
+		for (CK_ULONG i=0; i < ulPrivateKeyAttributeCount && rv == CKR_OK; ++i)
+		{
+			switch (pPrivateKeyTemplate[i].type)
+			{
+				case CKA_CLASS:
+				case CKA_TOKEN:
+				case CKA_PRIVATE:
+				case CKA_KEY_TYPE:
+					continue;
+				default:
+					if (privateKeyAttribsCount >= maxAttribs)
+						rv = CKR_TEMPLATE_INCONSISTENT;
+					else
+						privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
+			}
+		}
+
+		if (rv == CKR_OK)
+			rv = this->CreateObject(hSession,privateKeyAttribs,privateKeyAttribsCount,phPrivateKey,OBJECT_OP_GENERATE);
+
+		// Store the attributes that are being supplied by the key generation to the object
+		if (rv == CKR_OK)
+		{
+			OSObject* osobject = (OSObject*)handleManager->getObject(*phPrivateKey);
+			if (osobject == NULL_PTR || !osobject->isValid()) {
+				rv = CKR_FUNCTION_FAILED;
+			} else if (osobject->startTransaction()) {
+				bool bOK = true;
+
+				// Common Key Attributes
+				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
+				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
+
+				// Common Private Key Attributes
+				bool bAlwaysSensitive = osobject->getBooleanValue(CKA_SENSITIVE, false);
+				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,bAlwaysSensitive);
+				bool bNeverExtractable = osobject->getBooleanValue(CKA_EXTRACTABLE, false) == false;
+				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
+
+				// Private Key Attributes
+				ByteString value;
+				ByteString seed;
+				if (isPrivateKeyPrivate)
+				{
+					bOK = bOK && token->encrypt(privateValue, value);
+					if (privateSeed != NULL)
+						bOK = bOK && token->encrypt(*privateSeed, seed);
+				}
+				else
+				{
+					value = privateValue;
+					if (privateSeed != NULL)
+						seed = *privateSeed;
+				}
+
+				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, parameterSet);
+				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
+				if (privateSeed != NULL)
+					bOK = bOK && osobject->setAttribute(CKA_SEED, seed);
+
+				if (bOK)
+					bOK = osobject->commitTransaction();
+				else
+					osobject->abortTransaction();
+
+				if (!bOK)
+					rv = CKR_FUNCTION_FAILED;
+			} else
+				rv = CKR_FUNCTION_FAILED;
+		}
+	}
+
+	// Remove keys that may have been created already when the function fails.
+	if (rv != CKR_OK)
+	{
+		if (*phPrivateKey != CK_INVALID_HANDLE)
+		{
+			OSObject* ospriv = (OSObject*)handleManager->getObject(*phPrivateKey);
+			handleManager->destroyObject(*phPrivateKey);
+			if (ospriv) ospriv->destroyObject();
+			*phPrivateKey = CK_INVALID_HANDLE;
+		}
+
+		if (*phPublicKey != CK_INVALID_HANDLE)
+		{
+			OSObject* ospub = (OSObject*)handleManager->getObject(*phPublicKey);
+			handleManager->destroyObject(*phPublicKey);
+			if (ospub) ospub->destroyObject();
+			*phPublicKey = CK_INVALID_HANDLE;
+		}
+	}
+
+	return rv;
+}
+#endif
+
 #ifdef WITH_ML_DSA
 // Generate an MLDSA key pair
 CK_RV SoftHSM::generateMLDSA
@@ -11881,28 +12119,13 @@ CK_RV SoftHSM::generateMLDSA
 
 	// Extract desired key information
 	CK_ULONG paramSet = 0;
-	for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount; i++)
-	{
-		switch (pPublicKeyTemplate[i].type)
-		{
-			case CKA_PARAMETER_SET:
-				if (pPublicKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
-                    INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
-                    return CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-				if (pPublicKeyTemplate[i].pValue == NULL) {
-                    INFO_MSG("CKA_PARAMETER_SET must have a value");
-                    return CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-                paramSet = *(CK_ULONG*)pPublicKeyTemplate[i].pValue;
-				break;
-			default:
-				break;
-		}
-	}
+	bool hasParamSet = false;
+	CK_RV rv = getTemplateParameterSet(pPublicKeyTemplate, ulPublicKeyAttributeCount, paramSet, hasParamSet);
+	if (rv != CKR_OK)
+		return rv;
 
 	// The parameters must be specified to be able to generate a key pair.
-	if (paramSet == 0) {
+	if (!hasParamSet || paramSet == 0) {
 		INFO_MSG("Missing parameter(s) CKA_PARAMETER_SET in pPublicKeyTemplate");
 		return CKR_TEMPLATE_INCOMPLETE;
 	}
@@ -11930,186 +12153,17 @@ CK_RV SoftHSM::generateMLDSA
 	MLDSAPublicKey* pub = (MLDSAPublicKey*) kp->getPublicKey();
 	MLDSAPrivateKey* priv = (MLDSAPrivateKey*) kp->getPrivateKey();
 
-	CK_RV rv = CKR_OK;
-
-	// Create a public key using C_CreateObject
-	if (rv == CKR_OK)
-	{
-		const CK_ULONG maxAttribs = 32;
-		CK_OBJECT_CLASS publicKeyClass = CKO_PUBLIC_KEY;
-		CK_KEY_TYPE publicKeyType = CKK_ML_DSA;
-		CK_ATTRIBUTE publicKeyAttribs[maxAttribs] = {
-			{ CKA_CLASS, &publicKeyClass, sizeof(publicKeyClass) },
-			{ CKA_TOKEN, &isPublicKeyOnToken, sizeof(isPublicKeyOnToken) },
-			{ CKA_PRIVATE, &isPublicKeyPrivate, sizeof(isPublicKeyPrivate) },
-			{ CKA_KEY_TYPE, &publicKeyType, sizeof(publicKeyType) },
-		};
-		CK_ULONG publicKeyAttribsCount = 4;
-
-		// Add the additional
-		if (ulPublicKeyAttributeCount > (maxAttribs - publicKeyAttribsCount))
-			rv = CKR_TEMPLATE_INCONSISTENT;
-		for (CK_ULONG i=0; i < ulPublicKeyAttributeCount && rv == CKR_OK; ++i)
-		{
-			switch (pPublicKeyTemplate[i].type)
-			{
-				case CKA_CLASS:
-				case CKA_TOKEN:
-				case CKA_PRIVATE:
-				case CKA_KEY_TYPE:
-					continue;
-				default:
-					publicKeyAttribs[publicKeyAttribsCount++] = pPublicKeyTemplate[i];
-			}
-		}
-
-		if (rv == CKR_OK)
-			rv = this->CreateObject(hSession,publicKeyAttribs,publicKeyAttribsCount,phPublicKey,OBJECT_OP_GENERATE);
-
-		// Store the attributes that are being supplied by the key generation to the object
-		if (rv == CKR_OK)
-		{
-			OSObject* osobject = (OSObject*)handleManager->getObject(*phPublicKey);
-			if (osobject == NULL_PTR || !osobject->isValid()) {
-				rv = CKR_FUNCTION_FAILED;
-			} else if (osobject->startTransaction()) {
-				bool bOK = true;
-
-				// Common Key Attributes
-				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
-				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_DSA_KEY_PAIR_GEN;
-				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
-
-				// ML-DSA Public Key Attributes
-				ByteString value;
-				if (isPublicKeyPrivate)
-				{
-					token->encrypt(pub->getValue(), value);
-				}
-				else
-				{
-					value = pub->getValue();
-				}
-				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, pub->getParameterSet());
-				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-
-				if (bOK)
-					bOK = osobject->commitTransaction();
-				else
-					osobject->abortTransaction();
-
-				if (!bOK)
-					rv = CKR_FUNCTION_FAILED;
-			} else
-				rv = CKR_FUNCTION_FAILED;
-		}
-	}
-
-	// Create a private key using C_CreateObject
-	if (rv == CKR_OK)
-	{
-		const CK_ULONG maxAttribs = 32;
-		CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
-		CK_KEY_TYPE privateKeyType = CKK_ML_DSA;
-		CK_ATTRIBUTE privateKeyAttribs[maxAttribs] = {
-			{ CKA_CLASS, &privateKeyClass, sizeof(privateKeyClass) },
-			{ CKA_TOKEN, &isPrivateKeyOnToken, sizeof(isPrivateKeyOnToken) },
-			{ CKA_PRIVATE, &isPrivateKeyPrivate, sizeof(isPrivateKeyPrivate) },
-			{ CKA_KEY_TYPE, &privateKeyType, sizeof(privateKeyType) },
-		};
-		CK_ULONG privateKeyAttribsCount = 4;
-		if (ulPrivateKeyAttributeCount > (maxAttribs - privateKeyAttribsCount))
-			rv = CKR_TEMPLATE_INCONSISTENT;
-		for (CK_ULONG i=0; i < ulPrivateKeyAttributeCount && rv == CKR_OK; ++i)
-		{
-			switch (pPrivateKeyTemplate[i].type)
-			{
-				case CKA_CLASS:
-				case CKA_TOKEN:
-				case CKA_PRIVATE:
-				case CKA_KEY_TYPE:
-					continue;
-				default:
-					privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
-			}
-		}
-
-		if (rv == CKR_OK)
-			rv = this->CreateObject(hSession,privateKeyAttribs,privateKeyAttribsCount,phPrivateKey,OBJECT_OP_GENERATE);
-
-		// Store the attributes that are being supplied by the key generation to the object
-		if (rv == CKR_OK)
-		{
-			OSObject* osobject = (OSObject*)handleManager->getObject(*phPrivateKey);
-			if (osobject == NULL_PTR || !osobject->isValid()) {
-				rv = CKR_FUNCTION_FAILED;
-			} else if (osobject->startTransaction()) {
-				bool bOK = true;
-
-				// Common Key Attributes
-				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
-				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_DSA_KEY_PAIR_GEN;
-				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
-
-				// Common Private Key Attributes
-				bool bAlwaysSensitive = osobject->getBooleanValue(CKA_SENSITIVE, false);
-				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,bAlwaysSensitive);
-				bool bNeverExtractable = osobject->getBooleanValue(CKA_EXTRACTABLE, false) == false;
-				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
-
-				// ML-DSA Private Key Attributes
-				ByteString value;
-				ByteString seed;
-				if (isPrivateKeyPrivate)
-				{
-					token->encrypt(priv->getValue(), value);
-					token->encrypt(priv->getSeed(), seed);
-				}
-				else
-				{
-					value = priv->getValue();
-					seed = priv->getSeed();
-				}
-
-				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, priv->getParameterSet());
-				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-				bOK = bOK && osobject->setAttribute(CKA_SEED, seed);
-
-				if (bOK)
-					bOK = osobject->commitTransaction();
-				else
-					osobject->abortTransaction();
-
-				if (!bOK)
-					rv = CKR_FUNCTION_FAILED;
-			} else
-				rv = CKR_FUNCTION_FAILED;
-		}
-	}
+	// Store the key pair
+	rv = this->storePQCKeyPair(hSession, token, CKK_ML_DSA, CKM_ML_DSA_KEY_PAIR_GEN, paramSet,
+				   pub->getValue(), priv->getValue(), &priv->getSeed(),
+				   pPublicKeyTemplate, ulPublicKeyAttributeCount,
+				   pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
+				   phPublicKey, phPrivateKey,
+				   isPublicKeyOnToken, isPublicKeyPrivate, isPrivateKeyOnToken, isPrivateKeyPrivate);
 
 	// Clean up
 	mldsa->recycleKeyPair(kp);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(mldsa);
-
-	// Remove keys that may have been created already when the function fails.
-	if (rv != CKR_OK)
-	{
-		if (*phPrivateKey != CK_INVALID_HANDLE)
-		{
-			OSObject* ospriv = (OSObject*)handleManager->getObject(*phPrivateKey);
-			handleManager->destroyObject(*phPrivateKey);
-			if (ospriv) ospriv->destroyObject();
-			*phPrivateKey = CK_INVALID_HANDLE;
-		}
-
-		if (*phPublicKey != CK_INVALID_HANDLE)
-		{
-			OSObject* ospub = (OSObject*)handleManager->getObject(*phPublicKey);
-			handleManager->destroyObject(*phPublicKey);
-			if (ospub) ospub->destroyObject();
-			*phPublicKey = CK_INVALID_HANDLE;
-		}
-	}
 
 	return rv;
 }
@@ -12144,41 +12198,26 @@ CK_RV SoftHSM::generateMLKEM
 		return CKR_GENERAL_ERROR;
 
 	// Extract desired key information
-	unsigned long* params = 0;
-	for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount; i++)
-	{
-		switch (pPublicKeyTemplate[i].type)
-		{
-			case CKA_PARAMETER_SET:
-				if (pPublicKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
-					INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
-					return CKR_ATTRIBUTE_VALUE_INVALID;
-				}
-				if (pPublicKeyTemplate[i].pValue == NULL) {
-					INFO_MSG("CKA_PARAMETER_SET must have a value");
-					return CKR_ATTRIBUTE_VALUE_INVALID;
-				}
-				params = (unsigned long*)pPublicKeyTemplate[i].pValue;
-				break;
-			default:
-				break;
-		}
-	}
+	CK_ULONG paramSet = 0;
+	bool hasParamSet = false;
+	CK_RV rv = getTemplateParameterSet(pPublicKeyTemplate, ulPublicKeyAttributeCount, paramSet, hasParamSet);
+	if (rv != CKR_OK)
+		return rv;
 
 	// The parameters must be specified to be able to generate a key pair.
-	if (params == 0) {
+	if (!hasParamSet) {
 		INFO_MSG("Missing parameter(s) in pPublicKeyTemplate");
 		return CKR_TEMPLATE_INCOMPLETE;
 	}
 
-	if (*params != CKP_ML_KEM_512 && *params != CKP_ML_KEM_768 && *params != CKP_ML_KEM_1024) {
-		INFO_MSG("Wrong parameterSet: %ld", *params);
+	if (paramSet != CKP_ML_KEM_512 && paramSet != CKP_ML_KEM_768 && paramSet != CKP_ML_KEM_1024) {
+		INFO_MSG("Wrong parameterSet: %lu", (unsigned long)paramSet);
 		return CKR_PARAMETER_SET_NOT_SUPPORTED;
 	}
 
 	// Set the parameters
 	MLKEMParameters p;
-	p.setParameterSet(*params);
+	p.setParameterSet(paramSet);
 
 	// Generate key pair
 	AsymmetricKeyPair* kp = NULL;
@@ -12194,187 +12233,17 @@ CK_RV SoftHSM::generateMLKEM
 	MLKEMPublicKey* pub = (MLKEMPublicKey*) kp->getPublicKey();
 	MLKEMPrivateKey* priv = (MLKEMPrivateKey*) kp->getPrivateKey();
 
-	CK_RV rv = CKR_OK;
-
-	// Create a public key using C_CreateObject
-	if (rv == CKR_OK)
-	{
-		const CK_ULONG maxAttribs = 32;
-		CK_OBJECT_CLASS publicKeyClass = CKO_PUBLIC_KEY;
-		CK_KEY_TYPE publicKeyType = CKK_ML_KEM;
-		CK_ATTRIBUTE publicKeyAttribs[maxAttribs] = {
-			{ CKA_CLASS, &publicKeyClass, sizeof(publicKeyClass) },
-			{ CKA_TOKEN, &isPublicKeyOnToken, sizeof(isPublicKeyOnToken) },
-			{ CKA_PRIVATE, &isPublicKeyPrivate, sizeof(isPublicKeyPrivate) },
-			{ CKA_KEY_TYPE, &publicKeyType, sizeof(publicKeyType) },
-		};
-		CK_ULONG publicKeyAttribsCount = 4;
-
-		// Add the additional
-		if (ulPublicKeyAttributeCount > (maxAttribs - publicKeyAttribsCount))
-			rv = CKR_TEMPLATE_INCONSISTENT;
-		for (CK_ULONG i=0; i < ulPublicKeyAttributeCount && rv == CKR_OK; ++i)
-		{
-			switch (pPublicKeyTemplate[i].type)
-			{
-				case CKA_CLASS:
-				case CKA_TOKEN:
-				case CKA_PRIVATE:
-				case CKA_KEY_TYPE:
-					continue;
-				default:
-					publicKeyAttribs[publicKeyAttribsCount++] = pPublicKeyTemplate[i];
-			}
-		}
-
-		if (rv == CKR_OK)
-			rv = this->CreateObject(hSession,publicKeyAttribs,publicKeyAttribsCount,phPublicKey,OBJECT_OP_GENERATE);
-
-		// Store the attributes that are being supplied by the key generation to the object
-		if (rv == CKR_OK)
-		{
-			OSObject* osobject = (OSObject*)handleManager->getObject(*phPublicKey);
-			if (osobject == NULL_PTR || !osobject->isValid()) {
-				rv = CKR_FUNCTION_FAILED;
-			} else if (osobject->startTransaction()) {
-				bool bOK = true;
-
-				// Common Key Attributes
-				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
-				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_KEM_KEY_PAIR_GEN;
-				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
-
-				// ML-KEM Public Key Attributes
-				ByteString value;
-				if (isPublicKeyPrivate)
-				{
-					token->encrypt(pub->getValue(), value);
-				}
-				else
-				{
-					value = pub->getValue();
-				}
-
-				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, pub->getParameterSet());
-				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-
-				if (bOK)
-					bOK = osobject->commitTransaction();
-				else
-					osobject->abortTransaction();
-
-				if (!bOK)
-					rv = CKR_FUNCTION_FAILED;
-			} else
-				rv = CKR_FUNCTION_FAILED;
-		}
-	}
-
-	// Create a private key using C_CreateObject
-	if (rv == CKR_OK)
-	{
-		const CK_ULONG maxAttribs = 32;
-		CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
-		CK_KEY_TYPE privateKeyType = CKK_ML_KEM;
-		CK_ATTRIBUTE privateKeyAttribs[maxAttribs] = {
-			{ CKA_CLASS, &privateKeyClass, sizeof(privateKeyClass) },
-			{ CKA_TOKEN, &isPrivateKeyOnToken, sizeof(isPrivateKeyOnToken) },
-			{ CKA_PRIVATE, &isPrivateKeyPrivate, sizeof(isPrivateKeyPrivate) },
-			{ CKA_KEY_TYPE, &privateKeyType, sizeof(privateKeyType) },
-		};
-		CK_ULONG privateKeyAttribsCount = 4;
-		if (ulPrivateKeyAttributeCount > (maxAttribs - privateKeyAttribsCount))
-			rv = CKR_TEMPLATE_INCONSISTENT;
-		for (CK_ULONG i=0; i < ulPrivateKeyAttributeCount && rv == CKR_OK; ++i)
-		{
-			switch (pPrivateKeyTemplate[i].type)
-			{
-				case CKA_CLASS:
-				case CKA_TOKEN:
-				case CKA_PRIVATE:
-				case CKA_KEY_TYPE:
-					continue;
-				default:
-					privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
-			}
-		}
-
-		if (rv == CKR_OK)
-			rv = this->CreateObject(hSession,privateKeyAttribs,privateKeyAttribsCount,phPrivateKey,OBJECT_OP_GENERATE);
-
-		// Store the attributes that are being supplied by the key generation to the object
-		if (rv == CKR_OK)
-		{
-			OSObject* osobject = (OSObject*)handleManager->getObject(*phPrivateKey);
-			if (osobject == NULL_PTR || !osobject->isValid()) {
-				rv = CKR_FUNCTION_FAILED;
-			} else if (osobject->startTransaction()) {
-				bool bOK = true;
-
-				// Common Key Attributes
-				bOK = bOK && osobject->setAttribute(CKA_LOCAL,true);
-				CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_ML_KEM_KEY_PAIR_GEN;
-				bOK = bOK && osobject->setAttribute(CKA_KEY_GEN_MECHANISM,ulKeyGenMechanism);
-
-				// Common Private Key Attributes
-				bool bAlwaysSensitive = osobject->getBooleanValue(CKA_SENSITIVE, false);
-				bOK = bOK && osobject->setAttribute(CKA_ALWAYS_SENSITIVE,bAlwaysSensitive);
-				bool bNeverExtractable = osobject->getBooleanValue(CKA_EXTRACTABLE, false) == false;
-				bOK = bOK && osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
-
-				// ML-KEM Private Key Attributes
-				ByteString value;
-				ByteString seed;
-				if (isPrivateKeyPrivate)
-				{
-					token->encrypt(priv->getValue(), value);
-					token->encrypt(priv->getSeed(), seed);
-				}
-				else
-				{
-					value = priv->getValue();
-					seed = priv->getSeed();
-				}
-
-				bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET, priv->getParameterSet());
-				bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-				bOK = bOK && osobject->setAttribute(CKA_SEED, seed);
-
-				if (bOK)
-					bOK = osobject->commitTransaction();
-				else
-					osobject->abortTransaction();
-
-				if (!bOK)
-					rv = CKR_FUNCTION_FAILED;
-			} else
-				rv = CKR_FUNCTION_FAILED;
-		}
-	}
+	// Store the key pair
+	rv = this->storePQCKeyPair(hSession, token, CKK_ML_KEM, CKM_ML_KEM_KEY_PAIR_GEN, paramSet,
+				   pub->getValue(), priv->getValue(), &priv->getSeed(),
+				   pPublicKeyTemplate, ulPublicKeyAttributeCount,
+				   pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
+				   phPublicKey, phPrivateKey,
+				   isPublicKeyOnToken, isPublicKeyPrivate, isPrivateKeyOnToken, isPrivateKeyPrivate);
 
 	// Clean up
 	mlkem->recycleKeyPair(kp);
 	CryptoFactory::i()->recycleAsymmetricAlgorithm(mlkem);
-
-	// Remove keys that may have been created already when the function fails.
-	if (rv != CKR_OK)
-	{
-		if (*phPrivateKey != CK_INVALID_HANDLE)
-		{
-			OSObject* ospriv = (OSObject*)handleManager->getObject(*phPrivateKey);
-			handleManager->destroyObject(*phPrivateKey);
-			if (ospriv) ospriv->destroyObject();
-			*phPrivateKey = CK_INVALID_HANDLE;
-		}
-
-		if (*phPublicKey != CK_INVALID_HANDLE)
-		{
-			OSObject* ospub = (OSObject*)handleManager->getObject(*phPublicKey);
-			handleManager->destroyObject(*phPublicKey);
-			if (ospub) ospub->destroyObject();
-			*phPublicKey = CK_INVALID_HANDLE;
-		}
-	}
 
 	return rv;
 }
@@ -14684,6 +14553,95 @@ CK_RV SoftHSM::deriveSymmetric
 	return rv;
 }
 
+#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM) || defined(WITH_SLH_DSA)
+// Get the CKA_VALUE length of a PQC key, 0 if the parameter set is unsupported
+static CK_ULONG getPQCKeyValueLength(CK_KEY_TYPE keyType, CK_OBJECT_CLASS objClass, CK_ULONG parameterSet, bool& known)
+{
+	bool isPublic = (objClass == CKO_PUBLIC_KEY);
+	known = true;
+	switch (keyType)
+	{
+#ifdef WITH_ML_DSA
+		case CKK_ML_DSA:
+			switch (parameterSet)
+			{
+				case CKP_ML_DSA_44:
+					return isPublic ? MLDSAParameters::ML_DSA_44_PUB_LENGTH : MLDSAParameters::ML_DSA_44_PRIV_LENGTH;
+				case CKP_ML_DSA_65:
+					return isPublic ? MLDSAParameters::ML_DSA_65_PUB_LENGTH : MLDSAParameters::ML_DSA_65_PRIV_LENGTH;
+				case CKP_ML_DSA_87:
+					return isPublic ? MLDSAParameters::ML_DSA_87_PUB_LENGTH : MLDSAParameters::ML_DSA_87_PRIV_LENGTH;
+				default:
+					return 0;
+			}
+#endif
+#ifdef WITH_ML_KEM
+		case CKK_ML_KEM:
+			switch (parameterSet)
+			{
+				case CKP_ML_KEM_512:
+					return isPublic ? MLKEMParameters::ML_KEM_512_PUB_LENGTH : MLKEMParameters::ML_KEM_512_PRIV_LENGTH;
+				case CKP_ML_KEM_768:
+					return isPublic ? MLKEMParameters::ML_KEM_768_PUB_LENGTH : MLKEMParameters::ML_KEM_768_PRIV_LENGTH;
+				case CKP_ML_KEM_1024:
+					return isPublic ? MLKEMParameters::ML_KEM_1024_PUB_LENGTH : MLKEMParameters::ML_KEM_1024_PRIV_LENGTH;
+				default:
+					return 0;
+			}
+#endif
+#ifdef WITH_SLH_DSA
+		case CKK_SLH_DSA:
+			return isPublic ? SLHDSAParameters::publicKeyLength(parameterSet) : SLHDSAParameters::privateKeyLength(parameterSet);
+#endif
+		default:
+			known = false;
+			return 0;
+	}
+}
+
+// Check the parameter set and value length of an imported PQC key
+static CK_RV checkPQCKeyTemplate(CK_OBJECT_CLASS objClass, CK_KEY_TYPE keyType, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount)
+{
+	bool known = false;
+	getPQCKeyValueLength(keyType, objClass, 0, known);
+	if (!known)
+		return CKR_OK;
+
+	CK_ULONG parameterSet = 0;
+	bool hasParameterSet = false;
+	const CK_ATTRIBUTE* value = NULL;
+	for (CK_ULONG i = 0; i < ulCount; ++i)
+	{
+		if (pTemplate[i].type == CKA_PARAMETER_SET)
+		{
+			if (pTemplate[i].pValue == NULL || pTemplate[i].ulValueLen != sizeof(parameterSet))
+				return CKR_ATTRIBUTE_VALUE_INVALID;
+			memcpy(&parameterSet, pTemplate[i].pValue, sizeof(parameterSet));
+			hasParameterSet = true;
+		}
+		if (pTemplate[i].type == CKA_VALUE)
+			value = &pTemplate[i];
+	}
+	// Missing attributes are reported by the attribute checks of the object
+	if (!hasParameterSet)
+		return CKR_OK;
+
+	CK_ULONG expectedLength = getPQCKeyValueLength(keyType, objClass, parameterSet, known);
+	if (expectedLength == 0)
+	{
+		INFO_MSG("Unsupported parameter set: %lu", (unsigned long)parameterSet);
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+	if (value != NULL && (value->pValue == NULL || value->ulValueLen != expectedLength))
+	{
+		INFO_MSG("CKA_VALUE does not match the length of the parameter set");
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+
+	return CKR_OK;
+}
+#endif
+
 /** Validate and save an object template, destroying the allocated object if saving fails. */
 CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount, CK_OBJECT_HANDLE_PTR phObject, int op)
 {
@@ -14730,30 +14688,13 @@ CK_RV SoftHSM::CreateObject(CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pTempla
 		return rv;
 	}
 
-#ifdef WITH_SLH_DSA
-	if (op == OBJECT_OP_CREATE && keyType == CKK_SLH_DSA &&
-	    (objClass == CKO_PUBLIC_KEY || objClass == CKO_PRIVATE_KEY))
+#if defined(WITH_ML_DSA) || defined(WITH_ML_KEM) || defined(WITH_SLH_DSA)
+	// Check the value length of PQC keys
+	if (op == OBJECT_OP_CREATE && (objClass == CKO_PUBLIC_KEY || objClass == CKO_PRIVATE_KEY))
 	{
-		CK_ULONG parameterSet = 0;
-		const CK_ATTRIBUTE* value = NULL;
-		bool hasParameterSet = false;
-		for (CK_ULONG i = 0; i < ulCount; ++i)
-		{
-			if (pTemplate[i].type == CKA_PARAMETER_SET)
-			{
-				if (pTemplate[i].pValue == NULL || pTemplate[i].ulValueLen != sizeof(parameterSet))
-					return CKR_ATTRIBUTE_VALUE_INVALID;
-				memcpy(&parameterSet, pTemplate[i].pValue, sizeof(parameterSet));
-				hasParameterSet = true;
-			}
-			if (pTemplate[i].type == CKA_VALUE) value = &pTemplate[i];
-		}
-		if (!hasParameterSet || value == NULL) return CKR_TEMPLATE_INCOMPLETE;
-		CK_ULONG expectedLength = objClass == CKO_PUBLIC_KEY
-			? SLHDSAParameters::publicKeyLength(parameterSet)
-			: SLHDSAParameters::privateKeyLength(parameterSet);
-		if (expectedLength == 0 || value->pValue == NULL || value->ulValueLen != expectedLength)
-			return CKR_ATTRIBUTE_VALUE_INVALID;
+		rv = checkPQCKeyTemplate(objClass, keyType, pTemplate, ulCount);
+		if (rv != CKR_OK)
+			return rv;
 	}
 #endif
 
@@ -15849,315 +15790,83 @@ bool SoftHSM::detectFork(void) {
 #endif
 }
 #ifdef WITH_SLH_DSA
-/** Generate a provider-supported SLH-DSA pair and persist both keys, cleaning up on failure. */
-CK_RV SoftHSM::generateSLHDSA(
-    CK_SESSION_HANDLE hSession, CK_ATTRIBUTE_PTR pPublicKeyTemplate,
-    CK_ULONG ulPublicKeyAttributeCount, CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
-    CK_ULONG ulPrivateKeyAttributeCount, CK_OBJECT_HANDLE_PTR phPublicKey,
-    CK_OBJECT_HANDLE_PTR phPrivateKey, CK_BBOOL isPublicKeyOnToken,
-    CK_BBOOL isPublicKeyPrivate, CK_BBOOL isPrivateKeyOnToken,
-    CK_BBOOL isPrivateKeyPrivate) {
-  *phPublicKey = CK_INVALID_HANDLE;
-  *phPrivateKey = CK_INVALID_HANDLE;
+// Generate an SLH-DSA key pair
+CK_RV SoftHSM::generateSLHDSA
+(CK_SESSION_HANDLE hSession,
+	CK_ATTRIBUTE_PTR pPublicKeyTemplate,
+	CK_ULONG ulPublicKeyAttributeCount,
+	CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
+	CK_ULONG ulPrivateKeyAttributeCount,
+	CK_OBJECT_HANDLE_PTR phPublicKey,
+	CK_OBJECT_HANDLE_PTR phPrivateKey,
+	CK_BBOOL isPublicKeyOnToken,
+	CK_BBOOL isPublicKeyPrivate,
+	CK_BBOOL isPrivateKeyOnToken,
+	CK_BBOOL isPrivateKeyPrivate)
+{
+	*phPublicKey = CK_INVALID_HANDLE;
+	*phPrivateKey = CK_INVALID_HANDLE;
 
-  // Get the session
-  Session *session = (Session *)handleManager->getSession(hSession);
-  if (session == NULL)
-    return CKR_SESSION_HANDLE_INVALID;
+	// Get the session
+	Session* session = (Session*)handleManager->getSession(hSession);
+	if (session == NULL)
+		return CKR_SESSION_HANDLE_INVALID;
 
-  // Get the token
-  Token *token = session->getToken();
-  if (token == NULL)
-    return CKR_GENERAL_ERROR;
+	// Get the token
+	Token* token = session->getToken();
+	if (token == NULL)
+		return CKR_GENERAL_ERROR;
 
-  // Extract desired key information
-  CK_ULONG paramSet = 0;
-  bool hasParamSet = false;
-  for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount; i++) {
-    switch (pPublicKeyTemplate[i].type) {
-    case CKA_PARAMETER_SET:
-      if (pPublicKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
-        INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
-        return CKR_ATTRIBUTE_VALUE_INVALID;
-      }
-      if (pPublicKeyTemplate[i].pValue == NULL) {
-        INFO_MSG("CKA_PARAMETER_SET must have a value");
-        return CKR_ATTRIBUTE_VALUE_INVALID;
-      }
-      paramSet = *(CK_ULONG *)pPublicKeyTemplate[i].pValue;
-      hasParamSet = true;
-      break;
-    default:
-      break;
-    }
-  }
+	// Extract desired key information
+	CK_ULONG paramSet = 0;
+	bool hasParamSet = false;
+	CK_RV rv = getTemplateParameterSet(pPublicKeyTemplate, ulPublicKeyAttributeCount, paramSet, hasParamSet);
+	if (rv != CKR_OK)
+		return rv;
 
-  // Scan private key template for CKA_PARAMETER_SET as well
-  CK_ULONG privParamSet = 0;
-  bool hasPrivParamSet = false;
-  for (CK_ULONG i = 0; i < ulPrivateKeyAttributeCount; i++) {
-    switch (pPrivateKeyTemplate[i].type) {
-    case CKA_PARAMETER_SET:
-      if (pPrivateKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
-        INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
-        return CKR_ATTRIBUTE_VALUE_INVALID;
-      }
-      if (pPrivateKeyTemplate[i].pValue == NULL) {
-        INFO_MSG("CKA_PARAMETER_SET must have a value");
-        return CKR_ATTRIBUTE_VALUE_INVALID;
-      }
-      privParamSet = *(CK_ULONG *)pPrivateKeyTemplate[i].pValue;
-      hasPrivParamSet = true;
-      break;
-    default:
-      break;
-    }
-  }
+	// The parameters must be specified to be able to generate a key pair.
+	if (!hasParamSet)
+	{
+		INFO_MSG("Missing parameter(s) CKA_PARAMETER_SET in pPublicKeyTemplate");
+		return CKR_TEMPLATE_INCOMPLETE;
+	}
 
-  if (!hasParamSet) {
-    if (!hasPrivParamSet) {
-      INFO_MSG("Missing parameter(s) CKA_PARAMETER_SET in templates");
-      return CKR_TEMPLATE_INCOMPLETE;
-    }
-    paramSet = privParamSet;
-  } else if (hasPrivParamSet && paramSet != privParamSet) {
-    INFO_MSG("CKA_PARAMETER_SET mismatch between public and private templates");
-    return CKR_TEMPLATE_INCONSISTENT;
-  }
+	if (!SLHDSAUtil::isParameterSetAvailable(paramSet))
+	{
+		INFO_MSG("Unsupported parameter set: %lu", (unsigned long)paramSet);
+		return CKR_PARAMETER_SET_NOT_SUPPORTED;
+	}
 
-  if (!SLHDSAUtil::isParameterSetAvailable(paramSet)) {
-    INFO_MSG("Unsupported parameter set: %lu", (unsigned long)paramSet);
-    return CKR_PARAMETER_SET_NOT_SUPPORTED;
-  }
+	// Set the parameters
+	SLHDSAParameters p;
+	p.setParameterSet(paramSet);
 
-  // Set the parameters
-  SLHDSAParameters p;
-  p.setParameterSet(paramSet);
+	// Generate key pair
+	AsymmetricKeyPair* kp = NULL;
+	AsymmetricAlgorithm* slhdsa = CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::SLHDSA);
+	if (slhdsa == NULL) return CKR_GENERAL_ERROR;
+	if (!slhdsa->generateKeyPair(&kp, &p))
+	{
+		ERROR_MSG("Could not generate key pair");
+		CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
+		return CKR_GENERAL_ERROR;
+	}
 
-  // Generate key pair
-  AsymmetricKeyPair *kp = NULL;
-  AsymmetricAlgorithm *slhdsa =
-      CryptoFactory::i()->getAsymmetricAlgorithm(AsymAlgo::SLHDSA);
-  if (slhdsa == NULL)
-    return CKR_GENERAL_ERROR;
-  if (!slhdsa->generateKeyPair(&kp, &p)) {
-    ERROR_MSG("Could not generate key pair");
-    CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
-    return CKR_GENERAL_ERROR;
-  }
+	SLHDSAPublicKey* pub = (SLHDSAPublicKey*) kp->getPublicKey();
+	SLHDSAPrivateKey* priv = (SLHDSAPrivateKey*) kp->getPrivateKey();
 
-  SLHDSAPublicKey *pub = (SLHDSAPublicKey *)kp->getPublicKey();
-  SLHDSAPrivateKey *priv = (SLHDSAPrivateKey *)kp->getPrivateKey();
+	// Store the key pair
+	rv = this->storePQCKeyPair(hSession, token, CKK_SLH_DSA, CKM_SLH_DSA_KEY_PAIR_GEN, paramSet,
+				   pub->getValue(), priv->getValue(), NULL,
+				   pPublicKeyTemplate, ulPublicKeyAttributeCount,
+				   pPrivateKeyTemplate, ulPrivateKeyAttributeCount,
+				   phPublicKey, phPrivateKey,
+				   isPublicKeyOnToken, isPublicKeyPrivate, isPrivateKeyOnToken, isPrivateKeyPrivate);
 
-  CK_RV rv = CKR_OK;
+	// Clean up
+	slhdsa->recycleKeyPair(kp);
+	CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
 
-  // Create a public key using C_CreateObject
-  if (rv == CKR_OK) {
-    const CK_ULONG maxAttribs = 32;
-    CK_OBJECT_CLASS publicKeyClass = CKO_PUBLIC_KEY;
-    CK_KEY_TYPE publicKeyType = CKK_SLH_DSA;
-    CK_ATTRIBUTE publicKeyAttribs[maxAttribs] = {
-        {CKA_CLASS, &publicKeyClass, sizeof(publicKeyClass)},
-        {CKA_TOKEN, &isPublicKeyOnToken, sizeof(isPublicKeyOnToken)},
-        {CKA_PRIVATE, &isPublicKeyPrivate, sizeof(isPublicKeyPrivate)},
-        {CKA_KEY_TYPE, &publicKeyType, sizeof(publicKeyType)},
-    };
-    CK_ULONG publicKeyAttribsCount = 4;
-
-    // Add the additional
-    if (ulPublicKeyAttributeCount > (maxAttribs - publicKeyAttribsCount))
-      rv = CKR_TEMPLATE_INCONSISTENT;
-    for (CK_ULONG i = 0; i < ulPublicKeyAttributeCount && rv == CKR_OK; ++i) {
-      switch (pPublicKeyTemplate[i].type) {
-      case CKA_CLASS:
-      case CKA_TOKEN:
-      case CKA_PRIVATE:
-      case CKA_KEY_TYPE:
-        continue;
-      case CKA_PARAMETER_SET:
-        if (pPublicKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
-          INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
-          rv = CKR_ATTRIBUTE_VALUE_INVALID;
-          break;
-        }
-        if (pPublicKeyTemplate[i].pValue == NULL) {
-          INFO_MSG("CKA_PARAMETER_SET must have a value");
-          rv = CKR_ATTRIBUTE_VALUE_INVALID;
-          break;
-        }
-        if (*(CK_ULONG *)pPublicKeyTemplate[i].pValue != paramSet) {
-          INFO_MSG("CKA_PARAMETER_SET mismatch between public and private templates");
-          rv = CKR_TEMPLATE_INCONSISTENT;
-          break;
-        }
-        publicKeyAttribs[publicKeyAttribsCount++] = pPublicKeyTemplate[i];
-        break;
-      default:
-        publicKeyAttribs[publicKeyAttribsCount++] = pPublicKeyTemplate[i];
-      }
-    }
-
-    if (rv == CKR_OK)
-      rv = this->CreateObject(hSession, publicKeyAttribs, publicKeyAttribsCount,
-                              phPublicKey, OBJECT_OP_GENERATE);
-
-    // Store the attributes that are being supplied by the key generation to the
-    // object
-    if (rv == CKR_OK) {
-      OSObject *osobject = (OSObject *)handleManager->getObject(*phPublicKey);
-      if (osobject == NULL_PTR || !osobject->isValid()) {
-        rv = CKR_FUNCTION_FAILED;
-      } else if (osobject->startTransaction()) {
-        bool bOK = true;
-
-        // Common Key Attributes
-        bOK = bOK && osobject->setAttribute(CKA_LOCAL, true);
-        CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_SLH_DSA_KEY_PAIR_GEN;
-        bOK = bOK &&
-              osobject->setAttribute(CKA_KEY_GEN_MECHANISM, ulKeyGenMechanism);
-
-        // SLH-DSA Public Key Attributes
-        ByteString value;
-        if (isPublicKeyPrivate) {
-          bOK = bOK && token->encrypt(pub->getValue(), value);
-        } else {
-          value = pub->getValue();
-        }
-        bOK = bOK &&
-              osobject->setAttribute(CKA_PARAMETER_SET, pub->getParameterSet());
-        bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-
-        if (bOK)
-          bOK = osobject->commitTransaction();
-        else
-          osobject->abortTransaction();
-
-        if (!bOK)
-          rv = CKR_FUNCTION_FAILED;
-      } else
-        rv = CKR_FUNCTION_FAILED;
-    }
-  }
-
-  // Create a private key using C_CreateObject
-  if (rv == CKR_OK) {
-    const CK_ULONG maxAttribs = 32;
-    CK_OBJECT_CLASS privateKeyClass = CKO_PRIVATE_KEY;
-    CK_KEY_TYPE privateKeyType = CKK_SLH_DSA;
-    CK_ATTRIBUTE privateKeyAttribs[maxAttribs] = {
-        {CKA_CLASS, &privateKeyClass, sizeof(privateKeyClass)},
-        {CKA_TOKEN, &isPrivateKeyOnToken, sizeof(isPrivateKeyOnToken)},
-        {CKA_PRIVATE, &isPrivateKeyPrivate, sizeof(isPrivateKeyPrivate)},
-        {CKA_KEY_TYPE, &privateKeyType, sizeof(privateKeyType)},
-    };
-    CK_ULONG privateKeyAttribsCount = 4;
-    if (ulPrivateKeyAttributeCount > (maxAttribs - privateKeyAttribsCount))
-      rv = CKR_TEMPLATE_INCONSISTENT;
-    for (CK_ULONG i = 0; i < ulPrivateKeyAttributeCount && rv == CKR_OK; ++i) {
-      switch (pPrivateKeyTemplate[i].type) {
-      case CKA_CLASS:
-      case CKA_TOKEN:
-      case CKA_PRIVATE:
-      case CKA_KEY_TYPE:
-        continue;
-      case CKA_PARAMETER_SET:
-        if (pPrivateKeyTemplate[i].ulValueLen != sizeof(CK_ULONG)) {
-          INFO_MSG("CKA_PARAMETER_SET must be sizeof(CK_ULONG)");
-          rv = CKR_ATTRIBUTE_VALUE_INVALID;
-          break;
-        }
-        if (pPrivateKeyTemplate[i].pValue == NULL) {
-          INFO_MSG("CKA_PARAMETER_SET must have a value");
-          rv = CKR_ATTRIBUTE_VALUE_INVALID;
-          break;
-        }
-        if (*(CK_ULONG *)pPrivateKeyTemplate[i].pValue != paramSet) {
-          INFO_MSG("CKA_PARAMETER_SET mismatch between public and private templates");
-          rv = CKR_TEMPLATE_INCONSISTENT;
-          break;
-        }
-        continue;
-      default:
-        privateKeyAttribs[privateKeyAttribsCount++] = pPrivateKeyTemplate[i];
-      }
-    }
-
-    if (rv == CKR_OK)
-      rv = this->CreateObject(hSession, privateKeyAttribs,
-                              privateKeyAttribsCount, phPrivateKey,
-                              OBJECT_OP_GENERATE);
-
-    // Store the attributes that are being supplied by the key generation to the
-    // object
-    if (rv == CKR_OK) {
-      OSObject *osobject = (OSObject *)handleManager->getObject(*phPrivateKey);
-      if (osobject == NULL_PTR || !osobject->isValid()) {
-        rv = CKR_FUNCTION_FAILED;
-      } else if (osobject->startTransaction()) {
-        bool bOK = true;
-
-        // Common Key Attributes
-        bOK = bOK && osobject->setAttribute(CKA_LOCAL, true);
-        CK_ULONG ulKeyGenMechanism = (CK_ULONG)CKM_SLH_DSA_KEY_PAIR_GEN;
-        bOK = bOK &&
-              osobject->setAttribute(CKA_KEY_GEN_MECHANISM, ulKeyGenMechanism);
-
-        // Common Private Key Attributes
-        bool bAlwaysSensitive = osobject->getBooleanValue(CKA_SENSITIVE, false);
-        bOK = bOK &&
-              osobject->setAttribute(CKA_ALWAYS_SENSITIVE, bAlwaysSensitive);
-        bool bNeverExtractable =
-            osobject->getBooleanValue(CKA_EXTRACTABLE, false) == false;
-        bOK = bOK &&
-              osobject->setAttribute(CKA_NEVER_EXTRACTABLE, bNeverExtractable);
-
-        // SLHDSA Private Key Attributes
-        ByteString value;
-        if (isPrivateKeyPrivate) {
-          bOK = bOK && token->encrypt(priv->getValue(), value);
-        } else {
-          value = priv->getValue();
-        }
-
-        bOK = bOK && osobject->setAttribute(CKA_PARAMETER_SET,
-                                            priv->getParameterSet());
-        bOK = bOK && osobject->setAttribute(CKA_VALUE, value);
-
-        if (bOK)
-          bOK = osobject->commitTransaction();
-        else
-          osobject->abortTransaction();
-
-        if (!bOK)
-          rv = CKR_FUNCTION_FAILED;
-      } else
-        rv = CKR_FUNCTION_FAILED;
-    }
-  }
-
-  // Clean up
-  slhdsa->recycleKeyPair(kp);
-  CryptoFactory::i()->recycleAsymmetricAlgorithm(slhdsa);
-
-  // Remove keys that may have been created already when the function fails.
-  if (rv != CKR_OK) {
-    if (*phPrivateKey != CK_INVALID_HANDLE) {
-      OSObject *ospriv = (OSObject *)handleManager->getObject(*phPrivateKey);
-      handleManager->destroyObject(*phPrivateKey);
-      if (ospriv)
-        ospriv->destroyObject();
-      *phPrivateKey = CK_INVALID_HANDLE;
-    }
-
-    if (*phPublicKey != CK_INVALID_HANDLE) {
-      OSObject *ospub = (OSObject *)handleManager->getObject(*phPublicKey);
-      handleManager->destroyObject(*phPublicKey);
-      if (ospub)
-        ospub->destroyObject();
-      *phPublicKey = CK_INVALID_HANDLE;
-    }
-  }
-
-  return rv;
+	return rv;
 }
 #endif

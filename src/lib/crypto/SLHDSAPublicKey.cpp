@@ -73,8 +73,8 @@ void SLHDSAPublicKey::setValue(const ByteString& inValue)
 /** \brief serialise */
 ByteString SLHDSAPublicKey::serialise() const
 {
-	uint64_t paramVal = (uint64_t)parameterSet;
-	return value.serialise() + ByteString((const unsigned char*)&paramVal, sizeof(uint64_t)).serialise();
+	// The parameter set is stored big-endian
+	return value.serialise() + ByteString(parameterSet).serialise();
 }
 
 /** Decode a public key only if its parameter identifier and raw-key length are valid. */
@@ -83,13 +83,16 @@ bool SLHDSAPublicKey::deserialise(ByteString& serialised)
 	ByteString deserializedValue = ByteString::chainDeserialise(serialised);
 	ByteString deserializedParam = ByteString::chainDeserialise(serialised);
 
-	if (deserializedValue.size() == 0 || deserializedParam.size() != sizeof(uint64_t))
+	if (deserializedValue.size() == 0 || deserializedParam.size() != 8)
 	{
 		return false;
 	}
 
 	uint64_t paramSet64 = 0;
-	memcpy(&paramSet64, deserializedParam.const_byte_str(), sizeof(uint64_t));
+	for (size_t i = 0; i < 8; i++)
+	{
+		paramSet64 = (paramSet64 << 8) + deserializedParam.const_byte_str()[i];
+	}
 	if (paramSet64 > ULONG_MAX) return false;
 	unsigned long paramSet = static_cast<unsigned long>(paramSet64);
 
