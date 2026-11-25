@@ -96,7 +96,10 @@ void SessionObjectStore::getObjects(CK_SLOT_ID slotID, std::set<OSObject*> &inOb
 	}
 }
 
-// Create a new object
+// Create a new object. The caller gets its own reference, taken while the store lock
+// is held: a concurrent logout, session close or store wipe drops the store's reference
+// and must not free the object under a creator that is still filling it in. The caller
+// MUST release() it.
 SessionObject* SessionObjectStore::createObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate)
 {
 	// Create the new object file
@@ -116,6 +119,7 @@ SessionObject* SessionObjectStore::createObject(CK_SLOT_ID slotID, CK_SESSION_HA
 
 	objects.insert(newObject);
 	allObjects.insert(newObject);
+	newObject->acquire();
 
 	DEBUG_MSG("(0x%08X) Created new object (0x%08X)", this, newObject);
 

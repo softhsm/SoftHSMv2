@@ -33,6 +33,7 @@
 #ifndef _SOFTHSM_V2_SESSION_H
 #define _SOFTHSM_V2_SESSION_H
 
+#include <atomic>
 #include "Slot.h"
 #include "FindOperation.h"
 #include "HashAlgorithm.h"
@@ -128,6 +129,23 @@ public:
 	void setSymmetricKey(SymmetricKey* inSymmetricKey);
 	SymmetricKey* getSymmetricKey();
 
+	// Reference counting. A new session holds one reference, owned by the session
+	// manager. Everybody else that uses a session obtained from the session or handle
+	// manager holds it with a SessionRef, so that a concurrent C_CloseSession or
+	// C_CloseAllSessions cannot delete it under them.
+	void acquire() noexcept
+	{
+		refCount.fetch_add(1, std::memory_order_relaxed);
+	}
+
+	void release() noexcept
+	{
+		if (refCount.fetch_sub(1, std::memory_order_acq_rel) == 1)
+		{
+			delete this;
+		}
+	}
+
 private:
 	// Constructor
 	Session();
@@ -175,6 +193,59 @@ private:
 
 	// Symmetric Crypto
 	SymmetricKey* symmetricKey;
+
+	// Reference count; the session manager owns the initial reference
+	std::atomic<unsigned long> refCount{1};
+};
+
+// Owning reference to a Session, released on destruction. SessionManager::getSession()
+// and HandleManager::getSession() return one. Keep it in a named variable for as long
+// as the session is used.
+class SessionRef
+{
+public:
+	SessionRef() : session(nullptr) {}
+
+	// Takes over a reference that has already been acquired for the caller.
+	explicit SessionRef(Session* inSession) : session(inSession) {}
+
+	SessionRef(SessionRef&& other) noexcept : session(other.session) { other.session = nullptr; }
+
+	SessionRef& operator=(SessionRef&& other) noexcept
+	{
+		if (this != &other)
+		{
+			reset();
+			session = other.session;
+			other.session = nullptr;
+		}
+		return *this;
+	}
+
+	SessionRef(const SessionRef&) = delete;
+	SessionRef& operator=(const SessionRef&) = delete;
+
+	~SessionRef() { reset(); }
+
+	// Converting a temporary would drop the reference at the end of the statement and
+	// leave a dangling pointer, so only a named SessionRef converts. Use get() to
+	// inspect a temporary within one expression.
+	operator Session*() const & { return session; }
+	operator Session*() const && = delete;
+	Session* operator->() const { return session; }
+	Session* get() const { return session; }
+
+private:
+	void reset()
+	{
+		if (session != nullptr)
+		{
+			session->release();
+			session = nullptr;
+		}
+	}
+
+	Session* session;
 };
 
 #endif // !_SOFTHSM_V2_SESSION_H

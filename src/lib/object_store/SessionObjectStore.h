@@ -61,7 +61,7 @@ public:
 	// Insert the session objects for the given slotID into the given OSObject set
 	void getObjects(CK_SLOT_ID slotID, std::set<OSObject*> &inObjects);
 
-	// Create a new object
+	// Create a new object; the caller owns a reference to it and MUST release() it
 	SessionObject* createObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate = false);
 
 	// Delete an object

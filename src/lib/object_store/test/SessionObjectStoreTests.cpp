@@ -87,6 +87,11 @@ void SessionObjectStoreTests::testCreateDeleteObjects()
 	obj2->setAttribute(CKA_ID, idAtt[1]);
 	obj3->setAttribute(CKA_ID, idAtt[2]);
 
+	// Drop the creator references; the store keeps the objects alive
+	obj1->release();
+	obj2->release();
+	obj3->release();
+
 	// Check that the store contains 3 objects
 	CPPUNIT_ASSERT(testStore->getObjectCount() == 3);
 
@@ -194,6 +199,11 @@ void SessionObjectStoreTests::testMultiSession()
 	obj2->setAttribute(CKA_ID, idAtt[1]);
 	obj3->setAttribute(CKA_ID, idAtt[2]);
 
+	// Drop the creator references; the store keeps the objects alive
+	obj1->release();
+	obj2->release();
+	obj3->release();
+
 	// Check that the store contains 3 objects
 	CPPUNIT_ASSERT(store->getObjectCount() == 3);
 
@@ -246,6 +256,9 @@ void SessionObjectStoreTests::testMultiSession()
 	SessionObject* obj5 = store->createObject(1, 7);
 	CPPUNIT_ASSERT(obj5 != NULL);
 	obj5->setAttribute(CKA_ID, idAtt[4]);
+
+	obj4->release();
+	obj5->release();
 
 	CPPUNIT_ASSERT(store->getObjectCount() == 4);
 
@@ -314,6 +327,10 @@ void SessionObjectStoreTests::testWipeStore()
 	CPPUNIT_ASSERT(obj3 != NULL);
 
 	// Wipe the store
+	obj1->release();
+	obj2->release();
+	obj3->release();
+
 	store->clearStore();
 
 	// Check that the store is empty
@@ -334,7 +351,7 @@ void SessionObjectStoreTests::testReferencedObject()
 	CPPUNIT_ASSERT(obj != NULL);
 	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
 	{
-		OSObjectRef ref(obj);
+		OSObjectRef ref = OSObjectRef::adopt(obj);
 
 		store->sessionClosed(1);
 		CPPUNIT_ASSERT(store->getObjectCount() == 0);
@@ -350,7 +367,7 @@ void SessionObjectStoreTests::testReferencedObject()
 	CPPUNIT_ASSERT(obj != NULL);
 	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
 	{
-		OSObjectRef ref(obj);
+		OSObjectRef ref = OSObjectRef::adopt(obj);
 
 		store->allSessionsClosed(1);
 		CPPUNIT_ASSERT(store->getObjectCount() == 0);
@@ -364,7 +381,7 @@ void SessionObjectStoreTests::testReferencedObject()
 	CPPUNIT_ASSERT(obj != NULL);
 	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
 	{
-		OSObjectRef ref(obj);
+		OSObjectRef ref = OSObjectRef::adopt(obj);
 
 		store->tokenLoggedOut(1);
 		CPPUNIT_ASSERT(store->getObjectCount() == 0);
@@ -378,7 +395,7 @@ void SessionObjectStoreTests::testReferencedObject()
 	CPPUNIT_ASSERT(obj != NULL);
 	CPPUNIT_ASSERT(obj->setAttribute(CKA_ID, idAtt));
 	{
-		OSObjectRef ref(obj);
+		OSObjectRef ref = OSObjectRef::adopt(obj);
 
 		CPPUNIT_ASSERT(obj->destroyObject());
 		CPPUNIT_ASSERT(store->getObjectCount() == 0);
@@ -387,5 +404,55 @@ void SessionObjectStoreTests::testReferencedObject()
 		CPPUNIT_ASSERT(ref->getByteStringValue(CKA_ID) == id);
 	}
 
+	delete store;
+}
+
+// #924: the creator of an object holds a reference from createObject() on, so that a
+// concurrent invalidation (logout, session close, store wipe) between the creation and
+// the registration of the object cannot free it while the creator is still filling it.
+void SessionObjectStoreTests::testTokenLogoutWhileCreatorHoldsObject()
+{
+	SessionObjectStore* store = new SessionObjectStore();
+	SessionObject* obj = store->createObject(1, 1, true);
+	CPPUNIT_ASSERT(obj != NULL);
+
+	store->tokenLoggedOut(1);
+
+	// The creator keeps going; it must see an invalid object, not freed memory
+	CPPUNIT_ASSERT(!obj->isValid());
+	CPPUNIT_ASSERT(!obj->setAttribute(CKA_CLASS, OSAttribute((unsigned long) CKO_DATA)));
+
+	obj->release();
+	delete store;
+}
+
+void SessionObjectStoreTests::testSessionCloseWhileCreatorHoldsObject()
+{
+	SessionObjectStore* store = new SessionObjectStore();
+	SessionObject* obj = store->createObject(1, 1, false);
+	CPPUNIT_ASSERT(obj != NULL);
+
+	store->sessionClosed(1);
+
+	CPPUNIT_ASSERT(!obj->isValid());
+	CPPUNIT_ASSERT(!obj->setAttribute(CKA_CLASS, OSAttribute((unsigned long) CKO_DATA)));
+
+	obj->release();
+	delete store;
+}
+
+void SessionObjectStoreTests::testClearStoreWhileCreatorHoldsObject()
+{
+	SessionObjectStore* store = new SessionObjectStore();
+	SessionObject* obj = store->createObject(1, 1, false);
+	CPPUNIT_ASSERT(obj != NULL);
+
+	store->clearStore();
+
+	// clearStore() only drops the store's references; the creator's object stays usable
+	CPPUNIT_ASSERT(obj->setAttribute(CKA_CLASS, OSAttribute((unsigned long) CKO_DATA)));
+	CPPUNIT_ASSERT_EQUAL((unsigned long) CKO_DATA, obj->getUnsignedLongValue(CKA_CLASS, CKO_VENDOR_DEFINED));
+
+	obj->release();
 	delete store;
 }

@@ -48,11 +48,19 @@ public:
 
 	virtual ~SessionManager();
 
-	CK_RV openSession(Slot* slot, CK_FLAGS flags, CK_VOID_PTR pApplication, CK_NOTIFY Notify, CK_SESSION_HANDLE_PTR phSession);
+	// When pSession is given it receives a reference to the new session. A caller must
+	// use it instead of looking the session up by handle: the handle (an index) can be
+	// reused by another session as soon as a concurrent close has freed it.
+	CK_RV openSession(Slot* slot, CK_FLAGS flags, CK_VOID_PTR pApplication, CK_NOTIFY Notify, CK_SESSION_HANDLE_PTR phSession, SessionRef* pSession = NULL);
 	CK_RV closeSession(CK_SESSION_HANDLE hSession);
+	// Close this very session. A caller that holds a session must close it with this
+	// instead of by handle: the handle (an index) may meanwhile belong to a newer
+	// session, which must not be closed (and its token logged out) by mistake.
+	CK_RV closeSession(Session* session);
 	CK_RV closeAllSessions(Slot* slot);
 	CK_RV getSessionInfo(CK_SESSION_HANDLE hSession, CK_SESSION_INFO_PTR pInfo);
-	Session* getSession(CK_SESSION_HANDLE hSession);
+	// Returns a reference to the session; it is empty when there is no such session
+	SessionRef getSession(CK_SESSION_HANDLE hSession);
 	bool haveSession(CK_SLOT_ID slotID);
 	bool haveROSession(CK_SLOT_ID slotID);
 
@@ -60,6 +68,10 @@ private:
 	// The sessions
 	std::vector<Session*> sessions;
 	Mutex* sessionsMutex;
+
+	// Close the session with the given handle; when expected is given only if it is
+	// that very session
+	CK_RV closeSessionChecked(CK_SESSION_HANDLE hSession, Session* expected);
 };
 
 #endif // !_SOFTHSM_V2_SESSIONMANAGER_H

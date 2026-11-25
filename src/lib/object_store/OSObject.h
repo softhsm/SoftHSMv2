@@ -152,6 +152,14 @@ public:
 	operator OSObject*() const & { return object; }
 	operator OSObject*() const && = delete;
 
+	// Take over a reference that has already been acquired for the caller
+	static OSObjectRef adopt(OSObject* inObject)
+	{
+		OSObjectRef ref;
+		ref.object = inObject;
+		return ref;
+	}
+
 private:
 	OSObject* object;
 };

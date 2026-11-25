@@ -67,16 +67,23 @@ HandleManager::~HandleManager()
 				kv.first, kv.second.hSession);
 			kv.second.object->release();
 		}
+		else if (kv.second.kind == CKH_SESSION)
+		{
+			kv.second.session->release();
+		}
 	}
 
 	MutexFactory::i()->recycleMutex(handlesMutex);
 }
 
+// The handle holds a reference to the session until the session is closed, so that
+// getSession() can always take a reference to a session that it finds.
 CK_SESSION_HANDLE HandleManager::addSession(CK_SLOT_ID slotID, Session *session)
 {
 	MutexLocker lock(handlesMutex);
 
 	Handle h( CKH_SESSION, slotID );
+	session->acquire();
 	h.session = session;
 	handles[++handleCounter] = h;
 	slotHandles[slotID].insert(handleCounter);
@@ -84,14 +91,18 @@ CK_SESSION_HANDLE HandleManager::addSession(CK_SLOT_ID slotID, Session *session)
 	return (CK_SESSION_HANDLE)handleCounter;
 }
 
-Session *HandleManager::getSession(const CK_SESSION_HANDLE hSession)
+SessionRef HandleManager::getSession(const CK_SESSION_HANDLE hSession)
 {
 	MutexLocker lock(handlesMutex);
 
 	std::map< CK_ULONG, Handle>::iterator it = handles.find(hSession);
 	if (it == handles.end() || CKH_SESSION != it->second.kind)
-		return nullptr;
-	return it->second.session;
+		return SessionRef();
+
+	// Acquired under the lock: sessionClosed() removes the handle before the session
+	// manager releases the session, so a session found here is still alive.
+	it->second.session->acquire();
+	return SessionRef(it->second.session);
 }
 
 CK_OBJECT_HANDLE HandleManager::addSessionObject(CK_SLOT_ID slotID, CK_SESSION_HANDLE hSession, bool isPrivate, OSObject *object)
@@ -207,6 +218,7 @@ void HandleManager::destroyObject(const CK_OBJECT_HANDLE hObject)
 void HandleManager::sessionClosed(const CK_SESSION_HANDLE hSession)
 {
 	std::set<OSObject*> toRelease;
+	Session* closedSession = NULL;
 
 	{
 		MutexLocker lock(handlesMutex);
@@ -221,6 +233,7 @@ void HandleManager::sessionClosed(const CK_SESSION_HANDLE hSession)
 
 		// session closed, so we can erase information about it.
 		slotHandles[slotID].erase(hSession);
+		closedSession = it->second.session;
 		handles.erase(it);
 
 		DEBUG_MSG("Session %lu (slot %lu) closed", hSession, slotID);
@@ -254,11 +267,14 @@ void HandleManager::sessionClosed(const CK_SESSION_HANDLE hSession)
 
 	for (auto* obj : toRelease)
 		obj->release();
+
+	closedSession->release();
 }
 
 void HandleManager::allSessionsClosed(const CK_SLOT_ID slotID, bool isLocked)
 {
 	std::set<OSObject*> toRelease;
+	std::set<Session*> sessionsToRelease;
 
 	DEBUG_MSG("Closing all sessions for slot %lu", slotID);
 
@@ -280,7 +296,10 @@ void HandleManager::allSessionsClosed(const CK_SLOT_ID slotID, bool isLocked)
 						objects.erase(hit->second.object);
 					}
 					if (CKH_SESSION == hit->second.kind)
+					{
 						sessionObjectHandles.erase(*it);
+						sessionsToRelease.insert(hit->second.session);
+					}
 					handles.erase(hit);
 				}
 			}
@@ -292,6 +311,9 @@ void HandleManager::allSessionsClosed(const CK_SLOT_ID slotID, bool isLocked)
 
 	for (auto* obj : toRelease)
 		obj->release();
+
+	for (Session* session : sessionsToRelease)
+		session->release();
 }
 
 void HandleManager::tokenLoggedOut(const CK_SLOT_ID slotID)

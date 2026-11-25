@@ -47,11 +47,32 @@
 
 #include "config.h"
 #include "MutexFactory.h"
+#include "SecureMemoryRegistry.h"
 
+#if defined(WITH_OPENSSL)
+#include "OSSLCryptoFactory.h"
+#else
+#include "BotanCryptoFactory.h"
+#endif
+
+// Initialise the one-and-only instance; the sessions used by the tests need the
+// crypto factory and the secure memory registry as well
 #ifdef HAVE_CXX11
 std::unique_ptr<MutexFactory>* MutexFactory::instance = new std::unique_ptr<MutexFactory>();
+std::unique_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::unique_ptr<SecureMemoryRegistry>();
+#if defined(WITH_OPENSSL)
+std::unique_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::unique_ptr<OSSLCryptoFactory>();
+#else
+std::unique_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::unique_ptr<BotanCryptoFactory>();
+#endif
 #else
 std::auto_ptr<MutexFactory>* MutexFactory::instance = new std::auto_ptr<MutexFactory>();
+std::auto_ptr<SecureMemoryRegistry>* SecureMemoryRegistry::instance = new std::auto_ptr<SecureMemoryRegistry>();
+#if defined(WITH_OPENSSL)
+std::auto_ptr<OSSLCryptoFactory>* OSSLCryptoFactory::instance = new std::auto_ptr<OSSLCryptoFactory>();
+#else
+std::auto_ptr<BotanCryptoFactory>* BotanCryptoFactory::instance = new std::auto_ptr<BotanCryptoFactory>();
+#endif
 #endif
 
 class MyProgressListener : public CppUnit::TextTestProgressListener
