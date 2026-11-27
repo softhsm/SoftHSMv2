@@ -42,6 +42,9 @@ class SessionObjectStoreTests : public CppUnit::TestFixture
 	CPPUNIT_TEST(testMultiSession);
 	CPPUNIT_TEST(testWipeStore);
 	CPPUNIT_TEST(testReferencedObject);
+	CPPUNIT_TEST(testTokenLogoutWhileCreatorHoldsObject);
+	CPPUNIT_TEST(testSessionCloseWhileCreatorHoldsObject);
+	CPPUNIT_TEST(testClearStoreWhileCreatorHoldsObject);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -49,6 +52,9 @@ public:
 	void testMultiSession();
 	void testWipeStore();
 	void testReferencedObject();
+	void testTokenLogoutWhileCreatorHoldsObject();
+	void testSessionCloseWhileCreatorHoldsObject();
+	void testClearStoreWhileCreatorHoldsObject();
 
 	void setUp();
 	void tearDown();

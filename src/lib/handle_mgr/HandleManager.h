@@ -52,7 +52,10 @@ public:
     virtual ~HandleManager();
 
     CK_SESSION_HANDLE addSession(CK_SLOT_ID slotID, Session *session);
-    Session *getSession(const CK_SESSION_HANDLE hSession);
+    // Returns a reference to the session; it is empty when the handle is not found.
+    // The session stays alive for as long as the reference is held, also when it is
+    // closed meanwhile.
+    SessionRef getSession(const CK_SESSION_HANDLE hSession);
 
     // Add the session object and return a handle. For objects that have already been registered, check that the
     // slotID matches. The hSession may be different as the object may be added as part of a find objects operation.

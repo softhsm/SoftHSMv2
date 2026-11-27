@@ -207,7 +207,7 @@ void SessionManagerTests::testSessionInfo()
 	// Public RW session info
 	rv = sessionManager.openSession(slot, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession);
 	CPPUNIT_ASSERT(rv == CKR_OK);
-	Session* session = sessionManager.getSession(CK_INVALID_HANDLE);
+	SessionRef session = sessionManager.getSession(CK_INVALID_HANDLE);
 	CPPUNIT_ASSERT(session == NULL);
 	session = sessionManager.getSession(hSession);
 	CPPUNIT_ASSERT(session != NULL);
@@ -257,4 +257,93 @@ void SessionManagerTests::testSessionInfo()
 
 	rv = sessionManager.closeSession(hSession);
 	CPPUNIT_ASSERT(rv == CKR_OK);
+}
+
+// #924: a caller that obtained a session from the manager must be able to keep using
+// it when another thread closes the session meanwhile.
+void SessionManagerTests::testCloseWhileHeld()
+{
+#ifndef _WIN32
+	ObjectStore store("./testdir", DEFAULT_UMASK);
+#else
+	ObjectStore store(".\\testdir", DEFAULT_UMASK);
+#endif
+
+	SlotManager slotManager(&store);
+	SessionManager sessionManager;
+
+	Slot* slot = slotManager.getSlot(0);
+
+	ByteString soPIN((unsigned char*)"1234", 4);
+	ByteString userPIN((unsigned char*)"1234", 4);
+	CK_UTF8CHAR label[33] = "My test token                   ";
+	CPPUNIT_ASSERT(slot->initToken(soPIN, label) == CKR_OK);
+	CPPUNIT_ASSERT(slot->getToken()->loginSO(soPIN) == CKR_OK);
+	CPPUNIT_ASSERT(slot->getToken()->initUserPIN(userPIN) == CKR_OK);
+	slot->getToken()->logout();
+
+	CK_SESSION_HANDLE hSession;
+	CK_SESSION_INFO info;
+
+	// Close one session while it is held
+	CPPUNIT_ASSERT(sessionManager.openSession(slot, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) == CKR_OK);
+	SessionRef held = sessionManager.getSession(hSession);
+	CPPUNIT_ASSERT(held != NULL);
+	CPPUNIT_ASSERT(sessionManager.closeSession(hSession) == CKR_OK);
+	CPPUNIT_ASSERT(sessionManager.getSession(hSession).get() == NULL);
+	CPPUNIT_ASSERT(held->getInfo(&info) == CKR_OK);
+	CPPUNIT_ASSERT(held->isRW());
+
+	// Close all sessions while one is held
+	CPPUNIT_ASSERT(sessionManager.openSession(slot, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hSession) == CKR_OK);
+	SessionRef held2 = sessionManager.getSession(hSession);
+	CPPUNIT_ASSERT(held2 != NULL);
+	CPPUNIT_ASSERT(sessionManager.closeAllSessions(slot) == CKR_OK);
+	CPPUNIT_ASSERT(sessionManager.getSession(hSession).get() == NULL);
+	CPPUNIT_ASSERT(held2->getInfo(&info) == CKR_OK);
+	CPPUNIT_ASSERT(held2->isRW());
+}
+
+// A session that was closed meanwhile (closeAll) must not close the session that reused
+// its handle when the holder of the old session closes it.
+void SessionManagerTests::testCloseStaleSessionKeepsReplacement()
+{
+#ifndef _WIN32
+	ObjectStore store("./testdir", DEFAULT_UMASK);
+#else
+	ObjectStore store(".\\testdir", DEFAULT_UMASK);
+#endif
+
+	SlotManager slotManager(&store);
+	SessionManager sessionManager;
+
+	Slot* slot = slotManager.getSlot(0);
+
+	ByteString soPIN((unsigned char*)"1234", 4);
+	ByteString userPIN((unsigned char*)"1234", 4);
+	CK_UTF8CHAR label[33] = "My test token                   ";
+	CPPUNIT_ASSERT(slot->initToken(soPIN, label) == CKR_OK);
+	CPPUNIT_ASSERT(slot->getToken()->loginSO(soPIN) == CKR_OK);
+	CPPUNIT_ASSERT(slot->getToken()->initUserPIN(userPIN) == CKR_OK);
+	slot->getToken()->logout();
+
+	CK_SESSION_HANDLE hOld, hNew;
+	CPPUNIT_ASSERT(sessionManager.openSession(slot, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hOld) == CKR_OK);
+	SessionRef old = sessionManager.getSession(hOld);
+	CPPUNIT_ASSERT(old != NULL);
+
+	CPPUNIT_ASSERT(sessionManager.closeAllSessions(slot) == CKR_OK);
+
+	// The new session reuses the handle of the old one
+	CPPUNIT_ASSERT(sessionManager.openSession(slot, CKF_SERIAL_SESSION | CKF_RW_SESSION, NULL_PTR, NULL_PTR, &hNew) == CKR_OK);
+	CPPUNIT_ASSERT(hNew == hOld);
+	CPPUNIT_ASSERT(slot->getToken()->loginSO(soPIN) == CKR_OK);
+
+	// Closing the old session fails and leaves the new one, and the login, alone
+	CPPUNIT_ASSERT(sessionManager.closeSession(old) == CKR_SESSION_HANDLE_INVALID);
+	CPPUNIT_ASSERT(sessionManager.getSession(hNew).get() != NULL);
+	CPPUNIT_ASSERT(slot->getToken()->isSOLoggedIn());
+
+	// The new session is still closed by its own handle
+	CPPUNIT_ASSERT(sessionManager.closeSession(hNew) == CKR_OK);
 }

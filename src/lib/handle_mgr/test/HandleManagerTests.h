@@ -42,11 +42,13 @@ class HandleManagerTests : public CppUnit::TestFixture
 	CPPUNIT_TEST_SUITE(HandleManagerTests);
 	CPPUNIT_TEST(testHandleManager);
 	CPPUNIT_TEST(testObjectReference);
+	CPPUNIT_TEST(testGetSessionKeepsSessionAlive);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
 	void testHandleManager();
 	void testObjectReference();
+	void testGetSessionKeepsSessionAlive();
 
 	void setUp();
 	void tearDown();

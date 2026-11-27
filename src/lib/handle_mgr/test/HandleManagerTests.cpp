@@ -92,10 +92,10 @@ void HandleManagerTests::testHandleManager()
 	CK_OBJECT_HANDLE hObject4;
 	CK_OBJECT_HANDLE hObject5;
 
-	// Sessions are passed as Session* but HandleManager never dereferences
-	// them, so casts from any unique pointer work.
-	Session* session  = reinterpret_cast<Session*>(&hSession);
-	Session* session2 = reinterpret_cast<Session*>(&hSession2);
+	// addSession() takes a reference to the session, so they must be real sessions
+	Slot slot(NULL, slotID, NULL);
+	Session* session  = new Session(&slot, false, NULL, NULL);
+	Session* session2 = new Session(&slot, false, NULL, NULL);
 
 	// Objects must be real OSObjects because addSessionObject acquires and
 	// the cleanup paths release. Each starts at refcount=1.
@@ -108,10 +108,10 @@ void HandleManagerTests::testHandleManager()
 	// Check session object management.
 	hSession = handleManager->addSession(slotID, session);
 	CPPUNIT_ASSERT(hSession != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(session == handleManager->getSession(hSession));
+	CPPUNIT_ASSERT(session == handleManager->getSession(hSession).get());
 	CPPUNIT_ASSERT_NO_THROW(handleManager->sessionClosed(123124));
 	handleManager->sessionClosed(hSession);
-	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
+	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession).get());
 
 	// Add an object, hSession doesn't have to exist
 	hObject = handleManager->addSessionObject(slotID, 4412412, true, object);
@@ -138,7 +138,7 @@ void HandleManagerTests::testHandleManager()
 	// Create a valid session again
 	hSession = handleManager->addSession(slotID, session);
 	CPPUNIT_ASSERT(hSession != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(session == handleManager->getSession(hSession));
+	CPPUNIT_ASSERT(session == handleManager->getSession(hSession).get());
 
 	// Now some magic with a couple of objects
 	hObject = handleManager->addTokenObject(slotID, false, object);
@@ -178,7 +178,7 @@ void HandleManagerTests::testHandleManager()
 
 	hSession2 = handleManager->addSession(slotID, session2);
 	CPPUNIT_ASSERT(hSession2 != CK_INVALID_HANDLE);
-	CPPUNIT_ASSERT(session2 == handleManager->getSession(hSession2));
+	CPPUNIT_ASSERT(session2 == handleManager->getSession(hSession2).get());
 
 	handleManager->sessionClosed(hSession);
 	CPPUNIT_ASSERT(object == handleManager->getObject(hObject).get()); // token object stays
@@ -187,15 +187,15 @@ void HandleManagerTests::testHandleManager()
 	// Closing the last session cascades into allSessionsClosed.
 	handleManager->sessionClosed(hSession2);
 	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
-	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
-	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2));
+	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession).get());
+	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2).get());
 
 	// Bulk close
 	hSession  = handleManager->addSession(slotID, session);
 	hSession2 = handleManager->addSession(slotID, session2);
 	handleManager->allSessionsClosed(slotID);
-	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession));
-	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2));
+	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession).get());
+	CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession2).get());
 
 	// At this point HandleManager holds no references to any of our test
 	// objects; refcount on each should be 1 (the "creating" ref we still own).
@@ -205,13 +205,17 @@ void HandleManagerTests::testHandleManager()
 	object3->release();
 	object4->release();
 	object5->release();
+
+	session->release();
+	session2->release();
 }
 
 void HandleManagerTests::testObjectReference()
 {
 	CK_SLOT_ID slotID = 1234;
 	CK_SESSION_HANDLE hSession;
-	Session* session = reinterpret_cast<Session*>(&hSession);
+	Slot slot(NULL, slotID, NULL);
+	Session* session = new Session(&slot, false, NULL, NULL);
 
 	// Session closed
 	bool deleted = false;
@@ -258,4 +262,30 @@ void HandleManagerTests::testObjectReference()
 	CPPUNIT_ASSERT(NULL == handleManager->getObject(hObject).get());
 
 	handleManager->sessionClosed(hSession);
+}
+
+// A reference returned by getSession() must keep the session alive when it is closed
+// meanwhile and the session manager drops its reference.
+void HandleManagerTests::testGetSessionKeepsSessionAlive()
+{
+	CK_SLOT_ID slotID = 1234;
+	Slot slot(NULL, slotID, NULL);
+	Session* session = new Session(&slot, true, NULL, NULL);
+
+	CK_SESSION_HANDLE hSession = handleManager->addSession(slotID, session);
+	CPPUNIT_ASSERT(hSession != CK_INVALID_HANDLE);
+
+	{
+		SessionRef ref = handleManager->getSession(hSession);
+		CPPUNIT_ASSERT(session == ref);
+
+		// What a concurrent C_CloseSession does: the handle manager and then the
+		// session manager drop their references.
+		handleManager->sessionClosed(hSession);
+		session->release();
+		CPPUNIT_ASSERT(NULL == handleManager->getSession(hSession).get());
+
+		// Still usable, not freed yet
+		CPPUNIT_ASSERT(ref->isRW());
+	}
 }

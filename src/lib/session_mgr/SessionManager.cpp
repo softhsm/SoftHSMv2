@@ -46,12 +46,12 @@ SessionManager::SessionManager()
 // Destructor
 SessionManager::~SessionManager()
 {
-	std::vector<Session*> toDelete = sessions;
+	std::vector<Session*> toRelease = sessions;
 	sessions.clear();
 
-	for (std::vector<Session*>::iterator i = toDelete.begin(); i != toDelete.end(); i++)
+	for (std::vector<Session*>::iterator i = toRelease.begin(); i != toRelease.end(); i++)
 	{
-		if (*i != NULL) delete *i;
+		if (*i != NULL) (*i)->release();
 	}
 
 	MutexFactory::i()->recycleMutex(sessionsMutex);
@@ -64,7 +64,8 @@ CK_RV SessionManager::openSession
 	CK_FLAGS flags,
 	CK_VOID_PTR pApplication,
 	CK_NOTIFY notify,
-	CK_SESSION_HANDLE_PTR phSession
+	CK_SESSION_HANDLE_PTR phSession,
+	SessionRef* pSession
 )
 {
 	if (phSession == NULL_PTR) return CKR_ARGUMENTS_BAD;
@@ -100,6 +101,11 @@ CK_RV SessionManager::openSession
 		sessions[i] = session;
 		session->setHandle(i + 1);
 		*phSession = session->getHandle();
+		if (pSession != NULL)
+		{
+			session->acquire();
+			*pSession = SessionRef(session);
+		}
 
 		return CKR_OK;
 	}
@@ -108,12 +114,30 @@ CK_RV SessionManager::openSession
 	sessions.push_back(session);
 	session->setHandle(sessions.size());
 	*phSession = session->getHandle();
+	if (pSession != NULL)
+	{
+		session->acquire();
+		*pSession = SessionRef(session);
+	}
 
 	return CKR_OK;
 }
 
 // Close a session
 CK_RV SessionManager::closeSession(CK_SESSION_HANDLE hSession)
+{
+	return closeSessionChecked(hSession, NULL);
+}
+
+// Close the given session, and only that one
+CK_RV SessionManager::closeSession(Session* session)
+{
+	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	return closeSessionChecked(session->getHandle(), session);
+}
+
+CK_RV SessionManager::closeSessionChecked(CK_SESSION_HANDLE hSession, Session* expected)
 {
 	if (hSession == CK_INVALID_HANDLE) return CKR_SESSION_HANDLE_INVALID;
 
@@ -126,6 +150,9 @@ CK_RV SessionManager::closeSession(CK_SESSION_HANDLE hSession)
 	// Check if it is a closed session
 	unsigned long sessionID = hSession - 1;
 	if (sessions[sessionID] == NULL) return CKR_SESSION_HANDLE_INVALID;
+
+	// The handle may have been reused by a newer session; only close the one asked for
+	if (expected != NULL && sessions[sessionID] != expected) return CKR_SESSION_HANDLE_INVALID;
 
 	// Check if this is the last session on the token
 	bool lastSession = true;
@@ -147,8 +174,8 @@ CK_RV SessionManager::closeSession(CK_SESSION_HANDLE hSession)
 		sessions[sessionID]->getSlot()->getToken()->logout();
 	}
 
-	// Close the session
-	delete sessions[sessionID];
+	// Close the session; it is deleted when the last user has released it
+	sessions[sessionID]->release();
 	sessions[sessionID] = NULL;
 
 	return CKR_OK;
@@ -174,7 +201,7 @@ CK_RV SessionManager::closeAllSessions(Slot* slot)
 
 		if ((*i)->getSlot()->getSlotID() == slotID)
 		{
-			delete *i;
+			(*i)->release();
 			*i = NULL;
 		}
 	}
@@ -189,25 +216,30 @@ CK_RV SessionManager::closeAllSessions(Slot* slot)
 CK_RV SessionManager::getSessionInfo(CK_SESSION_HANDLE hSession, CK_SESSION_INFO_PTR pInfo)
 {
 	// Get the session
-	Session* session = getSession(hSession);
+	SessionRef session = getSession(hSession);
 	if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
 
 	return session->getInfo(pInfo);
 }
 
 // Get the session
-Session* SessionManager::getSession(CK_SESSION_HANDLE hSession)
+SessionRef SessionManager::getSession(CK_SESSION_HANDLE hSession)
 {
 	// Lock access to the vector
 	MutexLocker lock(sessionsMutex);
 
 	// We do not want to get a negative number below
-	if (hSession == CK_INVALID_HANDLE) return NULL;
+	if (hSession == CK_INVALID_HANDLE) return SessionRef();
 
 	// Check if we are out of range
-	if (hSession > sessions.size()) return NULL;
+	if (hSession > sessions.size()) return SessionRef();
 
-	return sessions[hSession - 1];
+	Session* session = sessions[hSession - 1];
+	if (session == NULL) return SessionRef();
+
+	// Acquired under the lock, so a concurrent close cannot have released it yet
+	session->acquire();
+	return SessionRef(session);
 }
 
 bool SessionManager::haveSession(CK_SLOT_ID slotID)
